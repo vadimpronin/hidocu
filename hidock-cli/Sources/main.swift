@@ -105,6 +105,32 @@ enum HiDockCLI {
             case "mass-storage":
                 try runMassStorage(jensen)
 
+            case "format":
+                let confirm = args.contains("--confirm")
+                try runFormat(jensen, confirm: confirm)
+                
+            case "factory-reset":
+                let confirm = args.contains("--confirm")
+                try runFactoryReset(jensen, confirm: confirm)
+
+            case "restore-factory":
+                let confirm = args.contains("--confirm")
+                try runRestoreFactory(jensen, confirm: confirm)
+                
+            case "usb-timeout":
+                let subcommand = args.dropFirst().first ?? "get"
+                if subcommand == "get" {
+                    try runUsbTimeoutGet(jensen)
+                } else if subcommand == "set" {
+                    guard let valueStr = args.dropFirst(2).first, let value = UInt32(valueStr) else {
+                        printError("Missing or invalid value. Usage: hidock-cli usb-timeout set <ms>")
+                        return
+                    }
+                    try runUsbTimeoutSet(jensen, value: value)
+                } else {
+                    printError("Usage: hidock-cli usb-timeout <get|set> [ms]")
+                }
+
             case "delete":
                 guard let filename = args.dropFirst().first, !filename.starts(with: "-") else {
                     printError("Missing filename. Usage: hidock-cli delete <filename>")
@@ -442,6 +468,75 @@ enum HiDockCLI {
         try jensen.clearPairedDevices()
         print("Paired list cleared.")
     }
+
+    static func runFormat(_ jensen: Jensen, confirm: Bool) throws {
+        _ = try jensen.getDeviceInfo()
+        
+        if !confirm {
+            print("WARNING: This will erase ALL data on the SD card.")
+            print("Type 'YES' to confirm: ", terminator: "")
+            fflush(stdout)
+            guard let input = readLine(), input == "YES" else {
+                print("Operation cancelled.")
+                return
+            }
+        }
+        
+        print("Formatting SD card (this may take 30 seconds)...")
+        try jensen.formatCard()
+        print("Format complete.")
+    }
+    
+    static func runFactoryReset(_ jensen: Jensen, confirm: Bool) throws {
+        _ = try jensen.getDeviceInfo()
+        
+        if !confirm {
+            print("WARNING: This will reset all settings to factory defaults.")
+            print("Type 'RESET' to confirm: ", terminator: "")
+            fflush(stdout)
+            guard let input = readLine(), input == "RESET" else {
+                print("Operation cancelled.")
+                return
+            }
+        }
+        
+        print("Performing factory reset...")
+        try jensen.factoryReset()
+        print("Factory reset complete.")
+    }
+    
+    static func runRestoreFactory(_ jensen: Jensen, confirm: Bool) throws {
+        _ = try jensen.getDeviceInfo()
+        
+        if !confirm {
+            print("WARNING: This will restore factory settings (Command 19).")
+            print("Type 'RESTORE' to confirm: ", terminator: "")
+            fflush(stdout)
+            guard let input = readLine(), input == "RESTORE" else {
+                print("Operation cancelled.")
+                return
+            }
+        }
+        
+        print("Restoring factory settings...")
+        try jensen.restoreFactorySettings()
+        print("Restore complete.")
+    }
+    
+    static func runUsbTimeoutGet(_ jensen: Jensen) throws {
+        let timeout = try jensen.getWebUSBTimeout()
+        print("USB Timeout: \(timeout) ms")
+    }
+    
+    static func runUsbTimeoutSet(_ jensen: Jensen, value: UInt32) throws {
+        print("Setting USB timeout to \(value) ms...")
+        try jensen.setWebUSBTimeout(value)
+        print("Timeout updated.")
+        
+        // Verify
+        let newTimeout = try jensen.getWebUSBTimeout()
+        print("Effective USB Timeout: \(newTimeout) ms")
+    }
     
     // MARK: - Helpers
     
@@ -686,7 +781,12 @@ enum HiDockCLI {
             bt-connect <mac>    Connect to a Bluetooth device
             bt-disconnect       Disconnect current Bluetooth device
             bt-clear-paired     Clear all paired devices
+            bt-clear-paired     Clear all paired devices
             mass-storage        Enter mass storage mode
+            format              Format SD card (requires confirmation)
+            factory-reset       Reset to factory defaults (Command 61451)
+            restore-factory     Restore factory settings (Command 19)
+            usb-timeout         Get/Set USB timeout
         
         OPTIONS:
             --verbose, -v       Enable verbose output

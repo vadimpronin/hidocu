@@ -437,6 +437,28 @@ public class Jensen {
         )
     }
     
+    public func formatCard() throws {
+        // Check version requirement
+        if let version = versionNumber, (model == .h1 || model == .h1e) && version < 0x00050025 {
+            throw JensenError.unsupportedFeature("Firmware too old")
+        }
+        
+        // Magic sequence for format confirmation
+        let magic: [UInt8] = [1, 2, 3, 4]
+        var command = Command(.formatCard, body: magic)
+        
+        // This is a long operation (30s timeout)
+        let response = try send(&command, timeout: 30.0)
+        
+        if !response.body.isEmpty && response.body[0] != 0 {
+            throw JensenError.commandFailed("Format failed with code: \(response.body[0])")
+        }
+        
+        if verbose {
+            print("[Jensen] Card formatted successfully")
+        }
+    }
+    
     public func deleteFile(name: String) throws {
         // Build command body: filename as ASCII bytes
         var filenameBytes: [UInt8] = []
@@ -527,6 +549,68 @@ public class Jensen {
         let (date, time, _) = parseFileName(name)
         
         return RecordingFile(name: name, createDate: date, createTime: time)
+    }
+    
+    // MARK: - Advanced Commands
+    
+    public func factoryReset() throws {
+        // H1/H1E >= 5.0.9
+        if let version = versionNumber, (model == .h1 || model == .h1e) && version < 0x00050009 {
+            throw JensenError.unsupportedFeature("Firmware too old")
+        }
+        
+        var command = Command(.factoryReset)  // 61451
+        let response = try send(&command, timeout: 10.0)
+        
+        if !response.body.isEmpty && response.body[0] != 0 {
+            throw JensenError.commandFailed("Factory reset failed with code: \(response.body[0])")
+        }
+    }
+    
+    public func restoreFactorySettings() throws {
+        // H1 >= 5.0.72, H1E >= 6.0.4
+        if let version = versionNumber {
+            if model == .h1 && version < 0x00050048 {
+                throw JensenError.unsupportedFeature("Firmware too old")
+            }
+            if model == .h1e && version < 0x00060004 {
+                throw JensenError.unsupportedFeature("Firmware too old")
+            }
+        }
+        
+        // Magic sequence
+        let magic: [UInt8] = [1, 2, 3, 4]
+        var command = Command(.restoreFactorySettings, body: magic)  // 19
+        let response = try send(&command, timeout: 10.0)
+        
+        if !response.body.isEmpty && response.body[0] != 0 {
+            throw JensenError.commandFailed("Restore factory settings failed with code: \(response.body[0])")
+        }
+    }
+    
+    public func getWebUSBTimeout() throws -> UInt32 {
+        var command = Command(.readWebusbTimeout)
+        let response = try send(&command)
+        
+        guard response.body.count >= 4 else {
+            throw JensenError.invalidResponse
+        }
+        
+        return UInt32(response.body[0]) << 24 |
+               UInt32(response.body[1]) << 16 |
+               UInt32(response.body[2]) << 8 |
+               UInt32(response.body[3])
+    }
+    
+    public func setWebUSBTimeout(_ timeoutMs: UInt32) throws {
+        var body: [UInt8] = []
+        body.append(UInt8((timeoutMs >> 24) & 0xFF))
+        body.append(UInt8((timeoutMs >> 16) & 0xFF))
+        body.append(UInt8((timeoutMs >> 8) & 0xFF))
+        body.append(UInt8(timeoutMs & 0xFF))
+        
+        var command = Command(.writeWebusbTimeout, body: body)
+        _ = try send(&command)
     }
     
     // MARK: - Bluetooth Commands (P1 only)
