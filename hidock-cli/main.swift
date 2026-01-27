@@ -84,6 +84,22 @@ enum HiDockCLI {
                 
             case "bt-paired":
                 try runBluetoothPaired(jensen)
+                
+            case "bt-scan":
+                try runBluetoothScan(jensen)
+                
+            case "bt-connect":
+                guard let mac = args.dropFirst().first, !mac.starts(with: "-") else {
+                    printError("Missing MAC address. Usage: hidock-cli bt-connect <mac>")
+                    return
+                }
+                try runBluetoothConnect(jensen, mac: mac)
+                
+            case "bt-disconnect":
+                try runBluetoothDisconnect(jensen)
+                
+            case "bt-clear-paired":
+                try runBluetoothClearPaired(jensen)
 
             case "mass-storage":
                 try runMassStorage(jensen)
@@ -370,6 +386,62 @@ enum HiDockCLI {
         }
     }
     
+    static func runBluetoothScan(_ jensen: Jensen) throws {
+        // Get device info first (checks compatibility)
+        _ = try jensen.getDeviceInfo()
+        
+        print("Starting Bluetooth scan...")
+        try jensen.startBluetoothScan()
+        
+        print("Scanning for 5 seconds...")
+        Thread.sleep(forTimeInterval: 5)
+        
+        try jensen.stopBluetoothScan()
+        
+        // Give a moment for results to be ready?
+        Thread.sleep(forTimeInterval: 0.5)
+        
+        let devices = try jensen.getScanResults()
+        
+        if devices.isEmpty {
+            print("No devices found.")
+            return
+        }
+        
+        print("Found \(devices.count) devices:")
+        print("")
+        print("\("MAC Address".padding(toLength: 18, withPad: " ", startingAt: 0)) \("RSSI".padding(toLength: 6, withPad: " ", startingAt: 0)) \("Type".padding(toLength: 10, withPad: " ", startingAt: 0)) Name")
+        print(String(repeating: "-", count: 60))
+        
+        for dev in devices {
+            let macStr = dev.mac.padding(toLength: 18, withPad: " ", startingAt: 0)
+            let rssiStr = "\(dev.rssi)".padding(toLength: 6, withPad: " ", startingAt: 0)
+            let typeStr = (dev.audio ? "Audio" : "Other").padding(toLength: 10, withPad: " ", startingAt: 0)
+            print("\(macStr) \(rssiStr) \(typeStr) \(dev.name)")
+        }
+    }
+    
+    static func runBluetoothConnect(_ jensen: Jensen, mac: String) throws {
+        _ = try jensen.getDeviceInfo()
+        print("Connecting to \(mac)...")
+        try jensen.connectBluetooth(mac: mac)
+        print("Connection command sent.")
+    }
+    
+    static func runBluetoothDisconnect(_ jensen: Jensen) throws {
+        _ = try jensen.getDeviceInfo()
+        print("Disconnecting Bluetooth...")
+        try jensen.disconnectBluetooth()
+        print("Disconnection command sent.")
+    }
+    
+    static func runBluetoothClearPaired(_ jensen: Jensen) throws {
+        _ = try jensen.getDeviceInfo()
+        print("Clearing all paired devices...")
+        try jensen.clearPairedDevices()
+        print("Paired list cleared.")
+    }
+    
     // MARK: - Helpers
     
     static func formatDuration(_ seconds: TimeInterval) -> String {
@@ -609,6 +681,10 @@ enum HiDockCLI {
             battery             Get battery status (P1 only)
             bt-status           Get Bluetooth status (P1 only)
             bt-paired           Get paired Bluetooth devices
+            bt-scan             Scan for Bluetooth devices
+            bt-connect <mac>    Connect to a Bluetooth device
+            bt-disconnect       Disconnect current Bluetooth device
+            bt-clear-paired     Clear all paired devices
             mass-storage        Enter mass storage mode
         
         OPTIONS:

@@ -62,6 +62,14 @@ struct BatteryStatus {
     let voltage: UInt32
 }
 
+struct ScannedDevice {
+    let name: String
+    let mac: String
+    let rssi: Int
+    let cod: UInt32
+    let audio: Bool
+}
+
 struct RecordingFile {
     let name: String
     let createDate: String
@@ -587,6 +595,126 @@ class Jensen {
         }
         
         return result
+    }
+    
+    // MARK: - Bluetooth Scan & Connection
+    
+    func startBluetoothScan(duration: Int = 30) throws {
+        guard model.isP1 else {
+            throw JensenError.unsupportedDevice
+        }
+        
+        let dur = UInt8(min(max(duration, 0), 255))
+        var command = Command(.btScan, body: [1, dur])
+        _ = try send(&command)
+    }
+    
+    func stopBluetoothScan() throws {
+        guard model.isP1 else { return }
+        var command = Command(.btScan, body: [0, 0])
+        _ = try send(&command)
+    }
+    
+    func getScanResults() throws -> [ScannedDevice] {
+        guard model.isP1 else {
+            throw JensenError.unsupportedDevice
+        }
+        
+        var command = Command(.btDevList)
+        let response = try send(&command)
+        
+        if response.body.isEmpty { return [] }
+        
+        guard response.body.count >= 2 else { return [] }
+        
+        let count = Int(response.body[0]) << 8 | Int(response.body[1])
+        var offset = 2
+        var devices: [ScannedDevice] = []
+        
+        for _ in 0..<count {
+            if offset + 2 > response.body.count { break }
+            let len = Int(response.body[offset]) << 8 | Int(response.body[offset+1])
+            offset += 2
+            
+            if offset + len > response.body.count { break }
+            let deviceData = response.body[offset..<(offset+len)]
+            
+            let name = String(data: Data(deviceData), encoding: .utf8) ?? "Unknown"
+            offset += len
+            
+            // Following fields: MAC(6), RSSI(1), COD(3)
+            if offset + 10 > response.body.count { break }
+            
+            var macParts: [String] = []
+            for j in 0..<6 {
+                macParts.append(String(format: "%02X", response.body[offset+j]))
+            }
+            offset += 6
+            
+            let rssi = Int(Int8(bitPattern: response.body[offset]))
+            offset += 1
+            
+            let cod = UInt32(response.body[offset]) << 16 | UInt32(response.body[offset+1]) << 8 | UInt32(response.body[offset+2])
+            offset += 3
+            
+            // Check if headset/mic via COD: (cod & 0x1F00) >> 8 == 4
+            let isAudio = ((cod & 0x1F00) >> 8) == 4
+            
+            devices.append(ScannedDevice(name: name, mac: macParts.joined(separator: "-"), rssi: rssi, cod: cod, audio: isAudio))
+        }
+        
+        return devices
+    }
+    
+    func connectBluetooth(mac: String) throws {
+        guard model.isP1 else { throw JensenError.unsupportedDevice }
+        
+        let parts = mac.split(separator: "-").map { String($0) }
+        guard parts.count == 6 else {
+            throw JensenError.commandFailed("Invalid MAC address format")
+        }
+        
+        var body: [UInt8] = [0] // Subcommand 0 = Connect
+        for part in parts {
+            if let byte = UInt8(part, radix: 16) {
+                body.append(byte)
+            }
+        }
+        
+        var command = Command(.bluetoothCmd, body: body)
+        _ = try send(&command)
+    }
+    
+    func disconnectBluetooth() throws {
+        guard model.isP1 else { throw JensenError.unsupportedDevice }
+        // Subcommand 1 = Disconnect
+        var command = Command(.bluetoothCmd, body: [1])
+        _ = try send(&command)
+    }
+    
+    func reconnectBluetooth(mac: String) throws {
+        guard model.isP1 else { throw JensenError.unsupportedDevice }
+        
+        let parts = mac.split(separator: "-").map { String($0) }
+        guard parts.count == 6 else {
+            throw JensenError.commandFailed("Invalid MAC address format")
+        }
+        
+        var body: [UInt8] = [3] // Subcommand 3 = Reconnect
+        for part in parts {
+            if let byte = UInt8(part, radix: 16) {
+                body.append(byte)
+            }
+        }
+        
+        var command = Command(.bluetoothCmd, body: body)
+        _ = try send(&command)
+    }
+    
+    func clearPairedDevices() throws {
+        guard model.isP1 else { throw JensenError.unsupportedDevice }
+        var command = Command(.btRemovePairedDev, body: [0])
+        _ = try send(&command)
     }
     
     // MARK: - Paired Devices
