@@ -20,6 +20,63 @@ enum HiDockCLI {
         }
         
         let verbose = args.contains("--verbose") || args.contains("-v")
+        let accessToken = getArgValue(args, for: "--access-token")
+        let modelOverride = getArgValue(args, for: "--model")
+        
+        // Handle commands that don't require device connection
+        if command == "--help" || command == "-h" || command == "help" {
+            printUsage()
+            exit(0)
+        }
+        
+        if command == "--version" {
+            print("hidock-cli 0.2.0")
+            exit(0)
+        }
+        
+        // Device-less firmware commands
+        if command == "firmware-check" || command == "firmware-download" {
+            // These can run without a device if --model is provided
+            if modelOverride != nil || accessToken != nil {
+                do {
+                    let jensen = Jensen(verbose: verbose)
+                    // Attempt to connect if not model override
+                    if modelOverride == nil {
+                        try jensen.connect()
+                    }
+                    
+                    switch command {
+                    case "firmware-check":
+                        guard let token = accessToken else {
+                            printError("Missing --access-token")
+                            return
+                        }
+                        try runFirmwareCheck(jensen, accessToken: token, model: modelOverride)
+                        
+                    case "firmware-download":
+                        let version = getVersionArg(args)
+                        let install = args.contains("--install")
+                        let confirm = args.contains("--confirm")
+                        let rawOutputDir = getArgValue(args, for: "--output")
+                        try runFirmwareDownload(jensen, version: version, install: install, confirm: confirm, outputDir: rawOutputDir, accessToken: accessToken, model: modelOverride)
+                        
+                    default: break
+                    }
+                    
+                    jensen.disconnect()
+                    exit(0)
+                } catch {
+                    // If we failed to connect but have a model override, we might still be able to run
+                    if modelOverride != nil && accessToken != nil {
+                        // Fall back to device-less path
+                    } else {
+                        // Regular error handling
+                        printError("\(error)")
+                        exit(1)
+                    }
+                }
+            }
+        }
         
         do {
             let jensen = Jensen(verbose: verbose)
@@ -101,6 +158,13 @@ enum HiDockCLI {
                 
             case "bt-clear-paired":
                 try runBluetoothClearPaired(jensen)
+            
+            case "bt-reconnect":
+                guard let mac = args.dropFirst().first, !mac.starts(with: "-") else {
+                    printError("Missing MAC address. Usage: hidock-cli bt-reconnect <mac>")
+                    return
+                }
+                try runBluetoothReconnect(jensen, mac: mac)
 
             case "mass-storage":
                 try runMassStorage(jensen)
@@ -137,14 +201,85 @@ enum HiDockCLI {
                     return
                 }
                 try runDelete(jensen, filename: filename)
+            
+            case "bnc-start":
+                try runBNCStart(jensen)
+            
+            case "bnc-stop":
+                try runBNCStop(jensen)
+            
+            case "send-key":
+                let argsAfterCommand = Array(args.dropFirst())
+                guard argsAfterCommand.count >= 2,
+                      let mode = UInt8(argsAfterCommand[0]),
+                      let keyCode = UInt8(argsAfterCommand[1]) else {
+                    printError("Usage: hidock-cli send-key <mode> <keycode>")
+                    print("  Mode: 1=single click, 2=long press, 3=double click")
+                    print("  Key:  3=record, 4=mute, 5=playback")
+                    return
+                }
+                try runSendKey(jensen, mode: mode, keyCode: keyCode)
+            
+            case "record-test":
+                let argsAfterCommand = Array(args.dropFirst())
+                guard argsAfterCommand.count >= 2,
+                      let subcommand = argsAfterCommand.first,
+                      let testType = UInt8(argsAfterCommand[1]) else {
+                    printError("Usage: hidock-cli record-test <start|stop> <type>")
+                    return
+                }
+                if subcommand == "start" {
+                    try runRecordTestStart(jensen, type: testType)
+                } else if subcommand == "stop" {
+                    try runRecordTestEnd(jensen, type: testType)
+                } else {
+                    printError("Unknown subcommand. Use 'start' or 'stop'.")
+                }
                 
             case "download":
                 let filename = args.dropFirst().first { !$0.starts(with: "-") }
                 let rawOutputDir = getArgValue(args, for: "--output") ?? "."
-                let outputDir = (rawOutputDir as NSString).expandingTildeInPath
+                let expandedPath = (rawOutputDir as NSString).expandingTildeInPath
+                let outputDir = URL(fileURLWithPath: expandedPath).standardizedFileURL.path
                 let downloadAll = args.contains("--all")
                 let sync = args.contains("--sync")
                 try runDownload(jensen, filename: filename, downloadAll: downloadAll, outputDir: outputDir, sync: sync)
+            
+            case "firmware-update":
+                guard let filePath = args.dropFirst().first, !filePath.starts(with: "-") else {
+                    printError("Missing firmware file. Usage: hidock-cli firmware-update <file.bin>")
+                    return
+                }
+                let confirm = args.contains("--confirm")
+                try runFirmwareUpdate(jensen, filePath: filePath, confirm: confirm)
+            
+            case "tone-update":
+                guard let filePath = args.dropFirst().first, !filePath.starts(with: "-") else {
+                    printError("Missing tone file. Usage: hidock-cli tone-update <file.bin>")
+                    return
+                }
+                try runToneUpdate(jensen, filePath: filePath)
+            
+            case "uac-update":
+                guard let filePath = args.dropFirst().first, !filePath.starts(with: "-") else {
+                    printError("Missing UAC file. Usage: hidock-cli uac-update <file.bin>")
+                    return
+                }
+                try runUACUpdate(jensen, filePath: filePath)
+            
+            case "firmware-download":
+                let version = getVersionArg(args)
+                let install = args.contains("--install")
+                let confirm = args.contains("--confirm")
+                let rawOutputDir = getArgValue(args, for: "--output")
+                try runFirmwareDownload(jensen, version: version, install: install, confirm: confirm, outputDir: rawOutputDir, accessToken: accessToken, model: modelOverride)
+            
+            case "firmware-check":
+                guard let token = accessToken else {
+                    printError("Missing --access-token")
+                    return
+                }
+                try runFirmwareCheck(jensen, accessToken: token, model: modelOverride)
                 
             case "--help", "-h", "help":
                 printUsage()
@@ -161,7 +296,18 @@ enum HiDockCLI {
             jensen.disconnect()
             
         } catch let error as USBError {
-            printError(error.localizedDescription)
+            if case .deviceInUse = error {
+                printError("""
+                    Device is in use by another application.
+                    Common causes:
+                      • Chrome or another browser with HiNotes web app open (WebUSB)
+                      • Another instance of hidock-cli
+                      • HiNotes desktop app
+                    Close the application using the device and try again.
+                    """)
+            } else {
+                printError(error.localizedDescription)
+            }
             exit(3)
         } catch let error as JensenError {
             printError(error.localizedDescription)
@@ -468,6 +614,71 @@ enum HiDockCLI {
         try jensen.clearPairedDevices()
         print("Paired list cleared.")
     }
+    
+    static func runBluetoothReconnect(_ jensen: Jensen, mac: String) throws {
+        _ = try jensen.getDeviceInfo()
+        print("Reconnecting to \(mac)...")
+        try jensen.reconnectBluetooth(mac: mac)
+        print("Reconnection command sent.")
+    }
+    
+    // MARK: - BNC Demo Commands
+    
+    static func runBNCStart(_ jensen: Jensen) throws {
+        _ = try jensen.getDeviceInfo()
+        print("Starting BNC demo mode...")
+        try jensen.beginBNC()
+        print("BNC demo started.")
+    }
+    
+    static func runBNCStop(_ jensen: Jensen) throws {
+        _ = try jensen.getDeviceInfo()
+        print("Stopping BNC demo mode...")
+        try jensen.endBNC()
+        print("BNC demo stopped.")
+    }
+    
+    // MARK: - Send Key Command
+    
+    static func runSendKey(_ jensen: Jensen, mode: UInt8, keyCode: UInt8) throws {
+        _ = try jensen.getDeviceInfo()
+        
+        let modeDesc: String
+        switch mode {
+        case 1: modeDesc = "single click"
+        case 2: modeDesc = "long press"
+        case 3: modeDesc = "double click"
+        default: modeDesc = "mode \(mode)"
+        }
+        
+        let keyDesc: String
+        switch keyCode {
+        case 3: keyDesc = "record"
+        case 4: keyDesc = "mute"
+        case 5: keyDesc = "playback"
+        default: keyDesc = "key \(keyCode)"
+        }
+        
+        print("Sending key: \(keyDesc) (\(modeDesc))...")
+        try jensen.sendKeyCode(mode: mode, keyCode: keyCode)
+        print("Key code sent.")
+    }
+    
+    // MARK: - Recording Test Commands
+    
+    static func runRecordTestStart(_ jensen: Jensen, type: UInt8) throws {
+        _ = try jensen.getDeviceInfo()
+        print("Starting recording test (type \(type))...")
+        try jensen.recordTestStart(type: type)
+        print("Recording test started.")
+    }
+    
+    static func runRecordTestEnd(_ jensen: Jensen, type: UInt8) throws {
+        _ = try jensen.getDeviceInfo()
+        print("Stopping recording test (type \(type))...")
+        try jensen.recordTestEnd(type: type)
+        print("Recording test ended.")
+    }
 
     static func runFormat(_ jensen: Jensen, confirm: Bool) throws {
         _ = try jensen.getDeviceInfo()
@@ -538,6 +749,624 @@ enum HiDockCLI {
         print("Effective USB Timeout: \(newTimeout) ms")
     }
     
+    // MARK: - Firmware API
+    
+    struct FirmwareAPIResponse: Codable {
+        let error: Int
+        let message: String
+        let data: FirmwareData?
+        
+        struct FirmwareData: Codable {
+            let id: String
+            let model: String
+            let versionCode: String
+            let versionNumber: Int
+            let signature: String
+            let fileName: String
+            let fileLength: Int
+            let remark: String?
+            let createTime: Int64?
+            let state: String?
+        }
+    }
+    
+    struct FirmwareInfo {
+        let id: String
+        let model: String
+        let version: String
+        let versionNumber: UInt32
+        let signature: String
+        let fileName: String
+        let fileLength: Int
+        let remark: String
+        
+        var downloadURL: String {
+            return "https://hinotes.hidock.com/v2/device/firmware/get?id=\(id)"
+        }
+    }
+    
+    static let supportedModels = [
+        "hidock-p1",
+        "hidock-p1:mini",
+        "hidock-h1",
+        "hidock-h1e"
+    ]
+    
+    static func fetchLatestFirmware(model: String, accessToken: String) -> Result<FirmwareInfo, Error> {
+        let urlString = "https://hinotes.hidock.com/v2/device/firmware/latest"
+        guard let url = URL(string: urlString) else {
+            return .failure(NSError(domain: "FirmwareAPI", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"]))
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue(accessToken, forHTTPHeaderField: "AccessToken")
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        
+        let bodyString = "version=-1&model=\(model)"
+        request.httpBody = bodyString.data(using: .utf8)
+        
+        let semaphore = DispatchSemaphore(value: 0)
+        var result: Result<FirmwareInfo, Error> = .failure(NSError(domain: "FirmwareAPI", code: 2, userInfo: [NSLocalizedDescriptionKey: "No response"]))
+        
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            defer { semaphore.signal() }
+            
+            if let error = error {
+                result = .failure(error)
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                result = .failure(NSError(domain: "FirmwareAPI", code: 3, userInfo: [NSLocalizedDescriptionKey: "Invalid response"]))
+                return
+            }
+            
+            guard httpResponse.statusCode == 200 else {
+                result = .failure(NSError(domain: "HTTP", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "HTTP \(httpResponse.statusCode)"]))
+                return
+            }
+            
+            guard let data = data else {
+                result = .failure(NSError(domain: "FirmwareAPI", code: 4, userInfo: [NSLocalizedDescriptionKey: "No data"]))
+                return
+            }
+            
+            do {
+                let apiResponse = try JSONDecoder().decode(FirmwareAPIResponse.self, from: data)
+                
+                guard apiResponse.error == 0, let fwData = apiResponse.data else {
+                    let msg = apiResponse.message.isEmpty ? "No firmware available" : apiResponse.message
+                    result = .failure(NSError(domain: "FirmwareAPI", code: apiResponse.error, userInfo: [NSLocalizedDescriptionKey: msg]))
+                    return
+                }
+                
+                let firmware = FirmwareInfo(
+                    id: fwData.id,
+                    model: fwData.model,
+                    version: fwData.versionCode,
+                    versionNumber: UInt32(fwData.versionNumber),
+                    signature: fwData.signature,
+                    fileName: fwData.fileName,
+                    fileLength: fwData.fileLength,
+                    remark: fwData.remark ?? ""
+                )
+                
+                result = .success(firmware)
+            } catch {
+                result = .failure(error)
+            }
+        }
+        
+        task.resume()
+        semaphore.wait()
+        
+        return result
+    }
+    
+    static func parseVersionCode(_ version: String) -> UInt32 {
+        let parts = version.split(separator: ".")
+        guard parts.count == 3,
+              let major = UInt32(parts[0]),
+              let minor = UInt32(parts[1]),
+              let patch = UInt32(parts[2]) else {
+            return 0
+        }
+        return (major << 16) | (minor << 8) | patch
+    }
+    
+    static func formatVersionNumber(_ versionNumber: UInt32) -> String {
+        let major = (versionNumber >> 16) & 0xFF
+        let minor = (versionNumber >> 8) & 0xFF
+        let patch = versionNumber & 0xFF
+        return "\(major).\(minor).\(patch)"
+    }
+    
+    static func compareVersions(_ v1: String, _ v2: String) -> Int {
+        let num1 = parseVersionCode(v1)
+        let num2 = parseVersionCode(v2)
+        if num1 > num2 { return 1 }
+        if num1 < num2 { return -1 }
+        return 0
+    }
+    
+    static func runFirmwareCheck(_ jensen: Jensen, accessToken: String, model: String?) throws {
+        let modelToUse = model ?? jensen.model.rawValue
+        
+        print("Checking for updates for \(modelToUse)...")
+        
+        let result = fetchLatestFirmware(model: modelToUse, accessToken: accessToken)
+        
+        switch result {
+        case .success(let fw):
+            print("Latest Version: \(fw.version)")
+            print("Create Time: \(fw.fileName)") // fileName here is often a timestamp-like ID or partial filename
+            if !fw.remark.isEmpty {
+                print("Release Notes:\n\(fw.remark)")
+            }
+            
+            // Compare if we have a device
+            if let deviceInfo = try? jensen.getDeviceInfo() {
+                let comparison = compareVersions(fw.version, deviceInfo.versionCode)
+                if comparison > 0 {
+                    print("\nUpdate available! (Current: \(deviceInfo.versionCode))")
+                } else if comparison < 0 {
+                    print("\nDevice firmware (\(deviceInfo.versionCode)) is newer than server version.")
+                } else {
+                    print("\nDevice is up to date.")
+                }
+            } else {
+                print("\nTo download this firmware, run:")
+                print("  hidock-cli firmware-download --model \(modelToUse) --access-token \(accessToken)")
+            }
+            
+        case .failure(let error):
+            printError("Failed to fetch firmware: \(error.localizedDescription)")
+        }
+    }
+    
+    static func runFirmwareDownload(_ jensen: Jensen, version: String?, install: Bool, confirm: Bool, outputDir: String?, accessToken: String?, model: String?) throws {
+        let modelToUse = model ?? jensen.model.rawValue
+        let currentVersion = (try? jensen.getDeviceInfo())?.versionCode
+        
+        guard let token = accessToken else {
+            printError("Missing --access-token required for dynamic download")
+            return
+        }
+        
+        print("Fetching latest firmware info for \(modelToUse)...")
+        let result = fetchLatestFirmware(model: modelToUse, accessToken: token)
+        
+        guard case .success(let fw) = result else {
+            if case .failure(let error) = result {
+                printError("Failed to fetch firmware info: \(error.localizedDescription)")
+            }
+            return
+        }
+        
+        // If user specified a version, verify it matcheslatest (API only gives latest)
+        if let v = version, v != fw.version {
+            printError("Requested version \(v) does not match latest server version \(fw.version)")
+            return
+        }
+        
+        let selectedFirmware = fw
+        
+        if let current = currentVersion {
+            let comp = compareVersions(selectedFirmware.version, current)
+            if comp > 0 {
+                print("Update Available: \(current) -> \(selectedFirmware.version)")
+            } else if comp < 0 {
+                print("Downgrade: \(current) -> \(selectedFirmware.version)")
+            } else {
+                print("Re-flashing current version: \(selectedFirmware.version)")
+            }
+        } else {
+            print("Firmware: \(selectedFirmware.version)")
+        }
+        
+        print("Size: \(formatSize(UInt64(selectedFirmware.fileLength)))")
+        
+        if !selectedFirmware.remark.isEmpty {
+            print("\nRelease Notes:\n\(selectedFirmware.remark)")
+        }
+        
+        if !confirm && !install && outputDir == nil {
+            print("\nProceed with download? (y/n): ", terminator: "")
+            fflush(stdout)
+            guard let input = readLine()?.lowercased(), input == "y" else {
+                print("Operation cancelled.")
+                return
+            }
+        }
+        
+        print("Downloading...")
+        let url = URL(string: selectedFirmware.downloadURL)!
+        
+        let semaphore = DispatchSemaphore(value: 0)
+        var downloadedData: Data?
+        var downloadError: Error?
+        
+        // Use a download delegate for progress
+        class DownloadDelegate: NSObject, URLSessionDownloadDelegate {
+            var completion: ((URL?, Error?) -> Void)?
+            var progressHandler: ((Int64, Int64) -> Void)?
+            
+            func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
+                completion?(location, nil)
+            }
+            
+            func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+                if let error = error {
+                    completion?(nil, error)
+                }
+            }
+            
+            func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
+                progressHandler?(totalBytesWritten, totalBytesExpectedToWrite)
+            }
+        }
+        
+        let delegate = DownloadDelegate()
+        var lastPercent = -1
+        
+        delegate.progressHandler = { written, total in
+            if total > 0 {
+                let percent = Int(Double(written) / Double(total) * 100)
+                if percent != lastPercent && percent % 10 == 0 {
+                    print("  \(percent)% (\(formatSize(UInt64(written))) / \(formatSize(UInt64(total))))")
+                    lastPercent = percent
+                }
+            }
+        }
+        
+        delegate.completion = { location, error in
+            if let error = error {
+                downloadError = error
+            } else if let location = location {
+                downloadedData = try? Data(contentsOf: location)
+            }
+            semaphore.signal()
+        }
+        
+        let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+        let task = session.downloadTask(with: url)
+        task.resume()
+        semaphore.wait()
+        
+        // Check for HTTP errors
+        if let response = task.response as? HTTPURLResponse, response.statusCode != 200 {
+            downloadError = NSError(domain: "HTTP", code: response.statusCode, userInfo: [NSLocalizedDescriptionKey: "HTTP \(response.statusCode)"])
+        }
+        
+        if let error = downloadError {
+            printError("Download failed: \(error.localizedDescription)")
+            return
+        }
+        
+        guard let data = downloadedData, !data.isEmpty else {
+            printError("Downloaded empty file")
+            return
+        }
+        
+        print("Downloaded \(formatSize(UInt64(data.count)))")
+        
+        // Save to file if output directory specified or not installing
+        if let outputDir = outputDir {
+            let expandedPath = (outputDir as NSString).expandingTildeInPath
+            let resolvedDir = URL(fileURLWithPath: expandedPath).standardizedFileURL.path
+            
+            // Create directory if needed
+            try? FileManager.default.createDirectory(atPath: resolvedDir, withIntermediateDirectories: true)
+            
+            let filename = "firmware-\(modelToUse.replacingOccurrences(of: ":", with: "-"))-\(selectedFirmware.version).bin"
+            let outputPath = (resolvedDir as NSString).appendingPathComponent(filename)
+            
+            try data.write(to: URL(fileURLWithPath: outputPath))
+            print("Saved to: \(outputPath)")
+        }
+        
+        if install {
+            // Safety check: ensure connected device matches firmware model
+            if jensen.model.rawValue != selectedFirmware.model {
+                printError("Model mismatch! Firmware is for \(selectedFirmware.model) but connected device is \(jensen.model.rawValue)")
+                return
+            }
+            
+            // Install the firmware
+            if !confirm {
+                print("")
+                print("WARNING: Firmware update can potentially brick your device if interrupted.")
+                print("Version: \(selectedFirmware.version)")
+                print("Size: \(formatSize(UInt64(data.count)))")
+                print("Type 'UPDATE' to confirm: ", terminator: "")
+                fflush(stdout)
+                guard let input = readLine(), input == "UPDATE" else {
+                    print("Operation cancelled.")
+                    return
+                }
+            }
+            
+            print("Requesting firmware upgrade...")
+            let result = try jensen.requestFirmwareUpgrade(
+                versionNumber: selectedFirmware.versionNumber,
+                fileSize: UInt32(data.count)
+            )
+            
+            switch result {
+            case .accepted:
+                print("Request accepted. Uploading firmware...")
+            case .wrongVersion:
+                printError("Wrong version - device rejected the firmware")
+                return
+            case .busy:
+                printError("Device is busy - try again later")
+                return
+            case .cardFull:
+                printError("SD card is full")
+                return
+            case .cardError:
+                printError("SD card error")
+                return
+            case .unknown:
+                printError("Unknown error from device")
+                return
+            }
+            
+            try jensen.uploadFirmware(data) { current, total in
+                let percent = Int(Double(current) / Double(total) * 100)
+                print("Progress: \(percent)%")
+            }
+            
+            print("Firmware upload complete!")
+            print("The device will restart to apply the update.")
+        } else if outputDir == nil {
+            // No install and no output dir - just save to current directory
+            let filename = "firmware-\(modelToUse.replacingOccurrences(of: ":", with: "-"))-\(selectedFirmware.version).bin"
+            try data.write(to: URL(fileURLWithPath: filename))
+            print("Saved to: ./\(filename)")
+            print("")
+            print("To install this firmware, run:")
+            print("  hidock-cli firmware-update \(filename)")
+        }
+    }
+    
+    // MARK: - Firmware Update Commands
+    
+    static func runFirmwareUpdate(_ jensen: Jensen, filePath: String, confirm: Bool) throws {
+        _ = try jensen.getDeviceInfo()
+        
+        // Resolve path
+        let expandedPath = (filePath as NSString).expandingTildeInPath
+        let resolvedPath = URL(fileURLWithPath: expandedPath).standardizedFileURL.path
+        
+        // Check file exists
+        guard FileManager.default.fileExists(atPath: resolvedPath) else {
+            printError("File not found: \(resolvedPath)")
+            return
+        }
+        
+        // Read file
+        guard let data = FileManager.default.contents(atPath: resolvedPath) else {
+            printError("Cannot read file: \(resolvedPath)")
+            return
+        }
+        
+        // Parse version from filename (e.g., "firmware_1.3.10.bin" -> 0x0001030A)
+        let filename = (resolvedPath as NSString).lastPathComponent
+        let version = parseVersionFromFilename(filename)
+        
+        if !confirm {
+            print("WARNING: Firmware update can potentially brick your device if interrupted.")
+            print("File: \(filename)")
+            print("Size: \(formatSize(UInt64(data.count)))")
+            if let v = version {
+                print("Version: \(formatVersionCode(v))")
+            }
+            print("Type 'UPDATE' to confirm: ", terminator: "")
+            fflush(stdout)
+            guard let input = readLine(), input == "UPDATE" else {
+                print("Operation cancelled.")
+                return
+            }
+        }
+        
+        print("Requesting firmware upgrade...")
+        let result = try jensen.requestFirmwareUpgrade(
+            versionNumber: version ?? 0,
+            fileSize: UInt32(data.count)
+        )
+        
+        switch result {
+        case .accepted:
+            print("Request accepted. Uploading firmware...")
+        case .wrongVersion:
+            printError("Wrong version - device rejected the firmware")
+            return
+        case .busy:
+            printError("Device is busy - try again later")
+            return
+        case .cardFull:
+            printError("SD card is full")
+            return
+        case .cardError:
+            printError("SD card error")
+            return
+        case .unknown:
+            printError("Unknown error from device")
+            return
+        }
+        
+        try jensen.uploadFirmware(data) { current, total in
+            let percent = Int(Double(current) / Double(total) * 100)
+            print("Progress: \(percent)%")
+        }
+        
+        print("Firmware upload complete!")
+        print("The device will restart to apply the update.")
+    }
+    
+    static func runToneUpdate(_ jensen: Jensen, filePath: String) throws {
+        _ = try jensen.getDeviceInfo()
+        
+        // Resolve path
+        let expandedPath = (filePath as NSString).expandingTildeInPath
+        let resolvedPath = URL(fileURLWithPath: expandedPath).standardizedFileURL.path
+        
+        // Check file exists
+        guard FileManager.default.fileExists(atPath: resolvedPath) else {
+            printError("File not found: \(resolvedPath)")
+            return
+        }
+        
+        // Read file
+        guard let data = FileManager.default.contents(atPath: resolvedPath) else {
+            printError("Cannot read file: \(resolvedPath)")
+            return
+        }
+        
+        // Calculate MD5 signature
+        let signature = md5Hex(data)
+        
+        print("Requesting tone update...")
+        print("File: \((resolvedPath as NSString).lastPathComponent)")
+        print("Size: \(formatSize(UInt64(data.count)))")
+        
+        let result = try jensen.requestToneUpdate(signature: signature, size: UInt32(data.count))
+        
+        switch result {
+        case .success:
+            print("Request accepted. Uploading tone data...")
+        case .lengthMismatch:
+            printError("Length mismatch")
+            return
+        case .busy:
+            printError("Device is busy - try again later")
+            return
+        case .cardFull:
+            printError("SD card is full")
+            return
+        case .cardError:
+            printError("SD card error")
+            return
+        case .unknown:
+            printError("Unknown error from device")
+            return
+        }
+        
+        try jensen.updateTone(data)
+        print("Tone update complete!")
+    }
+    
+    static func runUACUpdate(_ jensen: Jensen, filePath: String) throws {
+        _ = try jensen.getDeviceInfo()
+        
+        // Resolve path
+        let expandedPath = (filePath as NSString).expandingTildeInPath
+        let resolvedPath = URL(fileURLWithPath: expandedPath).standardizedFileURL.path
+        
+        // Check file exists
+        guard FileManager.default.fileExists(atPath: resolvedPath) else {
+            printError("File not found: \(resolvedPath)")
+            return
+        }
+        
+        // Read file
+        guard let data = FileManager.default.contents(atPath: resolvedPath) else {
+            printError("Cannot read file: \(resolvedPath)")
+            return
+        }
+        
+        // Calculate MD5 signature
+        let signature = md5Hex(data)
+        
+        print("Requesting UAC update...")
+        print("File: \((resolvedPath as NSString).lastPathComponent)")
+        print("Size: \(formatSize(UInt64(data.count)))")
+        
+        let result = try jensen.requestUACUpdate(signature: signature, size: UInt32(data.count))
+        
+        switch result {
+        case .success:
+            print("Request accepted. Uploading UAC data...")
+        case .lengthMismatch:
+            printError("Length mismatch")
+            return
+        case .busy:
+            printError("Device is busy - try again later")
+            return
+        case .cardFull:
+            printError("SD card is full")
+            return
+        case .cardError:
+            printError("SD card error")
+            return
+        case .unknown:
+            printError("Unknown error from device")
+            return
+        }
+        
+        try jensen.updateUAC(data)
+        print("UAC update complete!")
+    }
+    
+    static func parseVersionFromFilename(_ filename: String) -> UInt32? {
+        // Try to match patterns like "1.3.10" or "v1.3.10" in the filename
+        let pattern = #"(\d+)\.(\d+)\.(\d+)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: filename, range: NSRange(filename.startIndex..., in: filename)) else {
+            return nil
+        }
+        
+        guard let majorRange = Range(match.range(at: 1), in: filename),
+              let minorRange = Range(match.range(at: 2), in: filename),
+              let patchRange = Range(match.range(at: 3), in: filename),
+              let major = UInt32(filename[majorRange]),
+              let minor = UInt32(filename[minorRange]),
+              let patch = UInt32(filename[patchRange]) else {
+            return nil
+        }
+        
+        // Encode as 0x00MMNNPP (major.minor.patch)
+        return (major << 16) | (minor << 8) | patch
+    }
+    
+    static func formatVersionCode(_ version: UInt32) -> String {
+        let major = (version >> 16) & 0xFF
+        let minor = (version >> 8) & 0xFF
+        let patch = version & 0xFF
+        return "\(major).\(minor).\(patch)"
+    }
+    
+    static func md5Hex(_ data: Data) -> String {
+        // Simple MD5 using CommonCrypto via Insecure module
+        // Since we can't easily import CommonCrypto, we'll use a shell command
+        let tempFile = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        do {
+            try data.write(to: tempFile)
+            defer { try? FileManager.default.removeItem(at: tempFile) }
+            
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/sbin/md5")
+            process.arguments = ["-q", tempFile.path]
+            
+            let pipe = Pipe()
+            process.standardOutput = pipe
+            
+            try process.run()
+            process.waitUntilExit()
+            
+            let output = pipe.fileHandleForReading.readDataToEndOfFile()
+            if let result = String(data: output, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) {
+                return result
+            }
+        } catch {
+            // Fallback: return empty (will likely fail the request)
+        }
+        return ""
+    }
+    
     // MARK: - Helpers
     
     static func formatDuration(_ seconds: TimeInterval) -> String {
@@ -572,6 +1401,26 @@ enum HiDockCLI {
         let valueIndex = args.index(after: index)
         guard valueIndex < args.endIndex else { return nil }
         return args[valueIndex]
+    }
+    
+    static func getVersionArg(_ args: Array<String>.SubSequence) -> String? {
+        var skipNext = false
+        // Skip first because it's the command
+        for arg in args.dropFirst() {
+            if skipNext {
+                skipNext = false
+                continue
+            }
+            if arg.starts(with: "-") {
+                // Known flags with values
+                if arg == "--model" || arg == "--access-token" || arg == "--output" || arg == "-o" {
+                    skipNext = true
+                }
+                continue
+            }
+            return arg
+        }
+        return nil
     }
     
     // MARK: - Download Command
@@ -762,46 +1611,85 @@ enum HiDockCLI {
         USAGE:
             hidock-cli <command> [options]
         
-        COMMANDS:
-            info                Get device information
-            time get            Get device time
-            count               Get file count
-            list                List all recording files
-            download <file>     Download a recording file
-            download --all      Download all recording files
-            delete <file>       Delete a recording file
-            settings get        Get device settings
-            settings set-*      Modify settings (see 'settings --help')
-            card-info           Get SD card information
-            recording           Get current recording file
-            battery             Get battery status (P1 only)
-            bt-status           Get Bluetooth status (P1 only)
-            bt-paired           Get paired Bluetooth devices
-            bt-scan             Scan for Bluetooth devices
-            bt-connect <mac>    Connect to a Bluetooth device
-            bt-disconnect       Disconnect current Bluetooth device
-            bt-clear-paired     Clear all paired devices
-            bt-clear-paired     Clear all paired devices
-            mass-storage        Enter mass storage mode
-            format              Format SD card (requires confirmation)
-            factory-reset       Reset to factory defaults (Command 61451)
-            restore-factory     Restore factory settings (Command 19)
-            usb-timeout         Get/Set USB timeout
+        DEVICE INFO:
+            info                                Get device model, firmware version, serial number
+            battery                             Get battery status (P1/P1 Mini only)
+            card-info                           Get SD card capacity and usage
         
-        OPTIONS:
-            --verbose, -v       Enable verbose output
-            --output <dir>      Output directory for downloads
-            --all               Download all files
-            --sync              Only download new or changed files (offsets existing to .bak)
-            --help, -h          Show this help
-            --version           Show version
+        TIME MANAGEMENT:
+            time get                            Get device time
+            time set [YYYY-MM-DD HH:MM:SS]      Set device time (defaults to current time)
+        
+        FILE MANAGEMENT:
+            count                               Get total file count
+            list                                List all recording files with details
+            download <file> [options]           Download a specific file
+            download --all [options]            Download all files
+            delete <filename>                   Delete a recording file
+            recording                           Get current recording file info
+        
+        DOWNLOAD OPTIONS:
+            --output <dir>                      Output directory (default: current dir)
+            --sync                              Skip files that exist with matching size
+        
+        SETTINGS:
+            settings get                        Get all device settings
+            settings set-auto-record <on|off>   Enable/disable auto-recording
+            settings set-auto-play <on|off>     Enable/disable auto-play
+            settings set-notification <on|off>  Enable/disable notifications
+            settings set-bt-tone <on|off>       Enable/disable Bluetooth tone
+        
+        BLUETOOTH (P1/P1 Mini only):
+            bt-status                           Get Bluetooth connection status
+            bt-paired                           List paired Bluetooth devices
+            bt-scan                             Scan for nearby Bluetooth devices
+            bt-connect <mac>                    Connect to device by MAC address
+            bt-disconnect                       Disconnect current Bluetooth device
+            bt-reconnect <mac>                  Reconnect to a known device
+            bt-clear-paired                     Clear all paired devices
+        
+        DEVICE MODES:
+            mass-storage                        Enter USB mass storage mode
+            bnc-start                           Start BNC demo mode
+            bnc-stop                            Stop BNC demo mode
+        
+        FIRMWARE UPDATES (use with caution):
+            firmware-download [version]         Download firmware from server
+                --output <dir>                  Save to directory instead of current
+                --install                       Install after download
+                --confirm                       Skip confirmation prompt
+            firmware-update <file> [--confirm]  Upload firmware file (dangerous!)
+            tone-update <file>                  Update notification tones
+            uac-update <file>                   Update USB Audio Class firmware
+        
+        ADVANCED/FACTORY:
+            format [--confirm]                  Format SD card (destructive!)
+            factory-reset [--confirm]           Reset to factory defaults
+            restore-factory [--confirm]         Restore factory settings (alt. method)
+            usb-timeout get                     Get USB timeout value
+            usb-timeout set <ms>                Set USB timeout in milliseconds
+            send-key <mode> <keycode>           Send key code to device
+                                                  mode: 1=single, 2=long, 3=double
+                                                  key:  3=record, 4=mute, 5=playback
+            record-test <start|stop> <type>     Start/stop recording test
+        
+        GLOBAL OPTIONS:
+            --verbose, -v                       Enable verbose USB debug output
+            --help, -h                          Show this help
+            --version                           Show version
         
         EXAMPLES:
             hidock-cli info
+            hidock-cli time set
+            hidock-cli time set "2026-01-27 12:00:00"
             hidock-cli list
-            hidock-cli download 20250127REC001.hda
+            hidock-cli download REC001.hda
             hidock-cli download --all --output ~/recordings
-            hidock-cli download 20250127REC001.hda --output ~/recordings
+            hidock-cli download --all --output ./recs --sync
+            hidock-cli settings set-auto-record on
+            hidock-cli bt-connect AA:BB:CC:DD:EE:FF
+            hidock-cli firmware-download 1.3.6 --install
+            hidock-cli format --confirm
         """)
     }
     

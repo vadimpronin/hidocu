@@ -15,13 +15,13 @@ Bluetooth connections.
 
 * **File Management**: List, count, and delete recording files.
 * **Smart Download**: Batch download recordings with resume capability.
-* Includes a `--sync` mode to detect changed files and backup local copies before overwriting.
-
-
+  * Includes a `--sync` mode to detect changed files and backup local copies before overwriting.
 * **Device Configuration**: View and toggle device settings (Auto-record, Auto-play, Notifications).
 * **Bluetooth Manager**: Scan, pair, connect, and disconnect Bluetooth devices (P1/P1 Mini).
 * **System Status**: View battery levels, firmware versions, and storage capacity.
 * **Time Sync**: Synchronize device clock with your computer.
+* **Key Simulation**: Send simulated key presses to the device.
+* **BNC Demo**: Control Background Noise Cancellation demo mode.
 
 ## Prerequisites
 
@@ -41,21 +41,18 @@ Bluetooth connections.
 ```bash
 git clone https://github.com/yourusername/hidock-cli.git
 cd hidock-cli
-
 ```
 
 2. Build the project using the Makefile:
 
 ```bash
 make build
-
 ```
 
 3. (Optional) Install to `/usr/local/bin`:
 
 ```bash
 sudo make install
-
 ```
 
 ### Run without Installing
@@ -65,7 +62,6 @@ You can compile and run directly using Swift:
 ```bash
 cd hidock-cli
 swift run hidock-cli info
-
 ```
 
 ## Usage
@@ -74,7 +70,6 @@ The general syntax is:
 
 ```bash
 hidock-cli <command> [subcommand] [flags]
-
 ```
 
 ### Device Information
@@ -90,7 +85,6 @@ hidock-cli battery
 
 # Check SD card usage
 hidock-cli card-info
-
 ```
 
 ### Device Time
@@ -106,7 +100,6 @@ hidock-cli time set
 
 # Set a specific time
 hidock-cli time set "2025-01-27 14:30:00"
-
 ```
 
 ### File Operations
@@ -125,7 +118,6 @@ hidock-cli delete 20250127REC001.wav
 
 # Check current recording status
 hidock-cli recording
-
 ```
 
 ### Downloading Files
@@ -146,7 +138,6 @@ hidock-cli download --all --output ~/Music/HiDock
 # Downloads files only if they differ from local versions.
 # If a local file exists but sizes differ, the local file is renamed to .bak
 hidock-cli download --all --sync --output ~/Music/HiDock
-
 ```
 
 ### Settings Configuration
@@ -168,7 +159,6 @@ hidock-cli settings set-notification off
 
 # Enable/Disable Bluetooth connection tones
 hidock-cli settings set-bt-tone on
-
 ```
 
 ### Bluetooth Management
@@ -191,9 +181,11 @@ hidock-cli bt-connect A1-B2-C3-D4-E5-F6
 # Disconnect current device
 hidock-cli bt-disconnect
 
+# Reconnect to a previously paired device
+hidock-cli bt-reconnect A1-B2-C3-D4-E5-F6
+
 # Clear all paired devices
 hidock-cli bt-clear-paired
-
 ```
 
 ### USB Mass Storage Mode
@@ -202,6 +194,75 @@ hidock-cli bt-clear-paired
 # Switch device to USB Mass Storage mode
 # (Device will disconnect from CLI and mount as a drive)
 hidock-cli mass-storage
-
 ```
 
+### Key Simulation
+
+Send simulated button presses to the device.
+
+```bash
+# Syntax: hidock-cli send-key <mode> <keycode>
+# Mode: 1=single click, 2=long press, 3=double click
+# Key:  3=record, 4=mute, 5=playback
+
+# Single click mute button
+hidock-cli send-key 1 4
+
+# Long press record button
+hidock-cli send-key 2 3
+
+# Double click playback
+hidock-cli send-key 3 5
+```
+
+### BNC Demo Mode
+
+Control Background Noise Cancellation demo mode.
+
+```bash
+# Start BNC demo
+hidock-cli bnc-start
+
+# Stop BNC demo
+hidock-cli bnc-stop
+```
+
+### Advanced Commands
+
+These commands are intended for factory testing and advanced use cases.
+
+```bash
+# Format SD card (requires confirmation)
+hidock-cli format
+
+# Factory reset (full reset, Command 61451)
+hidock-cli factory-reset
+
+# Restore factory settings (soft reset, Command 19)
+hidock-cli restore-factory
+
+# Get/Set USB timeout
+hidock-cli usb-timeout get
+hidock-cli usb-timeout set 5000
+
+# Recording test (factory/MTT mode)
+hidock-cli record-test start 0
+hidock-cli record-test stop 0
+```
+
+### Global Options
+
+```bash
+# Enable verbose output for debugging
+hidock-cli info --verbose
+
+# Show help
+hidock-cli --help
+
+# Show version
+hidock-cli --version
+```
+
+## License
+
+MIT License - See LICENSE file for details.

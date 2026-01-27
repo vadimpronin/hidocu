@@ -1351,4 +1351,473 @@ public class Jensen {
         
         return ("", "", nil)
     }
+    
+    // MARK: - Firmware Update
+    
+    /// Result of a firmware upgrade request
+    public enum FirmwareUpgradeResult: String {
+        case accepted
+        case wrongVersion
+        case busy
+        case cardFull
+        case cardError
+        case unknown
+    }
+    
+    /// Request a firmware upgrade
+    /// - Parameters:
+    ///   - versionNumber: Target firmware version (32-bit encoded)
+    ///   - fileSize: Size of the firmware file in bytes
+    /// - Returns: Result of the request
+    public func requestFirmwareUpgrade(versionNumber: UInt32, fileSize: UInt32) throws -> FirmwareUpgradeResult {
+        guard let device = device, device.isOpen else {
+            throw JensenError.notConnected
+        }
+        
+        var body: [UInt8] = []
+        // Version number (big-endian)
+        body.append(UInt8((versionNumber >> 24) & 0xFF))
+        body.append(UInt8((versionNumber >> 16) & 0xFF))
+        body.append(UInt8((versionNumber >> 8) & 0xFF))
+        body.append(UInt8(versionNumber & 0xFF))
+        // File size (big-endian)
+        body.append(UInt8((fileSize >> 24) & 0xFF))
+        body.append(UInt8((fileSize >> 16) & 0xFF))
+        body.append(UInt8((fileSize >> 8) & 0xFF))
+        body.append(UInt8(fileSize & 0xFF))
+        
+        var command = Command(.requestFirmwareUpgrade, body: body)
+        let response = try send(&command, timeout: 10.0)
+        
+        guard !response.body.isEmpty else {
+            throw JensenError.invalidResponse
+        }
+        
+        switch response.body[0] {
+        case 0x00: return .accepted
+        case 0x01: return .wrongVersion
+        case 0x02: return .busy
+        case 0x03: return .cardFull
+        case 0x04: return .cardError
+        default: return .unknown
+        }
+    }
+    
+    /// Upload firmware data after request is accepted
+    /// - Parameters:
+    ///   - data: Firmware binary data
+    ///   - progressHandler: Optional callback for progress updates
+    public func uploadFirmware(_ data: Data, progressHandler: ((Int, Int) -> Void)? = nil) throws {
+        guard let device = device, device.isOpen else {
+            throw JensenError.notConnected
+        }
+        
+        var body: [UInt8] = []
+        for byte in data {
+            body.append(byte)
+        }
+        
+        var command = Command(.firmwareUpload, body: body)
+        
+        if verbose {
+            print("[Jensen] Uploading firmware: \(data.count) bytes")
+        }
+        
+        // Long timeout for firmware upload
+        let response = try send(&command, timeout: 120.0)
+        
+        if !response.body.isEmpty && response.body[0] != 0 {
+            throw JensenError.commandFailed("Firmware upload failed with code: \(response.body[0])")
+        }
+        
+        progressHandler?(data.count, data.count)
+        
+        if verbose {
+            print("[Jensen] Firmware upload complete")
+        }
+    }
+    
+    // MARK: - BNC Demo Test
+    
+    /// Start BNC (Background Noise Cancellation) demo mode
+    public func beginBNC() throws {
+        guard let device = device, device.isOpen else {
+            throw JensenError.notConnected
+        }
+        
+        var command = Command(.deviceMsgTest, body: [0x01])
+        let response = try send(&command, timeout: 5.0)
+        
+        if !response.body.isEmpty && response.body[0] != 0 {
+            throw JensenError.commandFailed("Begin BNC failed")
+        }
+        
+        if verbose {
+            print("[Jensen] BNC demo started")
+        }
+    }
+    
+    /// End BNC demo mode
+    public func endBNC() throws {
+        guard let device = device, device.isOpen else {
+            throw JensenError.notConnected
+        }
+        
+        var command = Command(.deviceMsgTest, body: [0x00])
+        let response = try send(&command, timeout: 5.0)
+        
+        if !response.body.isEmpty && response.body[0] != 0 {
+            throw JensenError.commandFailed("End BNC failed")
+        }
+        
+        if verbose {
+            print("[Jensen] BNC demo ended")
+        }
+    }
+    
+    // MARK: - Schedule Info
+    
+    /// Meeting schedule info for auto-recording
+    public struct ScheduleInfo {
+        public let startDate: Date
+        public let endDate: Date
+        public let os: String        // "macos", "windows"
+        public let platform: String  // "zoom", "teams", "meet", etc.
+        
+        public init(startDate: Date, endDate: Date, os: String, platform: String) {
+            self.startDate = startDate
+            self.endDate = endDate
+            self.os = os
+            self.platform = platform
+        }
+    }
+    
+    /// Send meeting schedule information to the device
+    /// - Parameter schedules: Array of schedule entries
+    public func sendScheduleInfo(_ schedules: [ScheduleInfo]) throws {
+        guard let device = device, device.isOpen else {
+            throw JensenError.notConnected
+        }
+        
+        var body: [UInt8] = []
+        
+        if schedules.isEmpty {
+            // Empty schedule: 52 bytes of zeros
+            body = [UInt8](repeating: 0, count: 52)
+        } else {
+            for schedule in schedules {
+                // Format dates as 8-byte arrays (YYYYMMDDHHMMSS00)
+                let startBytes = formatScheduleDate(schedule.startDate)
+                let endBytes = formatScheduleDate(schedule.endDate)
+                
+                body.append(contentsOf: startBytes)
+                body.append(contentsOf: endBytes)
+                
+                // Reserved 2 bytes
+                body.append(0x00)
+                body.append(0x00)
+                
+                // Shortcut keys (34 bytes placeholder - would need platform-specific key codes)
+                body.append(contentsOf: [UInt8](repeating: 0, count: 34))
+            }
+        }
+        
+        var command = Command(.scheduleInfo, body: body)
+        let response = try send(&command, timeout: 5.0)
+        
+        if !response.body.isEmpty && response.body[0] != 0 {
+            throw JensenError.commandFailed("Send schedule info failed")
+        }
+        
+        if verbose {
+            print("[Jensen] Schedule info sent: \(schedules.count) entries")
+        }
+    }
+    
+    private func formatScheduleDate(_ date: Date) -> [UInt8] {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMddHHmmss"
+        let dateString = formatter.string(from: date)
+        
+        var bytes: [UInt8] = []
+        for i in stride(from: 0, to: min(dateString.count, 14), by: 2) {
+            let start = dateString.index(dateString.startIndex, offsetBy: i)
+            let end = dateString.index(start, offsetBy: 2)
+            if let value = UInt8(String(dateString[start..<end])) {
+                bytes.append(value)
+            }
+        }
+        bytes.append(0x00) // Null terminator
+        
+        // Pad to 8 bytes
+        while bytes.count < 8 {
+            bytes.append(0x00)
+        }
+        
+        return bytes
+    }
+    
+    // MARK: - Recording Test (MTT/Factory)
+    
+    /// Start a recording test (factory/MTT mode)
+    /// - Parameter type: Test type (device-specific)
+    public func recordTestStart(type: UInt8) throws {
+        guard let device = device, device.isOpen else {
+            throw JensenError.notConnected
+        }
+        
+        var command = Command(.recordTestStart, body: [type])
+        let response = try send(&command, timeout: 5.0)
+        
+        if !response.body.isEmpty && response.body[0] != 0 {
+            throw JensenError.commandFailed("Record test start failed")
+        }
+        
+        if verbose {
+            print("[Jensen] Recording test started (type: \(type))")
+        }
+    }
+    
+    /// End a recording test
+    /// - Parameter type: Test type (must match start)
+    public func recordTestEnd(type: UInt8) throws {
+        guard let device = device, device.isOpen else {
+            throw JensenError.notConnected
+        }
+        
+        var command = Command(.recordTestEnd, body: [type])
+        let response = try send(&command, timeout: 5.0)
+        
+        if !response.body.isEmpty && response.body[0] != 0 {
+            throw JensenError.commandFailed("Record test end failed")
+        }
+        
+        if verbose {
+            print("[Jensen] Recording test ended (type: \(type))")
+        }
+    }
+    
+    // MARK: - Write Serial Number (Factory)
+    
+    /// Write a serial number to the device (factory command)
+    /// - Parameter sn: Serial number string (max 16 characters)
+    public func writeSerialNumber(_ sn: String) throws {
+        guard let device = device, device.isOpen else {
+            throw JensenError.notConnected
+        }
+        
+        var body: [UInt8] = []
+        for char in sn.utf8 {
+            body.append(char)
+        }
+        
+        var command = Command(.testSnWrite, body: body)
+        let response = try send(&command, timeout: 5.0)
+        
+        if !response.body.isEmpty && response.body[0] != 0 {
+            throw JensenError.commandFailed("Write serial number failed")
+        }
+        
+        if verbose {
+            print("[Jensen] Serial number written: \(sn)")
+        }
+    }
+    
+    // MARK: - Tone Update
+    
+    /// Result of a tone update request
+    public enum ToneUpdateResult: String {
+        case success
+        case lengthMismatch
+        case busy
+        case cardFull
+        case cardError
+        case unknown
+    }
+    
+    /// Request a tone update
+    /// - Parameters:
+    ///   - signature: MD5 signature of the tone file (32 hex characters)
+    ///   - size: Size of the tone file in bytes
+    /// - Returns: Result of the request
+    public func requestToneUpdate(signature: String, size: UInt32) throws -> ToneUpdateResult {
+        guard let device = device, device.isOpen else {
+            throw JensenError.notConnected
+        }
+        
+        var body: [UInt8] = []
+        
+        // Parse signature hex string (32 chars = 16 bytes)
+        for i in stride(from: 0, to: min(signature.count, 32), by: 2) {
+            let start = signature.index(signature.startIndex, offsetBy: i)
+            let end = signature.index(start, offsetBy: 2)
+            if let byte = UInt8(String(signature[start..<end]), radix: 16) {
+                body.append(byte)
+            }
+        }
+        
+        // Size (big-endian)
+        body.append(UInt8((size >> 24) & 0xFF))
+        body.append(UInt8((size >> 16) & 0xFF))
+        body.append(UInt8((size >> 8) & 0xFF))
+        body.append(UInt8(size & 0xFF))
+        
+        var command = Command(.requestToneUpdate, body: body)
+        let response = try send(&command, timeout: 10.0)
+        
+        guard !response.body.isEmpty else {
+            throw JensenError.invalidResponse
+        }
+        
+        switch response.body[0] {
+        case 0x00: return .success
+        case 0x01: return .lengthMismatch
+        case 0x02: return .busy
+        case 0x03: return .cardFull
+        case 0x04: return .cardError
+        default: return .unknown
+        }
+    }
+    
+    /// Upload tone data after request is accepted
+    /// - Parameter data: Tone binary data
+    public func updateTone(_ data: Data) throws {
+        guard let device = device, device.isOpen else {
+            throw JensenError.notConnected
+        }
+        
+        var body: [UInt8] = []
+        for byte in data {
+            body.append(byte)
+        }
+        
+        var command = Command(.toneUpdate, body: body)
+        let response = try send(&command, timeout: 60.0)
+        
+        if !response.body.isEmpty && response.body[0] != 0 {
+            throw JensenError.commandFailed("Tone update failed")
+        }
+        
+        if verbose {
+            print("[Jensen] Tone update complete")
+        }
+    }
+    
+    // MARK: - UAC Update
+    
+    /// Result of a UAC update request (same as tone update)
+    public typealias UACUpdateResult = ToneUpdateResult
+    
+    /// Request a UAC (USB Audio Class) firmware update
+    /// - Parameters:
+    ///   - signature: MD5 signature of the UAC file (32 hex characters)
+    ///   - size: Size of the UAC file in bytes
+    /// - Returns: Result of the request
+    public func requestUACUpdate(signature: String, size: UInt32) throws -> UACUpdateResult {
+        guard let device = device, device.isOpen else {
+            throw JensenError.notConnected
+        }
+        
+        var body: [UInt8] = []
+        
+        // Parse signature hex string (32 chars = 16 bytes)
+        for i in stride(from: 0, to: min(signature.count, 32), by: 2) {
+            let start = signature.index(signature.startIndex, offsetBy: i)
+            let end = signature.index(start, offsetBy: 2)
+            if let byte = UInt8(String(signature[start..<end]), radix: 16) {
+                body.append(byte)
+            }
+        }
+        
+        // Size (big-endian)
+        body.append(UInt8((size >> 24) & 0xFF))
+        body.append(UInt8((size >> 16) & 0xFF))
+        body.append(UInt8((size >> 8) & 0xFF))
+        body.append(UInt8(size & 0xFF))
+        
+        var command = Command(.requestUACUpdate, body: body)
+        let response = try send(&command, timeout: 10.0)
+        
+        guard !response.body.isEmpty else {
+            throw JensenError.invalidResponse
+        }
+        
+        switch response.body[0] {
+        case 0x00: return .success
+        case 0x01: return .lengthMismatch
+        case 0x02: return .busy
+        case 0x03: return .cardFull
+        case 0x04: return .cardError
+        default: return .unknown
+        }
+    }
+    
+    /// Upload UAC firmware data after request is accepted
+    /// - Parameter data: UAC binary data
+    public func updateUAC(_ data: Data) throws {
+        guard let device = device, device.isOpen else {
+            throw JensenError.notConnected
+        }
+        
+        var body: [UInt8] = []
+        for byte in data {
+            body.append(byte)
+        }
+        
+        var command = Command(.uacUpdate, body: body)
+        let response = try send(&command, timeout: 60.0)
+        
+        if !response.body.isEmpty && response.body[0] != 0 {
+            throw JensenError.commandFailed("UAC update failed")
+        }
+        
+        if verbose {
+            print("[Jensen] UAC update complete")
+        }
+    }
+    
+    // MARK: - Send Key Code
+    
+    /// Key press mode
+    public enum KeyMode: UInt8 {
+        case singleClick = 0x01
+        case longPress = 0x02
+        case doubleClick = 0x03
+    }
+    
+    /// Device key codes
+    public enum KeyCode: UInt8 {
+        case record = 0x03
+        case mute = 0x04
+        case playback = 0x05
+    }
+    
+    /// Send a simulated key press to the device
+    /// - Parameters:
+    ///   - mode: How the key was pressed (single, long, double)
+    ///   - keyCode: Which key was pressed
+    public func sendKeyCode(mode: KeyMode, keyCode: KeyCode) throws {
+        try sendKeyCode(mode: mode.rawValue, keyCode: keyCode.rawValue)
+    }
+    
+    /// Send a simulated key press to the device (raw values)
+    /// - Parameters:
+    ///   - mode: Key press mode (1=single, 2=long, 3=double)
+    ///   - keyCode: Key code (3=record, 4=mute, 5=playback)
+    public func sendKeyCode(mode: UInt8, keyCode: UInt8) throws {
+        guard let device = device, device.isOpen else {
+            throw JensenError.notConnected
+        }
+        
+        var command = Command(.sendKeyCode, body: [mode, keyCode])
+        let response = try send(&command, timeout: 5.0)
+        
+        if !response.body.isEmpty && response.body[0] != 0 {
+            throw JensenError.commandFailed("Send key code failed")
+        }
+        
+        if verbose {
+            print("[Jensen] Key code sent: mode=\(mode), key=\(keyCode)")
+        }
+    }
 }

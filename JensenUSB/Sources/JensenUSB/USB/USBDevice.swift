@@ -28,10 +28,16 @@ let kIOUSBInterfaceInterfaceUUID = CFUUIDGetConstantUUIDWithBytes(nil,
     0x73, 0xc9, 0x7a, 0xe8, 0x9e, 0xf3, 0x11, 0xD4,
     0xb1, 0xd0, 0x00, 0x0a, 0x27, 0x05, 0x28, 0x61)
 
+// MARK: - IOKit Error Constants
+
+// kIOReturnExclusiveAccess - another process has exclusive access to the device
+private let kIOReturnExclusiveAccess: Int32 = Int32(bitPattern: 0xe00002c5)
+
 // MARK: - USB Error Types
 
 public enum USBError: Error, LocalizedError {
     case deviceNotFound
+    case deviceInUse
     case connectionFailed(String)
     case transferFailed(String)
     case deviceNotOpen
@@ -42,6 +48,8 @@ public enum USBError: Error, LocalizedError {
         switch self {
         case .deviceNotFound:
             return "No HiDock device found"
+        case .deviceInUse:
+            return "Device is in use by another application"
         case .connectionFailed(let msg):
             return "Connection failed: \(msg)"
         case .transferFailed(let msg):
@@ -188,6 +196,9 @@ public class USBDevice {
         }
         
         let result = device.USBDeviceOpen(deviceInterface)
+        if result == kIOReturnExclusiveAccess {
+            throw USBError.deviceInUse
+        }
         guard result == kIOReturnSuccess else {
             throw USBError.connectionFailed("USBDeviceOpen failed: \(result)")
         }
