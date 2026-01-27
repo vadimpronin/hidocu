@@ -506,7 +506,7 @@ public class Jensen {
     }
     
     public func enterMassStorage() throws {
-        var command = Command(.enterMassStorage)
+        var command = Command(.enterMassStorage, body: [1])
         
         // This command causes the device to disconnect/reboot into mass storage mode.
         // It may not send a response, or the response might be interrupted.
