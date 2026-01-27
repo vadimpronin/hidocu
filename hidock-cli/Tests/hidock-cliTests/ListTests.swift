@@ -34,7 +34,6 @@ class ListTests: XCTestCase {
     
     func testListCommandPrintsFiles() throws {
         // 1. Connection (getDeviceInfo)
-        // Use high version to skip count check for simplicity
         mockTransport.addResponse(TestHelpers.makeResponse(for: .queryDeviceInfo, sequence: 1, body: TestHelpers.makeDeviceInfoBody(verNum: 0x10000000)))
         
         // 2. List Files (queryFileList)
@@ -57,11 +56,9 @@ class ListTests: XCTestCase {
         
         mockTransport.addResponse(TestHelpers.makeResponse(for: .queryFileList, sequence: 2, body: Array(fileListBody)))
         
-        // Execute
         let list = try List.parse(["--verbose"])
         try list.run()
         
-        // Verification
         XCTAssertEqual(mockTransport.sentCommands.count, 2)
         XCTAssertEqual(Array(mockTransport.sentCommands[1][2...3]), [0x00, 0x04])
     }

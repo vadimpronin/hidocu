@@ -244,7 +244,6 @@ struct FirmwareUpdate: ParsableCommand {
         
         let data = try Data(contentsOf: url)
         let filename = url.lastPathComponent
-        // Simple parser
         let version = FirmwareUpdate.parseVersionFromFilename(filename)
         
         if let v = version {

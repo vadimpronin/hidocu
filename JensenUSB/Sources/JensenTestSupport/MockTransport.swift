@@ -65,11 +65,7 @@ public class MockTransport: JensenTransport {
     // MARK: - Helper Methods
     
     public func addResponse(_ message: Message) {
-        // Encode message back to data
-        // For testing purposes we'll use ProtocolEncoder logic manually or 
-        // we can just use the provided Data directly if we want raw control
-        // Since Message struct stores body but doesn't have "encode" method,
-        // we construct the frame here.
+        // Encode message into protocol frame for tests
         
         var packet = Data()
         packet.append(0x12)
@@ -108,8 +104,6 @@ public class MockTransport: JensenTransport {
     
     public func getLastSentCommand() -> Command? {
         guard let data = sentCommands.last else { return nil }
-        // We can't easily decode back to Command struct without parsing logic
-        // But we can inspect the bytes in tests
         return nil
     }
     

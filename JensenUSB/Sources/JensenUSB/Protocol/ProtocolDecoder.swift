@@ -75,14 +75,7 @@ struct ProtocolDecoder {
                     break
                 }
             } catch {
-                // If we hit an error (e.g. malformed header), we might need to resync
-                // For now, we'll just stop parsing. In a real stream we might search for next header.
-                // But given this is USB packet based, errors likely mean corrupt transfer.
-                // Simple recovery: skip 1 byte and try again? 
-                // For now, let's assume if header is bad at expected position, we stop content here.
-                // Or maybe we should skip until we find 0x12 0x34?
-                
-                // Resync logic: search for next 0x12 0x34
+                // Resync: search for next 0x12 0x34
                 if let nextHeader = findNextHeader(data, start: offset + 1) {
                     offset = nextHeader
                     continue

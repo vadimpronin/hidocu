@@ -15,7 +15,6 @@ struct CardInfo: ParsableCommand {
         
         let info = try jensen.getCardInfo()
         
-        // Assuming Formatters is in Utils/Formatters.swift and part of the target
         let capacity = Formatters.formatSize(info.capacity)
         let used = Formatters.formatSize(info.used)
         let free = info.capacity > info.used ? Formatters.formatSize(info.capacity - info.used) : "0 B"

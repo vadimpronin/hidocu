@@ -9,8 +9,6 @@ public class TestHelpers {
     
     /// Create a complete packet (header + body) for testing decoder
     public static func makePacket(commandID: UInt16, sequence: UInt32, body: [UInt8]) -> Data {
-        // We can reuse our ProtocolEncoder logic here manually or use it directly if accessible
-        // Since ProtocolEncoder takes a Command, let's just build it manually to ensure independence
         var packet = Data()
         packet.append(0x12)
         packet.append(0x34)

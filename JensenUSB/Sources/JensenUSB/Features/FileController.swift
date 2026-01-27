@@ -44,11 +44,7 @@ public class FileController {
         while Date() < deadline {
             do {
                 let chunk = try core.transport.receive(timeout: 5.0)
-                allData.append(chunk) // Append raw data, we will parse it later or incrementally
-                
-                // Optional: We could try to parse incrementally here to return early
-                // But parseFileList logic is designed to parse the whole blob.
-                // Let's stick to original behavior: append and try parse.
+                allData.append(chunk)
                 
                 if let files = parseFileList(allData, expectedCount: expectedCount) {
                     return files
@@ -104,11 +100,6 @@ public class FileController {
                 }
                 
                 if fileData.count >= expectedSize {
-                    // Protocol might send padding/extra bytes in correct packets, 
-                    // ProtocolDecoder handles bodies correctly. 
-                    // So fileData should be clean.
-                    // But if we got more than expected, we truncate? 
-                    // Usually we just return what we got if it matches protocol.
                     return fileData
                 }
                 
@@ -140,9 +131,6 @@ public class FileController {
         for message in messages {
             bodyData.append(message.body)
         }
-        
-        // ProtocolDecoder handles skipping invalid headers/resync logic better than previous manual loop.
-        // It consumes all complete messages.
         
         if bodyData.isEmpty {
             return messages.isEmpty ? nil : []

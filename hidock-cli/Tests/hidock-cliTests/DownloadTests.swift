@@ -50,11 +50,9 @@ class DownloadTests: XCTestCase {
         let fileContent = "Hello World!".data(using: .utf8)!
         mockTransport.addResponse(TestHelpers.makeResponse(for: .transferFile, sequence: 3, body: Array(fileContent)))
         
-        // Run
         let cmd = try Download.parse([ "test.wav", "--output", tempDir.path ])
         try cmd.run()
         
-        // Verify
         let outputFile = tempDir.appendingPathComponent("test.wav")
         XCTAssertTrue(FileManager.default.fileExists(atPath: outputFile.path))
         let content = try Data(contentsOf: outputFile)
@@ -82,11 +80,9 @@ class DownloadTests: XCTestCase {
         // 4. Download f2
         mockTransport.addResponse(TestHelpers.makeResponse(for: .transferFile, sequence: 4, body: Array("World".data(using: .utf8)!)))
         
-        // Run
         let cmd = try Download.parse([ "--all", "--output", tempDir.path ])
         try cmd.run()
         
-        // Verify
         XCTAssertTrue(FileManager.default.fileExists(atPath: tempDir.appendingPathComponent("f1.wav").path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: tempDir.appendingPathComponent("f2.wav").path))
         XCTAssertEqual(mockTransport.sentCommands.count, 4)
