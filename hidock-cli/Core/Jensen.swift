@@ -51,8 +51,8 @@ struct DeviceSettings {
 }
 
 struct CardInfo {
-    let used: UInt32
-    let capacity: UInt32
+    let used: UInt64
+    let capacity: UInt64
     let status: String
 }
 
@@ -77,6 +77,7 @@ struct FileEntry {
     let length: UInt32
     let mode: String
     let signature: String
+    let date: Date?
 }
 
 // MARK: - Jensen
@@ -384,6 +385,8 @@ class Jensen {
         }
     }
     
+
+    
     func getCardInfo() throws -> CardInfo {
         // Check version requirement
         if let version = versionNumber, (model == .h1 || model == .h1e) && version < 0x00050025 {
@@ -398,16 +401,17 @@ class Jensen {
         }
         
         var offset = 0
-        let used = UInt32(response.body[offset]) << 24 |
-                  UInt32(response.body[offset + 1]) << 16 |
-                  UInt32(response.body[offset + 2]) << 8 |
-                  UInt32(response.body[offset + 3])
+        // Value is in MB, convert to Bytes
+        let freeMB = UInt64(response.body[offset]) << 24 |
+                     UInt64(response.body[offset + 1]) << 16 |
+                     UInt64(response.body[offset + 2]) << 8 |
+                     UInt64(response.body[offset + 3])
         offset += 4
         
-        let capacity = UInt32(response.body[offset]) << 24 |
-                      UInt32(response.body[offset + 1]) << 16 |
-                      UInt32(response.body[offset + 2]) << 8 |
-                      UInt32(response.body[offset + 3])
+        let capacityMB = UInt64(response.body[offset]) << 24 |
+                         UInt64(response.body[offset + 1]) << 16 |
+                         UInt64(response.body[offset + 2]) << 8 |
+                         UInt64(response.body[offset + 3])
         offset += 4
         
         let statusNum = UInt32(response.body[offset]) << 24 |
@@ -415,11 +419,29 @@ class Jensen {
                        UInt32(response.body[offset + 2]) << 8 |
                        UInt32(response.body[offset + 3])
         
+        // Calculate used space (Capacity - Free)
+        let usedMB = capacityMB > freeMB ? capacityMB - freeMB : 0
+        
         return CardInfo(
-            used: used,
-            capacity: capacity,
+            used: usedMB * 1024 * 1024,
+            capacity: capacityMB * 1024 * 1024,
             status: String(format: "0x%08X", statusNum)
         )
+    }
+    
+    func deleteFile(name: String) throws {
+        // Build command body: filename as ASCII bytes
+        var filenameBytes: [UInt8] = []
+        for char in name.utf8 {
+            filenameBytes.append(char)
+        }
+        
+        var command = Command(.deleteFile, body: filenameBytes)
+        _ = try send(&command, timeout: 5.0)
+        
+        if verbose {
+            print("[Jensen] Deleted file: \(name)")
+        }
     }
     
     func getBatteryStatus() throws -> BatteryStatus {
@@ -453,6 +475,21 @@ class Jensen {
         return BatteryStatus(status: status, percentage: percentage, voltage: voltage)
     }
     
+    func enterMassStorage() throws {
+        var command = Command(.enterMassStorage)
+        
+        // This command causes the device to disconnect/reboot into mass storage mode.
+        // It may not send a response, or the response might be interrupted.
+        do {
+            _ = try send(&command, timeout: 2.0)
+        } catch {
+            // Log but don't fail if it's a timeout/disconnection, as that's expected
+            if verbose {
+                print("[Jensen] Mass storage switch initiated (error ignored: \(error))")
+            }
+        }
+    }
+    
     func getRecordingFile() throws -> RecordingFile? {
         // Check version requirement
         if let version = versionNumber, (model == .h1 || model == .h1e) && version < 0x00050025 {
@@ -479,7 +516,7 @@ class Jensen {
         }
         
         // Parse date/time from filename
-        let (date, time) = parseFileName(name)
+        let (date, time, _) = parseFileName(name)
         
         return RecordingFile(name: name, createDate: date, createTime: time)
     }
@@ -984,7 +1021,7 @@ class Jensen {
             fileOffset += 16
             
             // Parse date/time from filename
-            let (dateStr, timeStr) = parseFileName(name)
+            let (dateStr, timeStr, dateObj) = parseFileName(name)
             
             // Calculate duration based on version (result in milliseconds converted to seconds)
             var duration: TimeInterval = 0
@@ -1020,7 +1057,8 @@ class Jensen {
                     version: version,
                     length: fileSize,
                     mode: mode,
-                    signature: sigParts.joined()
+                    signature: sigParts.joined(),
+                    date: dateObj
                 ))
             }
         }
@@ -1040,15 +1078,21 @@ class Jensen {
         return files.isEmpty ? nil : files
     }
     
-    private func parseFileName(_ name: String) -> (date: String, time: String) {
+    private func parseFileName(_ name: String) -> (date: String, time: String, dateObj: Date?) {
         // Pattern 1: YYYYMMDDHHMMSSREC###.wav
         if let match = name.range(of: #"^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})REC"#, options: .regularExpression) {
             let matched = String(name[match])
             if matched.count >= 14 {
                 let chars = Array(matched)
-                let date = "\(chars[0...3].map{String($0)}.joined())/\(chars[4...5].map{String($0)}.joined())/\(chars[6...7].map{String($0)}.joined())"
-                let time = "\(chars[8...9].map{String($0)}.joined()):\(chars[10...11].map{String($0)}.joined()):\(chars[12...13].map{String($0)}.joined())"
-                return (date, time)
+                let dateStr = "\(chars[0...3].map{String($0)}.joined())/\(chars[4...5].map{String($0)}.joined())/\(chars[6...7].map{String($0)}.joined())"
+                let timeStr = "\(chars[8...9].map{String($0)}.joined()):\(chars[10...11].map{String($0)}.joined()):\(chars[12...13].map{String($0)}.joined())"
+                
+                let rawDate = "\(chars[0...13].map{String($0)}.joined())"
+                let formatter = DateFormatter()
+                formatter.dateFormat = "yyyyMMddHHmmss"
+                let dateObj = formatter.date(from: rawDate)
+                
+                return (dateStr, timeStr, dateObj)
             }
         }
         
@@ -1062,27 +1106,37 @@ class Jensen {
                 let timePart = components[1]  // "143530"
                 
                 var dateFormatted = datePart
-                // Format date nicely: 2025Oct09 -> 2025-Oct-09
+                var dateObj: Date? = nil
+                
+                let formatter = DateFormatter()
+                formatter.locale = Locale(identifier: "en_US_POSIX")
+                
                 if datePart.count == 9 { // YYYYMMMDD
                     let y = datePart.prefix(4)
                     let m = datePart.dropFirst(4).prefix(3)
                     let d = datePart.suffix(2)
                     dateFormatted = "\(y)-\(m)-\(d)"
+                    
+                    formatter.dateFormat = "yyyyMMMdd-HHmmss"
+                    dateObj = formatter.date(from: "\(datePart)-\(timePart)")
                 } else if datePart.count == 7 { // YYMMMDD
                     let y = "20" + datePart.prefix(2)
                     let m = datePart.dropFirst(2).prefix(3)
                     let d = datePart.suffix(2)
                     dateFormatted = "\(y)-\(m)-\(d)"
+                    
+                    formatter.dateFormat = "yyMMMdd-HHmmss"
+                    dateObj = formatter.date(from: "\(datePart)-\(timePart)")
                 }
                 
                 if timePart.count >= 6 {
                     let tChars = Array(timePart)
                     let time = "\(tChars[0...1].map{String($0)}.joined()):\(tChars[2...3].map{String($0)}.joined()):\(tChars[4...5].map{String($0)}.joined())"
-                    return (dateFormatted, time)
+                    return (dateFormatted, time, dateObj)
                 }
             }
         }
         
-        return ("", "")
+        return ("", "", nil)
     }
 }

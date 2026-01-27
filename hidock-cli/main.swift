@@ -63,14 +63,11 @@ enum HiDockCLI {
                 } else if subcommand == "set-bt-tone" {
                     let value = args.dropFirst(2).first { !$0.starts(with: "-") }
                     try runSettingsSet(jensen, setting: "bt-tone", value: value)
+                } else if subcommand == "--help" || subcommand == "-h" || subcommand == "help" {
+                    printSettingsUsage()
                 } else {
                     printError("Unknown settings subcommand: \(subcommand)")
-                    print("Usage:")
-                    print("  hidock-cli settings get")
-                    print("  hidock-cli settings set-auto-record <on|off>")
-                    print("  hidock-cli settings set-auto-play <on|off>")
-                    print("  hidock-cli settings set-notification <on|off>")
-                    print("  hidock-cli settings set-bt-tone <on|off>")
+                    printSettingsUsage()
                 }
                 
             case "card-info":
@@ -87,12 +84,24 @@ enum HiDockCLI {
                 
             case "bt-paired":
                 try runBluetoothPaired(jensen)
+
+            case "mass-storage":
+                try runMassStorage(jensen)
+
+            case "delete":
+                guard let filename = args.dropFirst().first, !filename.starts(with: "-") else {
+                    printError("Missing filename. Usage: hidock-cli delete <filename>")
+                    return
+                }
+                try runDelete(jensen, filename: filename)
                 
             case "download":
                 let filename = args.dropFirst().first { !$0.starts(with: "-") }
-                let outputDir = getArgValue(args, for: "--output") ?? "."
+                let rawOutputDir = getArgValue(args, for: "--output") ?? "."
+                let outputDir = (rawOutputDir as NSString).expandingTildeInPath
                 let downloadAll = args.contains("--all")
-                try runDownload(jensen, filename: filename, downloadAll: downloadAll, outputDir: outputDir)
+                let sync = args.contains("--sync")
+                try runDownload(jensen, filename: filename, downloadAll: downloadAll, outputDir: outputDir, sync: sync)
                 
             case "--help", "-h", "help":
                 printUsage()
@@ -188,19 +197,20 @@ enum HiDockCLI {
         
         // Print header
         print("")
-        print("\("Name".padding(toLength: 35, withPad: " ", startingAt: 0)) \("Date".padding(toLength: 12, withPad: " ", startingAt: 0)) \("Time".padding(toLength: 10, withPad: " ", startingAt: 0)) \("Duration".padding(toLength: 10, withPad: " ", startingAt: 0)) \("Mode".padding(toLength: 8, withPad: " ", startingAt: 0)) Size")
-        print(String(repeating: "-", count: 90))
+        print("\("Name".padding(toLength: 35, withPad: " ", startingAt: 0)) \("Date".padding(toLength: 12, withPad: " ", startingAt: 0)) \("Time".padding(toLength: 10, withPad: " ", startingAt: 0)) \("Duration".padding(toLength: 10, withPad: " ", startingAt: 0)) \("Mode".padding(toLength: 8, withPad: " ", startingAt: 0)) \("Ver".padding(toLength: 4, withPad: " ", startingAt: 0)) Size         Signature")
+        print(String(repeating: "-", count: 120))
         
         for file in files {
             let durationStr = formatDuration(file.duration)
-            let sizeStr = formatSize(file.length)
+            let sizeStr = formatSize(UInt64(file.length)).padding(toLength: 12, withPad: " ", startingAt: 0)
             let nameStr = String(file.name.prefix(35)).padding(toLength: 35, withPad: " ", startingAt: 0)
             let dateStr = file.createDate.padding(toLength: 12, withPad: " ", startingAt: 0)
             let timeStr = file.createTime.padding(toLength: 10, withPad: " ", startingAt: 0)
             let durStr = durationStr.padding(toLength: 10, withPad: " ", startingAt: 0)
             let modeStr = file.mode.padding(toLength: 8, withPad: " ", startingAt: 0)
+            let verStr = String(file.version).padding(toLength: 4, withPad: " ", startingAt: 0)
             
-            print("\(nameStr) \(dateStr) \(timeStr) \(durStr) \(modeStr) \(sizeStr)")
+            print("\(nameStr) \(dateStr) \(timeStr) \(durStr) \(modeStr) \(verStr) \(sizeStr) \(file.signature)")
         }
         
         print("")
@@ -328,6 +338,15 @@ enum HiDockCLI {
         }
     }
     
+    static func runMassStorage(_ jensen: Jensen) throws {
+        // Get device info first
+        _ = try jensen.getDeviceInfo()
+        
+        try jensen.enterMassStorage()
+        print("Device switching to mass storage mode.")
+        print("It will disconnect and reappear as a disk drive.")
+    }
+    
     static func runBluetoothPaired(_ jensen: Jensen) throws {
         // Get device info first
         _ = try jensen.getDeviceInfo()
@@ -361,7 +380,7 @@ enum HiDockCLI {
         return String(format: "%02d:%02d:%02d", hours, minutes, secs)
     }
     
-    static func formatSize(_ bytes: UInt32) -> String {
+    static func formatSize(_ bytes: UInt64) -> String {
         let kb = Double(bytes) / 1024
         let mb = kb / 1024
         let gb = mb / 1024
@@ -389,7 +408,7 @@ enum HiDockCLI {
     
     // MARK: - Download Command
     
-    static func runDownload(_ jensen: Jensen, filename: String?, downloadAll: Bool, outputDir: String) throws {
+    static func runDownload(_ jensen: Jensen, filename: String?, downloadAll: Bool, outputDir: String, sync: Bool) throws {
         // Get device info first for version checking
         _ = try jensen.getDeviceInfo()
         
@@ -406,10 +425,12 @@ enum HiDockCLI {
         if downloadAll {
             print("Downloading all \(files.count) files to '\(outputDir)'...")
             for (index, file) in files.enumerated() {
-                print("\n[File \(index + 1)/\(files.count)] Downloading: \(file.name)")
-                try downloadSingleFile(jensen, file: file, outputDir: outputDir)
+                print("\n[File \(index + 1)/\(files.count)] Processing: \(file.name)")
+                if checkAndPrepareDownload(file: file, outputDir: outputDir, sync: sync) {
+                    try downloadSingleFile(jensen, file: file, outputDir: outputDir)
+                }
             }
-            print("\nAll files downloaded successfully.")
+            print("\nAll files processed.")
             return
         }
         
@@ -417,11 +438,11 @@ enum HiDockCLI {
         guard let targetFilename = filename else {
             print("\nAvailable files:")
             for (index, file) in files.enumerated() {
-                print("  [\(index + 1)] \(file.name) (\(formatSize(file.length)))")
+                print("  [\(index + 1)] \(file.name) (\(formatSize(UInt64(file.length))))")
             }
             print("\nUsage:")
-            print("  hidock-cli download <filename> [--output <dir>]")
-            print("  hidock-cli download --all [--output <dir>]")
+            print("  hidock-cli download <filename> [--output <dir>] [--sync]")
+            print("  hidock-cli download --all [--output <dir>] [--sync]")
             return
         }
         
@@ -438,13 +459,71 @@ enum HiDockCLI {
             return
         }
         
-        print("Downloading: \(file.name)")
-        try downloadSingleFile(jensen, file: file, outputDir: outputDir)
+        if checkAndPrepareDownload(file: file, outputDir: outputDir, sync: sync) {
+            print("Downloading: \(file.name)")
+            try downloadSingleFile(jensen, file: file, outputDir: outputDir)
+        }
+    }
+    
+    // Helper to check file existence and handle sync/backup logic
+    // Returns true if download should proceed
+    static func checkAndPrepareDownload(file: FileEntry, outputDir: String, sync: Bool) -> Bool {
+        let fileManager = FileManager.default
+        let outputPath = (outputDir as NSString).appendingPathComponent(file.name)
+        
+        // If file doesn't exist, always download
+        if !fileManager.fileExists(atPath: outputPath) {
+            return true
+        }
+        
+        // If sync is not enabled, overwrite (default behavior) logic handled by caller (downloadSingleFile overwrites)
+        // But if we want to mimic "ask to overwrite" generally we might check here, but CLI usually overwrites.
+        // Requirement says: "--sync ... only download the missing files"
+        
+        if !sync {
+            // If not syncing, we just proceed to download (will overwrite)
+            // Or maybe we should warn? But standard behavior implies force.
+            // Let's assume standard behavior remains 'download and overwrite' if sync is NOT passed.
+            return true
+        }
+        
+        // Sync is enabled, check size
+        do {
+            let attributes = try fileManager.attributesOfItem(atPath: outputPath)
+            let fileSize = attributes[.size] as? UInt64 ?? 0
+            
+            if fileSize == UInt64(file.length) {
+                print("File exists and size matches (\(formatSize(UInt64(file.length)))). Skipping.")
+                return false
+            }
+            
+            // Size mismatch - backup and redownload
+            print("File exists but size mismatch (Local: \(formatSize(UInt64(fileSize))), Remote: \(formatSize(UInt64(file.length)))).")
+            
+            // Find a free backup name
+            var backupPath = outputPath + ".bak"
+            var counter = 1
+            while fileManager.fileExists(atPath: backupPath) {
+                backupPath = outputPath + ".bak\(counter)"
+                counter += 1
+            }
+            
+            print("Renaming local file to: \( (backupPath as NSString).lastPathComponent )")
+            try fileManager.moveItem(atPath: outputPath, toPath: backupPath)
+            
+            return true
+            
+        } catch {
+            printError("Error checking local file: \(error)")
+            // If error checking, safe to try download? Or fail? 
+            // Better to try download.
+            return true
+        }
     }
     
     // Helper for downloading a single file
     static func downloadSingleFile(_ jensen: Jensen, file: FileEntry, outputDir: String) throws {
-        print("Size: \(formatSize(file.length))")
+        print("Size: \(formatSize(UInt64(file.length)))")
         
         // Download the file with progress
         let startTime = Date()
@@ -457,7 +536,7 @@ enum HiDockCLI {
             let progress = Int(Double(received) / Double(total) * 100)
             if progress != lastPrintedProgress && (progress % 10 == 0 || progress == 100) {
                 let bar = String(repeating: "=", count: progress / 5) + String(repeating: " ", count: 20 - progress / 5)
-                print("\r[\(bar)] \(progress)% (\(formatSize(UInt32(received))))", terminator: "")
+                print("\r[\(bar)] \(progress)% (\(formatSize(UInt64(received))))", terminator: "")
                 fflush(stdout)
                 lastPrintedProgress = progress
             }
@@ -477,11 +556,35 @@ enum HiDockCLI {
         
         try fileData.write(to: URL(fileURLWithPath: outputPath))
         
+        // Update filesystem timestamps if date is available
+        if let deviceDate = file.date {
+            let attributes: [FileAttributeKey: Any] = [
+                .creationDate: deviceDate,
+                .modificationDate: deviceDate
+            ]
+            do {
+                try FileManager.default.setAttributes(attributes, ofItemAtPath: outputPath)
+            } catch {
+                print("Warning: Could not set file timestamps: \(error)")
+            }
+        }
+        
         let elapsed = Date().timeIntervalSince(startTime)
         let speed = Double(fileData.count) / elapsed / 1024  // KB/s
         
         print("Saved to: \(outputPath)")
-        print("Downloaded \(formatSize(UInt32(fileData.count))) in \(String(format: "%.1f", elapsed))s (\(String(format: "%.1f", speed)) KB/s)")
+        print("Downloaded \(formatSize(UInt64(fileData.count))) in \(String(format: "%.1f", elapsed))s (\(String(format: "%.1f", speed)) KB/s)")
+    }
+    
+    // MARK: - Delete Command
+    
+    static func runDelete(_ jensen: Jensen, filename: String) throws {
+        // Get device info first
+        _ = try jensen.getDeviceInfo()
+        
+        print("Deleting file: \(filename)")
+        try jensen.deleteFile(name: filename)
+        print("File deleted successfully.")
     }
     
     static func printUsage() {
@@ -498,16 +601,21 @@ enum HiDockCLI {
             list                List all recording files
             download <file>     Download a recording file
             download --all      Download all recording files
+            delete <file>       Delete a recording file
             settings get        Get device settings
+            settings set-*      Modify settings (see 'settings --help')
             card-info           Get SD card information
             recording           Get current recording file
             battery             Get battery status (P1 only)
             bt-status           Get Bluetooth status (P1 only)
+            bt-paired           Get paired Bluetooth devices
+            mass-storage        Enter mass storage mode
         
         OPTIONS:
             --verbose, -v       Enable verbose output
             --output <dir>      Output directory for downloads
             --all               Download all files
+            --sync              Only download new or changed files (offsets existing to .bak)
             --help, -h          Show this help
             --version           Show version
         
@@ -518,6 +626,15 @@ enum HiDockCLI {
             hidock-cli download --all --output ~/recordings
             hidock-cli download 20250127REC001.hda --output ~/recordings
         """)
+    }
+    
+    static func printSettingsUsage() {
+        print("Usage:")
+        print("  hidock-cli settings get                        Get all settings")
+        print("  hidock-cli settings set-auto-record <on|off>   Enable/Disable auto-recording")
+        print("  hidock-cli settings set-auto-play <on|off>     Enable/Disable auto-play")
+        print("  hidock-cli settings set-notification <on|off>  Enable/Disable notifications")
+        print("  hidock-cli settings set-bt-tone <on|off>       Enable/Disable Bluetooth tone")
     }
 }
 
