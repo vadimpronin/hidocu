@@ -1,64 +1,65 @@
-# HiDock CLI Makefile
+# HiDocu Monorepo Makefile
 
-# Build configuration
-BUILD_DIR = build
-EXECUTABLE = hidock-cli
-SCHEME = hidock-cli
-PROJECT = hidock-cli.xcodeproj
+CLI_DIR = hidock-cli
+CLI_EXECUTABLE = hidock-cli
+CLI_BUILD_PATH = $(CLI_DIR)/.build
 
-.PHONY: all build clean release install help
+GUI_WORKSPACE = HiDocu.xcworkspace
+GUI_SCHEME = HiDocu
+GUI_BUILD_DIR = build/gui
+
+.PHONY: all build release clean install hidocu help
 
 all: build
 
-# Build debug version
+# Build CLI (Debug)
 build:
-	@echo "Building $(EXECUTABLE) (Debug)..."
-	@xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration Debug \
-		-derivedDataPath $(BUILD_DIR) build 2>&1 | grep -E "(error:|warning:|BUILD SUCCEEDED|BUILD FAILED)" || true
-	@cp "$(BUILD_DIR)/Build/Products/Debug/$(EXECUTABLE)" "$(BUILD_DIR)/$(EXECUTABLE)" 2>/dev/null || true
-	@echo "Built: $(BUILD_DIR)/$(EXECUTABLE)"
+	@echo "Building $(CLI_EXECUTABLE) (Debug)..."
+	@cd $(CLI_DIR) && swift build
+	@echo "Built: $(CLI_BUILD_PATH)/debug/$(CLI_EXECUTABLE)"
 
-# Build release version
+# Build CLI (Release)
 release:
-	@echo "Building $(EXECUTABLE) (Release)..."
-	@xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration Release \
-		-derivedDataPath $(BUILD_DIR) build 2>&1 | grep -E "(error:|warning:|BUILD SUCCEEDED|BUILD FAILED)" || true
-	@cp "$(BUILD_DIR)/Build/Products/Release/$(EXECUTABLE)" "$(BUILD_DIR)/$(EXECUTABLE)" 2>/dev/null || true
-	@echo "Built: $(BUILD_DIR)/$(EXECUTABLE)"
+	@echo "Building $(CLI_EXECUTABLE) (Release)..."
+	@cd $(CLI_DIR) && swift build -c release
+	@echo "Built: $(CLI_BUILD_PATH)/release/$(CLI_EXECUTABLE)"
+
+# Build HiDocu GUI App
+hidocu:
+	@echo "Building HiDocu App..."
+	@xcodebuild -workspace $(GUI_WORKSPACE) -scheme $(GUI_SCHEME) -configuration Release \
+		-derivedDataPath $(GUI_BUILD_DIR) build 2>&1 | grep -E "(error:|warning:|BUILD SUCCEEDED|BUILD FAILED)" || true
+	@echo "Built: $(GUI_BUILD_DIR)/Build/Products/Release/HiDocu.app"
 
 # Clean build artifacts
 clean:
 	@echo "Cleaning..."
-	@rm -rf $(BUILD_DIR)
-	@xcodebuild -project $(PROJECT) -scheme $(SCHEME) clean 2>/dev/null || true
+	@rm -rf $(GUI_BUILD_DIR)
+	@cd $(CLI_DIR) && swift package clean
+	@rm -rf $(CLI_BUILD_PATH)
 	@echo "Done."
 
-# Install to /usr/local/bin
+# Install CLI to /usr/local/bin
 install: release
-	@echo "Installing to /usr/local/bin/$(EXECUTABLE)..."
-	@cp "$(BUILD_DIR)/$(EXECUTABLE)" /usr/local/bin/$(EXECUTABLE)
-	@echo "Installed: /usr/local/bin/$(EXECUTABLE)"
+	@echo "Installing to /usr/local/bin/$(CLI_EXECUTABLE)..."
+	@cp "$(CLI_BUILD_PATH)/release/$(CLI_EXECUTABLE)" /usr/local/bin/$(CLI_EXECUTABLE)
+	@echo "Installed: /usr/local/bin/$(CLI_EXECUTABLE)"
 
-# Run the CLI
+# Run CLI
 run: build
-	@./$(BUILD_DIR)/$(EXECUTABLE) $(ARGS)
+	@$(CLI_BUILD_PATH)/debug/$(CLI_EXECUTABLE) $(ARGS)
 
 # Show help
 help:
-	@echo "HiDock CLI Build System"
+	@echo "HiDocu Monorepo Build System"
 	@echo ""
 	@echo "Usage: make [target]"
 	@echo ""
 	@echo "Targets:"
-	@echo "  build    - Build debug version (default)"
-	@echo "  release  - Build release version"
-	@echo "  clean    - Remove build artifacts"
-	@echo "  install  - Install to /usr/local/bin (requires sudo)"
-	@echo "  run      - Build and run (use ARGS='command' for arguments)"
+	@echo "  build    - Build CLI (Debug) (default)"
+	@echo "  release  - Build CLI (Release)"
+	@echo "  hidocu   - Build HiDocu GUI App"
+	@echo "  clean    - Remove all build artifacts"
+	@echo "  install  - Install CLI to /usr/local/bin"
+	@echo "  run      - Build and run CLI (use ARGS='...' for arguments)"
 	@echo "  help     - Show this help"
-	@echo ""
-	@echo "Examples:"
-	@echo "  make"
-	@echo "  make release"
-	@echo "  make run ARGS='info'"
-	@echo "  sudo make install"

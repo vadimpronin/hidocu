@@ -30,7 +30,7 @@ let kIOUSBInterfaceInterfaceUUID = CFUUIDGetConstantUUIDWithBytes(nil,
 
 // MARK: - USB Error Types
 
-enum USBError: Error, LocalizedError {
+public enum USBError: Error, LocalizedError {
     case deviceNotFound
     case connectionFailed(String)
     case transferFailed(String)
@@ -38,7 +38,7 @@ enum USBError: Error, LocalizedError {
     case interfaceNotClaimed
     case timeout
     
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .deviceNotFound:
             return "No HiDock device found"
@@ -58,14 +58,14 @@ enum USBError: Error, LocalizedError {
 
 // MARK: - Device Model
 
-enum HiDockModel: String {
+public enum HiDockModel: String {
     case h1 = "hidock-h1"
     case h1e = "hidock-h1e"
     case p1 = "hidock-p1"
     case p1Mini = "hidock-p1:mini"
     case unknown = "unknown"
     
-    static func from(productID: UInt16) -> HiDockModel {
+    public static func from(productID: UInt16) -> HiDockModel {
         switch productID {
         case 45068, 256, 258: return .h1
         case 45069, 257, 259: return .h1e
@@ -75,26 +75,26 @@ enum HiDockModel: String {
         }
     }
     
-    var isP1: Bool {
+    public var isP1: Bool {
         self == .p1 || self == .p1Mini
     }
 }
 
 // MARK: - USB Device
 
-class USBDevice {
+public class USBDevice {
     // HiDock vendor IDs
-    static let vendorIDs: [UInt16] = [4310, 14471]
+    public static let vendorIDs: [UInt16] = [4310, 14471]
     
     private var deviceInterface: UnsafeMutablePointer<UnsafeMutablePointer<IOUSBDeviceInterface>?>?
     private var interfaceInterface: UnsafeMutablePointer<UnsafeMutablePointer<IOUSBInterfaceInterface>?>?
     
-    let productID: UInt16
-    let vendorID: UInt16
-    let model: HiDockModel
+    public let productID: UInt16
+    public let vendorID: UInt16
+    public let model: HiDockModel
     
-    private(set) var isOpen: Bool = false
-    private(set) var isInterfaceClaimed: Bool = false
+    public private(set) var isOpen: Bool = false
+    public private(set) var isInterfaceClaimed: Bool = false
     
     init(productID: UInt16, vendorID: UInt16, deviceInterface: UnsafeMutablePointer<UnsafeMutablePointer<IOUSBDeviceInterface>?>?) {
         self.productID = productID
@@ -109,7 +109,7 @@ class USBDevice {
     
     // MARK: - Device Discovery
     
-    static func findDevice() throws -> USBDevice {
+    public static func findDevice() throws -> USBDevice {
         let matchingDict = IOServiceMatching(kIOUSBDeviceClassName) as NSMutableDictionary
         
         var iterator: io_iterator_t = 0
@@ -182,7 +182,7 @@ class USBDevice {
     
     // MARK: - Connection Management
     
-    func open() throws {
+    public func open() throws {
         guard let device = deviceInterface?.pointee?.pointee else {
             throw USBError.connectionFailed("No device interface")
         }
@@ -281,7 +281,7 @@ class USBDevice {
         isInterfaceClaimed = true
     }
     
-    func close() {
+    public func close() {
         if isInterfaceClaimed, let intf = interfaceInterface {
             _ = intf.pointee?.pointee.USBInterfaceClose(intf)
             _ = intf.pointee?.pointee.Release(intf)
@@ -299,7 +299,7 @@ class USBDevice {
     
     // MARK: - Transfers
     
-    func transferOut(endpoint: UInt8, data: Data) throws {
+    public func transferOut(endpoint: UInt8, data: Data) throws {
         guard isInterfaceClaimed, let intf = interfaceInterface?.pointee?.pointee else {
             throw USBError.interfaceNotClaimed
         }
@@ -322,7 +322,7 @@ class USBDevice {
         }
     }
     
-    func transferIn(endpoint: UInt8, length: Int, timeout: UInt32 = 5000) throws -> Data {
+    public func transferIn(endpoint: UInt8, length: Int, timeout: UInt32 = 5000) throws -> Data {
         guard isInterfaceClaimed, let intf = interfaceInterface?.pointee?.pointee else {
             throw USBError.interfaceNotClaimed
         }

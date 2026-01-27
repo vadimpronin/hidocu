@@ -5,7 +5,7 @@ import Foundation
 
 // MARK: - Jensen Errors
 
-enum JensenError: Error, LocalizedError {
+public enum JensenError: Error, LocalizedError {
     case notConnected
     case commandTimeout
     case commandFailed(String)
@@ -14,7 +14,7 @@ enum JensenError: Error, LocalizedError {
     case unsupportedFeature(String)
     case unsupportedDevice
     
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .notConnected: return "Device not connected"
         case .commandTimeout: return "Command timed out"
@@ -29,90 +29,90 @@ enum JensenError: Error, LocalizedError {
 
 // MARK: - Response Types
 
-struct DeviceInfo {
-    let versionCode: String
-    let versionNumber: UInt32
-    let serialNumber: String
+public struct DeviceInfo {
+    public let versionCode: String
+    public let versionNumber: UInt32
+    public let serialNumber: String
 }
 
-struct DeviceTime {
-    let timeString: String  // "YYYY-MM-DD HH:mm:ss" or "unknown"
+public struct DeviceTime {
+    public let timeString: String  // "YYYY-MM-DD HH:mm:ss" or "unknown"
 }
 
-struct FileCount {
-    let count: Int
+public struct FileCount {
+    public let count: Int
 }
 
-struct DeviceSettings {
-    let autoRecord: Bool
-    let autoPlay: Bool
-    let notification: Bool
-    let bluetoothTone: Bool
+public struct DeviceSettings {
+    public let autoRecord: Bool
+    public let autoPlay: Bool
+    public let notification: Bool
+    public let bluetoothTone: Bool
 }
 
-struct CardInfo {
-    let used: UInt64
-    let capacity: UInt64
-    let status: String
+public struct CardInfo {
+    public let used: UInt64
+    public let capacity: UInt64
+    public let status: String
 }
 
-struct BatteryStatus {
-    let status: String  // "idle", "charging", "full"
-    let percentage: Int
-    let voltage: UInt32
+public struct BatteryStatus {
+    public let status: String  // "idle", "charging", "full"
+    public let percentage: Int
+    public let voltage: UInt32
 }
 
-struct ScannedDevice {
-    let name: String
-    let mac: String
-    let rssi: Int
-    let cod: UInt32
-    let audio: Bool
+public struct ScannedDevice {
+    public let name: String
+    public let mac: String
+    public let rssi: Int
+    public let cod: UInt32
+    public let audio: Bool
 }
 
-struct RecordingFile {
-    let name: String
-    let createDate: String
-    let createTime: String
+public struct RecordingFile {
+    public let name: String
+    public let createDate: String
+    public let createTime: String
 }
 
-struct FileEntry {
-    let name: String
-    let createDate: String
-    let createTime: String
-    let duration: TimeInterval
-    let version: UInt8
-    let length: UInt32
-    let mode: String
-    let signature: String
-    let date: Date?
+public struct FileEntry {
+    public let name: String
+    public let createDate: String
+    public let createTime: String
+    public let duration: TimeInterval
+    public let version: UInt8
+    public let length: UInt32
+    public let mode: String
+    public let signature: String
+    public let date: Date?
 }
 
 // MARK: - Jensen
 
-class Jensen {
+public class Jensen {
     private var device: USBDevice?
     private var sequenceIndex: UInt32 = UInt32(Date().timeIntervalSince1970)
     private var receiveBuffer = Data()
     private let verbose: Bool
     
     // Cached device info
-    private(set) var versionCode: String?
-    private(set) var versionNumber: UInt32?
-    private(set) var serialNumber: String?
-    private(set) var model: HiDockModel = .unknown
+    public private(set) var versionCode: String?
+    public private(set) var versionNumber: UInt32?
+    public private(set) var serialNumber: String?
+    public private(set) var model: HiDockModel = .unknown
     
     // State flags
-    private(set) var isLiveMode: Bool = false
-    private(set) var isFileListing: Bool = false
+    public private(set) var isLiveMode: Bool = false
+    public private(set) var isFileListing: Bool = false
     
-    init(verbose: Bool = false) {
+    public init(verbose: Bool = false) {
         self.verbose = verbose
     }
     
     // MARK: - Connection
     
-    func connect() throws {
+    public func connect() throws {
         device = try USBDevice.findDevice()
         try device?.open()
         model = device?.model ?? .unknown
@@ -122,7 +122,7 @@ class Jensen {
         }
     }
     
-    func disconnect() {
+    public func disconnect() {
         device?.close()
         device = nil
         versionCode = nil
@@ -130,7 +130,7 @@ class Jensen {
         serialNumber = nil
     }
     
-    var isConnected: Bool {
+    public var isConnected: Bool {
         device?.isOpen ?? false
     }
     
@@ -187,7 +187,7 @@ class Jensen {
     
     // MARK: - Device Info Commands
     
-    func getDeviceInfo() throws -> DeviceInfo {
+    public func getDeviceInfo() throws -> DeviceInfo {
         var command = Command(.queryDeviceInfo)
         let response = try send(&command)
         
@@ -230,7 +230,7 @@ class Jensen {
         )
     }
     
-    func getTime() throws -> DeviceTime {
+    public func getTime() throws -> DeviceTime {
         var command = Command(.queryDeviceTime)
         let response = try send(&command)
         
@@ -262,7 +262,7 @@ class Jensen {
     
     /// Set device time
     /// - Parameter date: The date to set (defaults to current system time)
-    func setTime(_ date: Date = Date()) throws {
+    public func setTime(_ date: Date = Date()) throws {
         guard let device = device, device.isOpen else {
             throw JensenError.notConnected
         }
@@ -285,7 +285,7 @@ class Jensen {
         }
     }
     
-    func getFileCount() throws -> FileCount {
+    public func getFileCount() throws -> FileCount {
         var command = Command(.queryFileCount)
         let response = try send(&command)
         
@@ -305,7 +305,7 @@ class Jensen {
         return FileCount(count: count)
     }
     
-    func getSettings() throws -> DeviceSettings {
+    public func getSettings() throws -> DeviceSettings {
         // Check version requirement
         if let version = versionNumber {
             if (model == .h1 || model == .h1e) && version < 0x00050012 {
@@ -329,7 +329,7 @@ class Jensen {
     }
     
     /// Set auto-record setting
-    func setAutoRecord(_ enabled: Bool) throws {
+    public func setAutoRecord(_ enabled: Bool) throws {
         guard let device = device, device.isOpen else {
             throw JensenError.notConnected
         }
@@ -345,7 +345,7 @@ class Jensen {
     }
     
     /// Set auto-play setting
-    func setAutoPlay(_ enabled: Bool) throws {
+    public func setAutoPlay(_ enabled: Bool) throws {
         guard let device = device, device.isOpen else {
             throw JensenError.notConnected
         }
@@ -361,7 +361,7 @@ class Jensen {
     }
     
     /// Set notification setting
-    func setNotification(_ enabled: Bool) throws {
+    public func setNotification(_ enabled: Bool) throws {
         guard let device = device, device.isOpen else {
             throw JensenError.notConnected
         }
@@ -378,7 +378,7 @@ class Jensen {
     
     /// Set Bluetooth tone setting
     /// Note: Has inverted protocol logic (2=on, 1=off)
-    func setBluetoothTone(_ enabled: Bool) throws {
+    public func setBluetoothTone(_ enabled: Bool) throws {
         guard let device = device, device.isOpen else {
             throw JensenError.notConnected
         }
@@ -395,7 +395,7 @@ class Jensen {
     
 
     
-    func getCardInfo() throws -> CardInfo {
+    public func getCardInfo() throws -> CardInfo {
         // Check version requirement
         if let version = versionNumber, (model == .h1 || model == .h1e) && version < 0x00050025 {
             throw JensenError.unsupportedFeature("Firmware too old")
@@ -437,7 +437,7 @@ class Jensen {
         )
     }
     
-    func deleteFile(name: String) throws {
+    public func deleteFile(name: String) throws {
         // Build command body: filename as ASCII bytes
         var filenameBytes: [UInt8] = []
         for char in name.utf8 {
@@ -452,7 +452,7 @@ class Jensen {
         }
     }
     
-    func getBatteryStatus() throws -> BatteryStatus {
+    public func getBatteryStatus() throws -> BatteryStatus {
         guard model.isP1 else {
             throw JensenError.unsupportedFeature("Battery status only available on P1 models")
         }
@@ -483,7 +483,7 @@ class Jensen {
         return BatteryStatus(status: status, percentage: percentage, voltage: voltage)
     }
     
-    func enterMassStorage() throws {
+    public func enterMassStorage() throws {
         var command = Command(.enterMassStorage)
         
         // This command causes the device to disconnect/reboot into mass storage mode.
@@ -498,7 +498,7 @@ class Jensen {
         }
     }
     
-    func getRecordingFile() throws -> RecordingFile? {
+    public func getRecordingFile() throws -> RecordingFile? {
         // Check version requirement
         if let version = versionNumber, (model == .h1 || model == .h1e) && version < 0x00050025 {
             throw JensenError.unsupportedFeature("Firmware too old")
@@ -531,7 +531,7 @@ class Jensen {
     
     // MARK: - Bluetooth Commands (P1 only)
     
-    func getBluetoothStatus() throws -> [String: Any]? {
+    public func getBluetoothStatus() throws -> [String: Any]? {
         guard model.isP1 else {
             throw JensenError.unsupportedFeature("Bluetooth only available on P1 models")
         }
@@ -599,7 +599,7 @@ class Jensen {
     
     // MARK: - Bluetooth Scan & Connection
     
-    func startBluetoothScan(duration: Int = 30) throws {
+    public func startBluetoothScan(duration: Int = 30) throws {
         guard model.isP1 else {
             throw JensenError.unsupportedDevice
         }
@@ -609,13 +609,13 @@ class Jensen {
         _ = try send(&command)
     }
     
-    func stopBluetoothScan() throws {
+    public func stopBluetoothScan() throws {
         guard model.isP1 else { return }
         var command = Command(.btScan, body: [0, 0])
         _ = try send(&command)
     }
     
-    func getScanResults() throws -> [ScannedDevice] {
+    public func getScanResults() throws -> [ScannedDevice] {
         guard model.isP1 else {
             throw JensenError.unsupportedDevice
         }
@@ -666,7 +666,7 @@ class Jensen {
         return devices
     }
     
-    func connectBluetooth(mac: String) throws {
+    public func connectBluetooth(mac: String) throws {
         guard model.isP1 else { throw JensenError.unsupportedDevice }
         
         let parts = mac.split(separator: "-").map { String($0) }
@@ -685,14 +685,14 @@ class Jensen {
         _ = try send(&command)
     }
     
-    func disconnectBluetooth() throws {
+    public func disconnectBluetooth() throws {
         guard model.isP1 else { throw JensenError.unsupportedDevice }
         // Subcommand 1 = Disconnect
         var command = Command(.bluetoothCmd, body: [1])
         _ = try send(&command)
     }
     
-    func reconnectBluetooth(mac: String) throws {
+    public func reconnectBluetooth(mac: String) throws {
         guard model.isP1 else { throw JensenError.unsupportedDevice }
         
         let parts = mac.split(separator: "-").map { String($0) }
@@ -711,7 +711,7 @@ class Jensen {
         _ = try send(&command)
     }
     
-    func clearPairedDevices() throws {
+    public func clearPairedDevices() throws {
         guard model.isP1 else { throw JensenError.unsupportedDevice }
         var command = Command(.btRemovePairedDev, body: [0])
         _ = try send(&command)
@@ -719,14 +719,14 @@ class Jensen {
     
     // MARK: - Paired Devices
     
-    struct PairedDevice {
-        let name: String
-        let mac: String
-        let sequence: UInt8
+    public struct PairedDevice {
+        public let name: String
+        public let mac: String
+        public let sequence: UInt8
     }
     
     /// Get list of paired Bluetooth devices (P1/P1 Mini only)
-    func getPairedDevices() throws -> [PairedDevice] {
+    public func getPairedDevices() throws -> [PairedDevice] {
         guard let device = device, device.isOpen else {
             throw JensenError.notConnected
         }
@@ -797,7 +797,7 @@ class Jensen {
     
     // MARK: - File Listing
     
-    func listFiles() throws -> [FileEntry] {
+    public func listFiles() throws -> [FileEntry] {
         isFileListing = true
         defer { isFileListing = false }
         
@@ -877,7 +877,7 @@ class Jensen {
     ///   - expectedSize: Expected size of the file in bytes
     ///   - progressHandler: Optional callback for progress updates (bytesReceived, totalBytes)
     /// - Returns: The downloaded file data
-    func downloadFile(filename: String, expectedSize: UInt32, progressHandler: ((Int, Int) -> Void)? = nil) throws -> Data {
+    public func downloadFile(filename: String, expectedSize: UInt32, progressHandler: ((Int, Int) -> Void)? = nil) throws -> Data {
         guard let device = device, device.isOpen else {
             throw JensenError.notConnected
         }

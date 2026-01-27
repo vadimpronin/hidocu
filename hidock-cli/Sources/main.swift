@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import JensenUSB
 
 // MARK: - CLI Entry Point
 
