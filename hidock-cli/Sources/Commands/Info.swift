@@ -13,7 +13,7 @@ struct Info: ParsableCommand {
         try jensen.connect()
         defer { jensen.disconnect() }
 
-        let info = try jensen.getDeviceInfo()
+        _ = try jensen.getDeviceInfo()
         
         print("Device Model: \(jensen.model.rawValue)")
         if let code = jensen.versionCode {

@@ -22,12 +22,11 @@ class JensenTests: XCTestCase {
     
     func testConnectOpensTransportAndGetsInfo() {
         // Arrange
+        // New Format: 4 bytes version + 16 bytes serial
         var body = Data()
-        body.append(5) // VerLen
-        body.append(contentsOf: "1.2.3".utf8)
-        body.append(contentsOf: [0x00, 0x01, 0x02, 0x03]) // VerNum
-        body.append(3) // SNLen
+        body.append(contentsOf: [0, 1, 2, 3]) // VerNum 0x00010203 -> ver 1.2.3
         body.append(contentsOf: "SN1".utf8)
+        body.append(Data(count: 13)) // Pad to 16 bytes
         
         let infoResponse = TestHelpers.makeResponse(for: .queryDeviceInfo, sequence: 1, body: [UInt8](body))
         mockTransport.addResponse(infoResponse)
@@ -52,8 +51,9 @@ class JensenTests: XCTestCase {
     func testDisconnectClosesTransport() {
         // Connect first
         var body = Data()
-        body.append(5); body.append(contentsOf: "1.0.0".utf8)
-        body.append(contentsOf: [0,0,0,0]); body.append(2); body.append(contentsOf: "SN".utf8)
+        body.append(contentsOf: [0, 1, 0, 0]) // 1.0.0
+        body.append(contentsOf: "SN".utf8)
+        body.append(Data(count: 14)) // Pad to 16 bytes
         mockTransport.addResponse(TestHelpers.makeResponse(for: .queryDeviceInfo, sequence: 1, body: [UInt8](body)))
         try! jensen.connect()
         
@@ -71,8 +71,9 @@ class JensenTests: XCTestCase {
     func testSendIncrementsSequence() {
         // Connect
         var body = Data()
-        body.append(5); body.append(contentsOf: "1.0.0".utf8)
-        body.append(contentsOf: [0,0,0,0]); body.append(2); body.append(contentsOf: "SN".utf8)
+        body.append(contentsOf: [0, 1, 0, 0])
+        body.append(contentsOf: "SN".utf8)
+        body.append(Data(count: 14))
         mockTransport.addResponse(TestHelpers.makeResponse(for: .queryDeviceInfo, sequence: 1, body: [UInt8](body)))
         try! jensen.connect()
         
@@ -102,8 +103,9 @@ class JensenTests: XCTestCase {
     func testSendWaitsForMatchingResponse() {
          // Connect
          var body = Data()
-         body.append(5); body.append(contentsOf: "1.0.0".utf8)
-         body.append(contentsOf: [0,0,0,0]); body.append(2); body.append(contentsOf: "SN".utf8)
+         body.append(contentsOf: [0, 1, 0, 0])
+         body.append(contentsOf: "SN".utf8)
+         body.append(Data(count: 14))
          mockTransport.addResponse(TestHelpers.makeResponse(for: .queryDeviceInfo, sequence: 1, body: [UInt8](body)))
          try! jensen.connect()
          
@@ -124,8 +126,9 @@ class JensenTests: XCTestCase {
     func testSendTimesOut() {
         // Connect
          var body = Data()
-         body.append(5); body.append(contentsOf: "1.0.0".utf8)
-         body.append(contentsOf: [0,0,0,0]); body.append(2); body.append(contentsOf: "SN".utf8)
+         body.append(contentsOf: [0, 1, 0, 0])
+         body.append(contentsOf: "SN".utf8)
+         body.append(Data(count: 14))
          mockTransport.addResponse(TestHelpers.makeResponse(for: .queryDeviceInfo, sequence: 1, body: [UInt8](body)))
          try! jensen.connect()
          

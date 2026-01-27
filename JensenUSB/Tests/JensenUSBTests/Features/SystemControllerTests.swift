@@ -43,19 +43,22 @@ class SystemControllerTests: XCTestCase {
     }
     
     func testGetCardInfo() {
-        // Body: [Status(0=ok), Cap,Cap,Cap,Cap, Used,Used,Used,Used]
-        // Cap = 100 KB (0x64), Used = 50 KB (0x32)
-        var body: [UInt8] = [0]
-        body.append(contentsOf: [0, 0, 0, 100])
-        body.append(contentsOf: [0, 0, 0, 50])
+        // Body (12 bytes): [Free(4) | Capacity(4) | Status(4)]
+        // All in MB.
+        // Capacity = 100 MB. Free = 90 MB. -> Used = 10 MB.
+        var body: [UInt8] = []
+        body.append(contentsOf: [0, 0, 0, 90])  // Free MB
+        body.append(contentsOf: [0, 0, 0, 100]) // Capacity MB
+        body.append(contentsOf: [0, 0, 0, 0])   // Status
         
         mockTransport.addResponse(TestHelpers.makeResponse(for: .readCardInfo, sequence: 1, body: body))
         
         let info = try! systemController.getCardInfo()
         
+        let mb: UInt64 = 1024 * 1024
         XCTAssertEqual(info.status, "ok")
-        XCTAssertEqual(info.capacity, 100 * 1024)
-        XCTAssertEqual(info.used, 50 * 1024)
+        XCTAssertEqual(info.capacity, 100 * mb)
+        XCTAssertEqual(info.used, 10 * mb)
     }
     
     func testRequestFirmwareUpgradeEncodesCorrectly() {

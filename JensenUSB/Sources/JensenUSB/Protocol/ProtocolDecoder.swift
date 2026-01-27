@@ -19,25 +19,29 @@ struct ProtocolDecoder {
         // Need at least 12 bytes for header
         guard available >= 12 else { return nil }
         
+        // Calculate absolute index base
+        let base = data.startIndex + offset
+        
         // Check header
-        guard data[offset] == 0x12 && data[offset + 1] == 0x34 else {
+        // Use base for indexing
+        guard data[base] == 0x12 && data[base + 1] == 0x34 else {
             throw ProtocolError.malformedHeader
         }
         
         // Parse command ID
-        let commandID = UInt16(data[offset + 2]) << 8 | UInt16(data[offset + 3])
+        let commandID = UInt16(data[base + 2]) << 8 | UInt16(data[base + 3])
         
         // Parse sequence number
-        let sequence = UInt32(data[offset + 4]) << 24 |
-                       UInt32(data[offset + 5]) << 16 |
-                       UInt32(data[offset + 6]) << 8 |
-                       UInt32(data[offset + 7])
+        let sequence = UInt32(data[base + 4]) << 24 |
+                       UInt32(data[base + 5]) << 16 |
+                       UInt32(data[base + 6]) << 8 |
+                       UInt32(data[base + 7])
         
         // Parse body length (24-bit) + padding (8-bit stored in high byte)
-        let lengthRaw = UInt32(data[offset + 8]) << 24 |
-                        UInt32(data[offset + 9]) << 16 |
-                        UInt32(data[offset + 10]) << 8 |
-                        UInt32(data[offset + 11])
+        let lengthRaw = UInt32(data[base + 8]) << 24 |
+                        UInt32(data[base + 9]) << 16 |
+                        UInt32(data[base + 10]) << 8 |
+                        UInt32(data[base + 11])
         
         let padding = (lengthRaw >> 24) & 0xFF
         let bodyLength = Int(lengthRaw & 0x00FFFFFF)
@@ -47,7 +51,7 @@ struct ProtocolDecoder {
         guard available >= totalLength else { return nil }
         
         // Extract body
-        let bodyStart = offset + 12
+        let bodyStart = base + 12
         let bodyEnd = bodyStart + bodyLength
         let body = data[bodyStart..<bodyEnd]
         
@@ -94,10 +98,19 @@ struct ProtocolDecoder {
     }
     
     private static func findNextHeader(_ data: Data, start: Int) -> Int? {
-        guard start < data.count - 1 else { return nil }
-        for i in start..<(data.count - 1) {
+        // start is relative offset
+        let count = data.count
+        guard start < count - 1 else { return nil }
+        
+        let absStart = data.startIndex + start
+        // Scan until the second-to-last byte (since we check i and i+1)
+        let absEnd = data.startIndex + count - 1
+        
+        // Scan using absolute indices
+        for i in absStart..<absEnd {
             if data[i] == 0x12 && data[i+1] == 0x34 {
-                return i
+                // Return relative offset
+                return i - data.startIndex
             }
         }
         return nil

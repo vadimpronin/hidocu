@@ -40,23 +40,18 @@ class FirmwareManager {
     
     static func fetchLatestFirmware(model: String, accessToken: String) -> Result<FirmwareInfo, Error> {
         let urlString = "https://hinotes.hidock.com/v2/device/firmware/latest"
-        guard var urlComponents = URLComponents(string: urlString) else {
+        guard let url = URL(string: urlString) else {
            return .failure(NSError(domain: "FirmwareAPI", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"]))
         }
         
-        var queryItems = [
-            URLQueryItem(name: "model", value: model),
-            URLQueryItem(name: "lang", value: "en")
-        ]
-        urlComponents.queryItems = queryItems
-        
-        guard let url = urlComponents.url else {
-            return .failure(NSError(domain: "FirmwareAPI", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL parameters"]))
-        }
-        
         var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.addValue(accessToken, forHTTPHeaderField: "authorization")
+        request.httpMethod = "POST"
+        request.addValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.addValue("application/json", forHTTPHeaderField: "Accept")
+        request.addValue(accessToken, forHTTPHeaderField: "AccessToken")
+        
+        let bodyString = "version=-1&model=\(model)&lang=en"
+        request.httpBody = bodyString.data(using: .utf8)
         
         let semaphore = DispatchSemaphore(value: 0)
         var result: Result<FirmwareInfo, Error> = .failure(NSError(domain: "FirmwareAPI", code: 2, userInfo: [NSLocalizedDescriptionKey: "Timeout"]))

@@ -143,36 +143,28 @@ public class Jensen {
     public func getDeviceInfo() throws -> DeviceInfo {
         var command = Command(.queryDeviceInfo)
         let response = try send(&command)
+        let body = response.body
+        // Logic adapted from jensen.js (Jensen.registerHandler(QUERY_DEVICE_INFO))
+        // Fixed structure: 4 bytes version + 16 bytes serial number
+        guard body.count >= 4 else { throw JensenError.invalidResponse }
         
-        guard response.body.count >= 12 else { throw JensenError.invalidResponse }
+        // 1. Version Number (4 bytes big-endian)
+        let vNum = UInt32(body[0]) << 24 | UInt32(body[1]) << 16 | UInt32(body[2]) << 8 | UInt32(body[3])
         
-        let verLen = Int(response.body[0])
-        guard verLen > 0, response.body.count >= 1 + verLen + 12 else {
-             let verData = response.body[1..<1+verLen]
-             let verStr = String(data: verData, encoding: .utf8) ?? "unknown"
-             
-             let offset = 1 + verLen
-             let vNum = UInt32(response.body[offset]) << 24 | UInt32(response.body[offset+1]) << 16 | UInt32(response.body[offset+2]) << 8 | UInt32(response.body[offset+3])
-             
-             let snLen = Int(response.body[offset+4])
-             let snData = response.body[offset+5..<offset+5+snLen]
-             let snStr = String(data: snData, encoding: .utf8) ?? "unknown"
-             
-             self.versionCode = verStr
-             self.versionNumber = vNum
-             self.serialNumber = snStr
-             
-             return DeviceInfo(versionCode: verStr, versionNumber: vNum, serialNumber: snStr)
+        // 2. Version Code (bytes 1, 2, 3 joined by dots)
+        // jensen.js: loops 0..3, pushes if i > 0
+        let verStr = "\(body[1]).\(body[2]).\(body[3])"
+        
+        // 3. Serial Number (Next 16 bytes, filtering > 0)
+        var snStr = "unknown"
+        if body.count > 4 {
+            let snStart = 4
+            let snEnd = min(body.count, 20) // 4 + 16
+            let snIsBytes = body[snStart..<snEnd].filter { $0 > 0 }
+            if let str = String(data: snIsBytes, encoding: .utf8) {
+                snStr = str
+            }
         }
-        
-        // Fallback or full parse
-        let verData = response.body[1..<1+verLen]
-        let verStr = String(data: verData, encoding: .utf8) ?? "unknown"
-        let offset = 1 + verLen
-        let vNum = UInt32(response.body[offset]) << 24 | UInt32(response.body[offset+1]) << 16 | UInt32(response.body[offset+2]) << 8 | UInt32(response.body[offset+3])
-        let snLen = Int(response.body[offset+4])
-        let snData = response.body[offset+5..<offset+5+snLen]
-        let snStr = String(data: snData, encoding: .utf8) ?? "unknown"
         
         self.versionCode = verStr
         self.versionNumber = vNum
@@ -268,9 +260,9 @@ public class Jensen {
         return try system.requestUACUpdate(signature: signature, size: size)
     }
     public func updateUAC(_ data: Data) throws { try system.updateUAC(data) }
-    public func sendKeyCode(mode: UInt8, keyCode: UInt8) throws { try system.sendKeyCode(mode: mode, keyCode: keyCode) }
-    public func recordTestStart(type: UInt8) throws { try system.recordTestStart(type: type) }
-    public func recordTestEnd(type: UInt8) throws { try system.recordTestEnd(type: type) }
-    public func beginBNC() throws { try system.beginBNC() }
-    public func endBNC() throws { try system.endBNC() }
+    public func sendKeyCode(mode: UInt8, keyCode: UInt8) throws { try self.system.sendKeyCode(mode: mode, keyCode: keyCode) }
+    public func recordTestStart(type: UInt8) throws { try self.system.recordTestStart(type: type) }
+    public func recordTestEnd(type: UInt8) throws { try self.system.recordTestEnd(type: type) }
+    public func beginBNC() throws { try self.system.beginBNC() }
+    public func endBNC() throws { try self.system.endBNC() }
 }

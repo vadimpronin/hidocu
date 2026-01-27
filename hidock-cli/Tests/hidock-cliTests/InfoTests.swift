@@ -25,9 +25,23 @@ class InfoTests: XCTestCase {
         // So we need TWO responses for queryDeviceInfo.
         
         // Response 1 (Connect)
+        // New Format: Fixed structure [4 bytes Version] [16 bytes Serial]
+        // Version 1.0.0 -> 0x01000000 (bytes 0,1,2,3).
+        // 1.0.0 string is formed from bytes 1,2,3 -> "0.0.0" if they are 0.
+        // Wait, jensen.js logic:
+        // vn = (b0 << 24) | (b1 << 16) | (b2 << 8) | b3
+        // vc = b1 . b2 . b3
+        // So for "1.0.0", we need b1='1', b2='0', b3='0' -> [?, 49, 48, 48]
+        // Let's use 1.0.0 as bytes: [1, 1, 0, 0] -> vn=0x01010000, vc="1.0.0".
+        // Wait, jensen.js pushes String(b). So if byte is 1 -> "1".
+        // So [1, 1, 0, 0] -> 1.0.0
+        
         var body = Data()
-        body.append(5); body.append(contentsOf: "1.0.0".utf8)
-        body.append(contentsOf: [0,0,0,0]); body.append(2); body.append(contentsOf: "SN".utf8)
+        body.append(contentsOf: [1, 1, 0, 0]) // Version 1.0.0
+        
+        // Serial Number "SN"
+        body.append(contentsOf: "SN".utf8)
+        body.append(Data(count: 14)) // Padding to 16 bytes
         
         // Response 2 (Explicit getDeviceInfo)
         // Same body

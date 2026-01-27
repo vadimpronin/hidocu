@@ -43,26 +43,35 @@ public class SystemController {
          var command = Command(.readCardInfo)
          let response = try core.send(&command)
          
-         guard response.body.count >= 9 else { throw JensenError.invalidResponse }
+         guard response.body.count >= 12 else { throw JensenError.invalidResponse }
          
-         let statusByte = response.body[0]
+         // Protocol Analysis:
+         // Field 0 (4 bytes): Free Space (in MB)
+         // Field 1 (4 bytes): Total Capacity (in MB)
+         // Field 2 (4 bytes): Status?
+         // All Big Endian.
+         
+         let freeMB = UInt64(response.body[0]) << 24 | UInt64(response.body[1]) << 16 | UInt64(response.body[2]) << 8 | UInt64(response.body[3])
+         let capacityMB = UInt64(response.body[4]) << 24 | UInt64(response.body[5]) << 16 | UInt64(response.body[6]) << 8 | UInt64(response.body[7])
+         let statusVal = UInt64(response.body[8]) << 24 | UInt64(response.body[9]) << 16 | UInt64(response.body[10]) << 8 | UInt64(response.body[11])
+         
+         let usedMB = capacityMB > freeMB ? capacityMB - freeMB : 0
+         
          let status: String
-         switch statusByte {
+         switch statusVal {
          case 0: status = "ok"
          case 1: status = "full"
          case 2: status = "error"
          case 3: status = "no_card"
-         default: status = "unknown"
+         default: status = String(format: "%x", statusVal)
          }
          
-         let capacity = UInt64(response.body[1]) << 24 | UInt64(response.body[2]) << 16 | UInt64(response.body[3]) << 8 | UInt64(response.body[4])
-         let used = UInt64(response.body[5]) << 24 | UInt64(response.body[6]) << 16 | UInt64(response.body[7]) << 8 | UInt64(response.body[8])
-         
-         return CardInfo(used: used * 1024, capacity: capacity * 1024, status: status)
+         let mb: UInt64 = 1024 * 1024
+         return CardInfo(used: usedMB * mb, capacity: capacityMB * mb, status: status)
     }
     
     public func formatCard() throws {
-        var command = Command(.formatCard)
+        var command = Command(.formatCard, body: [0x01, 0x02, 0x03, 0x04])
         command.expireAfter(30.0) // Takes time
         let response = try core.send(&command, timeout: 30.0)
         
@@ -95,7 +104,7 @@ public class SystemController {
     }
     
     public func enterMassStorage() throws {
-        var command = Command(.enterMassStorage)
+        var command = Command(.enterMassStorage, body: [0x01])
         _ = try core.send(&command)
     }
     

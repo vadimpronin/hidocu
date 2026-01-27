@@ -233,7 +233,7 @@ struct FirmwareUpdate: ParsableCommand {
         try jensen.connect()
         defer { jensen.disconnect() }
         
-        _ = try jensen.getDeviceInfo()
+        let info = try jensen.getDeviceInfo()
         
         let expandedPath = (filePath as NSString).expandingTildeInPath
         let url = URL(fileURLWithPath: expandedPath)
@@ -247,12 +247,23 @@ struct FirmwareUpdate: ParsableCommand {
         // Simple parser
         let version = FirmwareUpdate.parseVersionFromFilename(filename)
         
+        if let v = version {
+            if v == info.versionNumber {
+                print("WARNING: The firmware file version matches the currently installed version (\(info.versionCode)).")
+                print("The device may reject re-flashing the same firmware.")
+            } else if v < info.versionNumber {
+                 print("WARNING: The firmware file version is older than the currently installed version (\(info.versionCode)).")
+                 print("The device may reject downgrading.")
+            }
+        }
+        
         if !confirm {
              print("WARNING: Firmware update can potentially brick your device if interrupted.")
              print("File: \(filename)")
              print("Size: \(Formatters.formatSize(UInt64(data.count)))")
              if let v = version {
-                 print("Version: \(v)")
+                 let vStr = "\(v >> 16).\(v >> 8 & 0xFF).\(v & 0xFF)"
+                 print("Version: \(vStr) (Device: \(info.versionCode))")
              }
              print("Type 'UPDATE' to confirm: ", terminator: "")
              fflush(stdout)
@@ -269,6 +280,9 @@ struct FirmwareUpdate: ParsableCommand {
         )
          if upResult != .accepted {
              print("Update request failed: \(upResult)")
+             if upResult == .wrongVersion {
+                 print("Reason: The device rejected the version number (likely same or older version).")
+             }
              throw ExitCode.failure
          }
          
