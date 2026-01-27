@@ -6,56 +6,45 @@ import JensenTestSupport
 
 class ListTests: XCTestCase {
     var mockTransport: MockTransport!
+    var jensen: Jensen!
     
     override func setUp() {
         super.setUp()
         mockTransport = MockTransport()
-        // Inject our mock transport factory
-        JensenFactory.make = { verbose in
-            return Jensen(transport: self.mockTransport, verbose: verbose)
+        mockTransport.mockModel = .h1
+        jensen = Jensen(transport: mockTransport)
+        
+        // Inject our transport factory
+        JensenFactory.make = { [unowned self] verbose in
+            if self.jensen.verbose != verbose {
+                self.jensen.verbose = verbose
+            }
+            return self.jensen
         }
     }
     
     override func tearDown() {
-        // Reset factory to default (optional, but good practice)
+        // Reset factory to default
         JensenFactory.make = { verbose in
             return Jensen(verbose: verbose)
         }
+        jensen.disconnect()
         super.tearDown()
     }
     
     func testListCommandPrintsFiles() throws {
         // 1. Connection (getDeviceInfo)
-        mockTransport.addResponse(TestHelpers.makeResponse(for: .queryDeviceInfo, sequence: 1, body: TestHelpers.makeDeviceInfoBody()))
-        
-        // 2. List Files (queryFileList)
-        // We need to construct a valid file list response body
-        // File 1: "20230101-120000.wav", size 1000
-        // Minimal file entry structure: [Version(1), NameLen(3), Name(N bytes), Size(4), Reserved(6), Sig(16)]
-        
-        var fileListBody = Data()
-        // Total count header (optional/version dependent, let's omit for simplicity or include if needed)
-        // FileController checks version. If version <= 0x0005001A it checks count first.
-        // Mock device info returns version number 0. So it WILL check count.
-        
-        // Wait, makeDeviceInfoBody returns version 1.0.0 (0x01000000 > 0x0005001A)?
-        // TestHelpers.makeDeviceInfoBody probably returns 0 if valid.
-        // Let's assume high version to skip count check for simplicity.
-        // Device info body: Length(1), VerStr(N), VerNum(4), SNLen(1), SN(M).
-        // Let's make sure VerNum is high.
-        
-        // Reset queue to use custom device info
-        mockTransport.responseQueue.removeAll()
+        // Use high version to skip count check for simplicity
         mockTransport.addResponse(TestHelpers.makeResponse(for: .queryDeviceInfo, sequence: 1, body: TestHelpers.makeDeviceInfoBody(verNum: 0x10000000)))
         
-        // File List response
+        // 2. List Files (queryFileList)
+        var fileListBody = Data()
         // Entry 1
         var entry1 = Data([1]) // Version
         let name = "test.wav"
         let nameData = name.data(using: .utf8)!
         let nameLen = UInt32(nameData.count)
-        // Name len is 3 bytes in struct?
-        // Code: Int(bodyData[offset]) << 16 | Int(bodyData[offset + 1]) << 8 | Int(bodyData[offset + 2])
+        // Name len is 3 bytes in struct
         entry1.append(Data([UInt8((nameLen >> 16) & 0xFF), UInt8((nameLen >> 8) & 0xFF), UInt8(nameLen & 0xFF)]))
         entry1.append(nameData)
         

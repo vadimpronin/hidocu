@@ -9,7 +9,7 @@ GUI_WORKSPACE = HiDocu.xcworkspace
 GUI_SCHEME = HiDocu
 GUI_BUILD_DIR = build/gui
 
-.PHONY: all build release clean install hidocu help
+.PHONY: all build release clean install hidocu test test-device help
 
 all: build
 
@@ -50,12 +50,19 @@ install: release
 run: build
 	@$(CLI_BUILD_PATH)/debug/$(CLI_EXECUTABLE) $(ARGS)
 
-# Run Tests
+# Run Tests (Mock Mode)
 test:
 	@echo "Running JensenUSB Tests..."
 	@cd $(LIBRARY_DIR) && swift test
 	@echo "Running hidock-cli Tests..."
 	@cd $(CLI_DIR) && swift test
+
+# Run Tests (Real Device - Read-Only)
+test-device:
+	@echo "Running JensenUSB Device Integration Tests..."
+	@cd $(LIBRARY_DIR) && TEST_MODE=REAL swift test --filter DeviceIntegrationTests
+	@echo "Running hidock-cli Device Integration Tests..."
+	@cd $(CLI_DIR) && TEST_MODE=REAL swift test --filter DeviceIntegrationTests
 
 # Show help
 help:
@@ -70,5 +77,6 @@ help:
 	@echo "  clean    - Remove all build artifacts"
 	@echo "  install  - Install CLI to /usr/local/bin"
 	@echo "  run      - Build and run CLI (use ARGS='...' for arguments)"
-	@echo "  test     - Run all tests"
+	@echo "  test     - Run all tests in Mock Mode (Default)"
+	@echo "  test-device - Run all tests on real device (Safe / Read-Only)"
 	@echo "  help     - Show this help"

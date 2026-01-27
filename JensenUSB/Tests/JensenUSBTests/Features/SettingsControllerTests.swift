@@ -10,7 +10,7 @@ class SettingsControllerTests: XCTestCase {
     override func setUp() {
         super.setUp()
         mockTransport = MockTransport()
-        jensen = Jensen(transport: mockTransport, verbose: false)
+        mockTransport.mockModel = .h1
         
         // Mock connection response
         var body = Data()
@@ -20,22 +20,22 @@ class SettingsControllerTests: XCTestCase {
         body.append(2)
         body.append(contentsOf: "H1".utf8)
         
-        let infoResponse = TestHelpers.makeResponse(for: .queryDeviceInfo, sequence: 1, body: [UInt8](body))
-        mockTransport.addResponse(infoResponse)
+        mockTransport.addResponse(TestHelpers.makeResponse(for: .queryDeviceInfo, sequence: 1, body: [UInt8](body)))
         
+        jensen = Jensen(transport: mockTransport)
         try! jensen.connect()
-        mockTransport.clearSentCommands()
         
+        mockTransport.clearSentCommands()
         settingsController = jensen.settings
     }
     
+    override func tearDown() {
+        jensen.disconnect()
+        super.tearDown()
+    }
+    
     func testGetSettingsReturnsAllSettings() {
-        // Body indices:
-        // 3: AutoRecord (1=on, 2=off)
-        // 7: AutoPlay (1=on, 2=off)
-        // 11: Notification (1=on, 2=off)
-        // 15: BluetoothTone (1=off, 2=on - inverted!)
-        
+        // Arrange
         var body = [UInt8](repeating: 0, count: 16)
         body[3] = 1  // Record ON
         body[7] = 2  // Play OFF
@@ -44,8 +44,10 @@ class SettingsControllerTests: XCTestCase {
         
         mockTransport.addResponse(TestHelpers.makeResponse(for: .getSettings, sequence: 1, body: body))
         
+        // Act
         let settings = try! settingsController.get()
         
+        // Assert
         XCTAssertTrue(settings.autoRecord)
         XCTAssertFalse(settings.autoPlay)
         XCTAssertTrue(settings.notification)
@@ -60,8 +62,6 @@ class SettingsControllerTests: XCTestCase {
         
         let cmds = mockTransport.getAllSentCommands()
         XCTAssertEqual(cmds.count, 1)
-        
-        // Body starts at 12. Offset 15 in body is at 12+15 = 27
         XCTAssertEqual(cmds[0][12+15], 2)
     }
     
@@ -83,7 +83,6 @@ class SettingsControllerTests: XCTestCase {
         try! settingsController.setAutoRecord(true)
         
         let cmds = mockTransport.getAllSentCommands()
-        // Offset 3 in body -> 12+3 = 15
         XCTAssertEqual(cmds[0][15], 1)
     }
 }

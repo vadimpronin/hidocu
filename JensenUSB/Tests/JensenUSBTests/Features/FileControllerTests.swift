@@ -11,23 +11,8 @@ class FileControllerTests: XCTestCase {
         super.setUp()
         mockTransport = MockTransport()
         mockTransport.mockModel = .h1
-        // We need to initialize Jensen with the mock transport
-        // Assuming Jensen has an init accepting transport or a way to set it
-        // If not, we might need to modify Jensen to accept transport injection
-        // Based on previous files, Jensen init probably accepts transport.
-        // Let's assume: init(transport: JensenTransport, verbose: Bool = false)
-        jensen = Jensen(transport: mockTransport, verbose: false)
         
-        // Add response for initial connection (getDeviceInfo)
-        // Header + ID + Seq + Length + Body
-        // Body: VerLen(1) + VerStr + VerNum(4) + SNLen(1) + SN
-        // Minimum body for parsing: 1 + "1.0.0".count + 4 + 1 + "SN".count
-        // Ver: "1.0.0" -> 5 bytes. 
-        // SN: "H1" -> 2 bytes.
-        // Body bytes: 0x05, 0x31, 0x2E, 0x30, 0x2E, 0x30, 
-        // 0x00, 0x01, 0x00, 0x00 (Version 0x00010000),
-        // 0x02, 0x48, 0x31 (SN "H1")
-        
+        // Mock connection interaction
         var body = Data()
         body.append(5) // VerLen
         body.append(contentsOf: "1.0.0".utf8)
@@ -38,9 +23,9 @@ class FileControllerTests: XCTestCase {
         let infoResponse = TestHelpers.makeResponse(for: .queryDeviceInfo, sequence: 1, body: [UInt8](body))
         mockTransport.addResponse(infoResponse)
         
-        try! jensen.connect() // Should succeed with mock
+        jensen = Jensen(transport: mockTransport)
+        try! jensen.connect()
         
-        // Clear queue and sent commands to have clean state for test
         mockTransport.clearSentCommands()
         fileController = jensen.file
     }
@@ -124,8 +109,6 @@ class FileControllerTests: XCTestCase {
         bodyData.append(contentsOf: Array(repeating: 0xAB, count: 16))
         
         // Add response
-        // Note: File list comes in chunks. FileController processes chunks.
-        // We'll wrap this in a standard message
         let response = TestHelpers.makeResponse(for: .queryFileList, sequence: 1, body: [UInt8](bodyData))
         mockTransport.addResponse(response)
         
@@ -139,7 +122,6 @@ class FileControllerTests: XCTestCase {
         XCTAssertEqual(files[0].version, 1)
         
         // Verify duration calc for version 1
-        // duration = Double(fileSize) / 32.0 / 1000.0
         let expectedDuration = Double(fileSize) / 32.0 / 1000.0
         XCTAssertEqual(files[0].duration, expectedDuration, accuracy: 0.001)
     }
@@ -164,25 +146,15 @@ class FileControllerTests: XCTestCase {
         let fileContent = Data([0xAA, 0xBB, 0xCC, 0xDD])
         
         // Response format: The device sends chunks wrapped in 0x1234 headers
-        // We need to simulate that raw stream structure
-        
-        // Chunk 1: Header + Data
         var chunk = Data()
-        // Header
         chunk.append(0x12)
         chunk.append(0x34)
-        // ID (transferFile = 5)
         chunk.append(0x00)
         chunk.append(0x05)
-        // Sequence
         chunk.append(contentsOf: [0, 0, 0, 0])
-        // Length (4 bytes content)
         chunk.append(contentsOf: [0, 0, 0, 4])
-        // Body
         chunk.append(fileContent)
         
-        // We add this as a RAW response because receive() returns Data chunks
-        // FileController expects these chunks to contain the frame structure
         mockTransport.addRawResponse(chunk)
         
         // Act
@@ -193,8 +165,7 @@ class FileControllerTests: XCTestCase {
         
         // Verify command sent
         let cmds = mockTransport.getAllSentCommands()
-        XCTAssertEqual(cmds.count, 1) 
-        // We could verify filename in body if we decoded it, but we trust ProtocolEncoder tests
+        XCTAssertEqual(cmds.count, 1)
     }
     
     // MARK: - Delete Tests

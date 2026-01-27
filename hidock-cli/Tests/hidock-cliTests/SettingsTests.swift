@@ -6,12 +6,19 @@ import JensenTestSupport
 
 class SettingsTests: XCTestCase {
     var mockTransport: MockTransport!
+    var jensen: Jensen!
     
     override func setUp() {
         super.setUp()
         mockTransport = MockTransport()
-        JensenFactory.make = { verbose in
-            return Jensen(transport: self.mockTransport, verbose: verbose)
+        mockTransport.mockModel = .h1
+        jensen = Jensen(transport: mockTransport)
+        
+        JensenFactory.make = { [unowned self] verbose in
+            if self.jensen.verbose != verbose {
+                self.jensen.verbose = verbose
+            }
+            return self.jensen
         }
     }
     
@@ -19,6 +26,7 @@ class SettingsTests: XCTestCase {
         JensenFactory.make = { verbose in
             return Jensen(verbose: verbose)
         }
+        jensen.disconnect()
         super.tearDown()
     }
     
@@ -43,7 +51,6 @@ class SettingsTests: XCTestCase {
         try cmd.run()
         
         XCTAssertEqual(mockTransport.sentCommands.count, 2)
-        // Checks output manually? No easy way. Trust the command logic if test runs without error.
     }
     
     func testSettingsSetAutoRecord() throws {

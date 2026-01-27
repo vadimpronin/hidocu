@@ -92,8 +92,6 @@ class JensenTests: XCTestCase {
         XCTAssertEqual(cmd1.sequence, 2)
         XCTAssertEqual(cmd2.sequence, 3)
         // Check internal jensen sequence
-        // Note: internal sequence is unaccessible directly unless internal, tests are in same module if @testable
-        // or we check sequence of sent commands in mock
         let sent = mockTransport.getAllSentCommands()
         // 0: connect (seq 1), 1: cmd1 (seq 2), 2: cmd2 (seq 3)
         XCTAssertEqual(sent[1][7], 2) // Sequence LSB

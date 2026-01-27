@@ -10,9 +10,9 @@ class TimeControllerTests: XCTestCase {
     override func setUp() {
         super.setUp()
         mockTransport = MockTransport()
-        jensen = Jensen(transport: mockTransport, verbose: false)
+        mockTransport.mockModel = .h1
         
-        // Mock connection response (Device Info)
+        // Mock connection setup
         var body = Data()
         body.append(5) // VerLen
         body.append(contentsOf: "1.0.0".utf8)
@@ -20,13 +20,18 @@ class TimeControllerTests: XCTestCase {
         body.append(2) // SNLen
         body.append(contentsOf: "H1".utf8)
         
-        let infoResponse = TestHelpers.makeResponse(for: .queryDeviceInfo, sequence: 1, body: [UInt8](body))
-        mockTransport.addResponse(infoResponse)
+        mockTransport.addResponse(TestHelpers.makeResponse(for: .queryDeviceInfo, sequence: 1, body: [UInt8](body)))
         
+        jensen = Jensen(transport: mockTransport)
         try! jensen.connect()
-        mockTransport.clearSentCommands()
         
+        mockTransport.clearSentCommands()
         timeController = jensen.time
+    }
+    
+    override func tearDown() {
+        jensen.disconnect()
+        super.tearDown()
     }
     
     // MARK: - Get Time
@@ -35,7 +40,6 @@ class TimeControllerTests: XCTestCase {
         // Arrange: 2025-01-27 12:34:56
         // BCD: 0x20 0x25 0x01 0x27 0x12 0x34 0x56
         let bcd: [UInt8] = [0x20, 0x25, 0x01, 0x27, 0x12, 0x34, 0x56]
-        
         mockTransport.addResponse(TestHelpers.makeResponse(for: .queryDeviceTime, sequence: 1, body: bcd))
         
         // Act
@@ -49,7 +53,10 @@ class TimeControllerTests: XCTestCase {
         let bcd: [UInt8] = [0, 0, 0, 0, 0, 0, 0]
         mockTransport.addResponse(TestHelpers.makeResponse(for: .queryDeviceTime, sequence: 1, body: bcd))
         
+        // Act
         let time = try! timeController.get()
+        
+        // Assert
         XCTAssertEqual(time.timeString, "unknown")
     }
     
@@ -72,7 +79,6 @@ class TimeControllerTests: XCTestCase {
         XCTAssertEqual(cmds.count, 1)
         
         // Verify Body: BCD of date
-        // Body starts at offset 12
         let body = [UInt8](cmds[0].subdata(in: 12..<19))
         XCTAssertEqual(body, [0x20, 0x25, 0x01, 0x27, 0x12, 0x34, 0x56])
     }
