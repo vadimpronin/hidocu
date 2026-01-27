@@ -14,3 +14,4 @@ DerivedData/
 # Temporary files
 *.tmp
 *.log
+tmp/
