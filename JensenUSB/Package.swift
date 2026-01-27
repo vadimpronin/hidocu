@@ -13,6 +13,9 @@ let package = Package(
         .library(
             name: "JensenUSB",
             targets: ["JensenUSB"]),
+        .library(
+            name: "JensenTestSupport",
+            targets: ["JensenTestSupport"]),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -22,8 +25,13 @@ let package = Package(
             dependencies: [],
             path: "Sources/JensenUSB"
         ),
+        .target(
+            name: "JensenTestSupport",
+            dependencies: ["JensenUSB"],
+            path: "Sources/JensenTestSupport"
+        ),
         .testTarget(
             name: "JensenUSBTests",
-            dependencies: ["JensenUSB"]),
+            dependencies: ["JensenUSB", "JensenTestSupport"]),
     ]
 )

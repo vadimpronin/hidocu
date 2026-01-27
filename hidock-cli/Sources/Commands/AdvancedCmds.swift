@@ -9,12 +9,12 @@ struct MassStorage: ParsableCommand {
     var verbose: Bool = false
 
     func run() throws {
-        let jensen = Jensen(verbose: verbose)
+        let jensen = JensenFactory.make(verbose)
         try jensen.connect()
         defer { jensen.disconnect() }
         
         _ = try jensen.getDeviceInfo()
-        try jensen.enterMassStorage()
+        try jensen.system.enterMassStorage()
         print("Device switching to mass storage mode.")
         print("It will disconnect and reappear as a disk drive.")
     }
@@ -30,7 +30,7 @@ struct Format: ParsableCommand {
     var verbose: Bool = false
 
     func run() throws {
-        let jensen = Jensen(verbose: verbose)
+        let jensen = JensenFactory.make(verbose)
         try jensen.connect()
         defer { jensen.disconnect() }
         
@@ -47,7 +47,7 @@ struct Format: ParsableCommand {
         }
         
         print("Formatting SD card (this may take 30 seconds)...")
-        try jensen.formatCard()
+        try jensen.system.formatCard()
         print("Format complete.")
     }
 }
@@ -62,7 +62,7 @@ struct FactoryReset: ParsableCommand {
     var verbose: Bool = false
 
     func run() throws {
-        let jensen = Jensen(verbose: verbose)
+        let jensen = JensenFactory.make(verbose)
         try jensen.connect()
         defer { jensen.disconnect() }
         
@@ -79,7 +79,7 @@ struct FactoryReset: ParsableCommand {
         }
         
         print("Performing factory reset...")
-        try jensen.factoryReset()
+        try jensen.system.factoryReset()
         print("Factory reset complete.")
     }
 }
@@ -94,7 +94,7 @@ struct RestoreFactory: ParsableCommand {
     var verbose: Bool = false
 
     func run() throws {
-        let jensen = Jensen(verbose: verbose)
+        let jensen = JensenFactory.make(verbose)
         try jensen.connect()
         defer { jensen.disconnect() }
         
@@ -111,7 +111,7 @@ struct RestoreFactory: ParsableCommand {
         }
         
         print("Restoring factory settings...")
-        try jensen.restoreFactorySettings()
+        try jensen.system.restoreFactorySettings()
         print("Restore complete.")
     }
 }
@@ -124,10 +124,10 @@ struct USBTimeoutGet: ParsableCommand {
     static var configuration = CommandConfiguration(commandName: "get", abstract: "Get USB timeout")
     @Flag(name: .shortAndLong) var verbose: Bool = false
     func run() throws {
-        let jensen = Jensen(verbose: verbose)
+        let jensen = JensenFactory.make(verbose)
         try jensen.connect()
         defer { jensen.disconnect() }
-        let timeout = try jensen.getWebUSBTimeout()
+        let timeout = try jensen.system.getWebUSBTimeout()
         print("USB Timeout: \(timeout) ms")
     }
 }
@@ -137,13 +137,13 @@ struct USBTimeoutSet: ParsableCommand {
     @Argument(help: "Timeout in ms") var value: UInt32
     @Flag(name: .shortAndLong) var verbose: Bool = false
     func run() throws {
-        let jensen = Jensen(verbose: verbose)
+        let jensen = JensenFactory.make(verbose)
         try jensen.connect()
         defer { jensen.disconnect() }
         print("Setting USB timeout to \(value) ms...")
-        try jensen.setWebUSBTimeout(value)
+        try jensen.system.setWebUSBTimeout(value)
         print("Timeout updated.")
-        let newTimeout = try jensen.getWebUSBTimeout()
+        let newTimeout = try jensen.system.getWebUSBTimeout()
         print("Effective USB Timeout: \(newTimeout) ms")
     }
 }
@@ -152,7 +152,7 @@ struct BNCStart: ParsableCommand {
     static var configuration = CommandConfiguration(commandName: "bnc-start", abstract: "Start BNC demo mode")
     @Flag(name: .shortAndLong) var verbose: Bool = false
     func run() throws {
-        let jensen = Jensen(verbose: verbose)
+        let jensen = JensenFactory.make(verbose)
         try jensen.connect()
         defer { jensen.disconnect() }
         _ = try jensen.getDeviceInfo()
@@ -166,7 +166,7 @@ struct BNCStop: ParsableCommand {
     static var configuration = CommandConfiguration(commandName: "bnc-stop", abstract: "Stop BNC demo mode")
     @Flag(name: .shortAndLong) var verbose: Bool = false
     func run() throws {
-        let jensen = Jensen(verbose: verbose)
+        let jensen = JensenFactory.make(verbose)
         try jensen.connect()
         defer { jensen.disconnect() }
         _ = try jensen.getDeviceInfo()
@@ -188,7 +188,7 @@ struct SendKey: ParsableCommand {
     @Flag(name: .shortAndLong) var verbose: Bool = false
 
     func run() throws {
-        let jensen = Jensen(verbose: verbose)
+        let jensen = JensenFactory.make(verbose)
         try jensen.connect()
         defer { jensen.disconnect() }
         
@@ -225,7 +225,7 @@ struct RecordTestStart: ParsableCommand {
     @Argument(help: "Test Type") var type: UInt8
     @Flag(name: .shortAndLong) var verbose: Bool = false
     func run() throws {
-        let jensen = Jensen(verbose: verbose)
+        let jensen = JensenFactory.make(verbose)
         try jensen.connect()
         defer { jensen.disconnect() }
         _ = try jensen.getDeviceInfo()
@@ -240,7 +240,7 @@ struct RecordTestStop: ParsableCommand {
     @Argument(help: "Test Type") var type: UInt8
     @Flag(name: .shortAndLong) var verbose: Bool = false
     func run() throws {
-        let jensen = Jensen(verbose: verbose)
+        let jensen = JensenFactory.make(verbose)
         try jensen.connect()
         defer { jensen.disconnect() }
         _ = try jensen.getDeviceInfo()

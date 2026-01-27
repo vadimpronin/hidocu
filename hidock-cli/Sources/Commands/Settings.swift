@@ -22,12 +22,12 @@ struct SettingsGet: ParsableCommand {
     var verbose: Bool = false
 
     func run() throws {
-        let jensen = Jensen(verbose: verbose)
+        let jensen = JensenFactory.make(verbose)
         try jensen.connect()
         defer { jensen.disconnect() }
         
-        _ = try jensen.getDeviceInfo()
-        let settings = try jensen.getSettings()
+        // connect() already calls getDeviceInfo()
+        let settings = try jensen.settings.get()
         
         print("Auto Record: \(settings.autoRecord ? "ON" : "OFF")")
         print("Auto Play: \(settings.autoPlay ? "ON" : "OFF")")
@@ -54,7 +54,7 @@ struct SettingsSetAutoRecord: ParsableCommand {
     var verbose: Bool = false
 
     func run() throws {
-        let jensen = Jensen(verbose: verbose)
+        let jensen = JensenFactory.make(verbose)
         try jensen.connect()
         defer { jensen.disconnect() }
         
@@ -62,7 +62,7 @@ struct SettingsSetAutoRecord: ParsableCommand {
             throw ValidationError("Invalid value '\(value)'. Use 'on' or 'off'.")
         }
         
-        try jensen.setAutoRecord(enabled)
+        try jensen.settings.setAutoRecord(enabled)
         print("Auto Record: \(enabled ? "ON" : "OFF")")
         print("Setting updated successfully.")
     }
@@ -78,7 +78,7 @@ struct SettingsSetAutoPlay: ParsableCommand {
     var verbose: Bool = false
 
     func run() throws {
-        let jensen = Jensen(verbose: verbose)
+        let jensen = JensenFactory.make(verbose)
         try jensen.connect()
         defer { jensen.disconnect() }
         
@@ -86,7 +86,7 @@ struct SettingsSetAutoPlay: ParsableCommand {
             throw ValidationError("Invalid value '\(value)'. Use 'on' or 'off'.")
         }
         
-        try jensen.setAutoPlay(enabled)
+        try jensen.settings.setAutoPlay(enabled)
         print("Auto Play: \(enabled ? "ON" : "OFF")")
         print("Setting updated successfully.")
     }
@@ -102,7 +102,7 @@ struct SettingsSetNotification: ParsableCommand {
     var verbose: Bool = false
 
     func run() throws {
-        let jensen = Jensen(verbose: verbose)
+        let jensen = JensenFactory.make(verbose)
         try jensen.connect()
         defer { jensen.disconnect() }
         
@@ -110,7 +110,7 @@ struct SettingsSetNotification: ParsableCommand {
             throw ValidationError("Invalid value '\(value)'. Use 'on' or 'off'.")
         }
         
-        try jensen.setNotification(enabled)
+        try jensen.settings.setNotification(enabled)
         print("Notifications: \(enabled ? "ON" : "OFF")")
         print("Setting updated successfully.")
     }
@@ -126,7 +126,7 @@ struct SettingsSetBTTone: ParsableCommand {
     var verbose: Bool = false
 
     func run() throws {
-        let jensen = Jensen(verbose: verbose)
+        let jensen = JensenFactory.make(verbose)
         try jensen.connect()
         defer { jensen.disconnect() }
         
@@ -134,7 +134,7 @@ struct SettingsSetBTTone: ParsableCommand {
             throw ValidationError("Invalid value '\(value)'. Use 'on' or 'off'.")
         }
         
-        try jensen.setBluetoothTone(enabled)
+        try jensen.settings.setBluetoothTone(enabled)
         print("Bluetooth Tone: \(enabled ? "ON" : "OFF")")
         print("Setting updated successfully.")
     }

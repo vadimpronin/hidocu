@@ -21,19 +21,18 @@ struct Download: ParsableCommand {
     var verbose: Bool = false
 
     func run() throws {
-        let jensen = Jensen(verbose: verbose)
+        let jensen = JensenFactory.make(verbose)
         try jensen.connect()
         defer { jensen.disconnect() }
         
         // Expansion of tilde in output path
         let outputDir = (output as NSString).expandingTildeInPath
         
-        // Get device info first for version checking
-        _ = try jensen.getDeviceInfo()
+        // connect() already calls getDeviceInfo() to populate version/serial
         
         // Get file list
         print("Loading file list...")
-        let files = try jensen.listFiles()
+        let files = try jensen.file.list()
         
         guard !files.isEmpty else {
             print("No files on device")
@@ -131,7 +130,7 @@ struct Download: ParsableCommand {
         let startTime = Date()
         var lastPrintedProgress = -1
         
-        let fileData = try jensen.downloadFile(
+        let fileData = try jensen.file.download(
             filename: file.name,
             expectedSize: file.length
         ) { received, total in

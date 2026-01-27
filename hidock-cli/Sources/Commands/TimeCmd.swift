@@ -20,10 +20,10 @@ struct TimeGet: ParsableCommand {
     var verbose: Bool = false
 
     func run() throws {
-        let jensen = Jensen(verbose: verbose)
+        let jensen = JensenFactory.make(verbose)
         try jensen.connect()
         defer { jensen.disconnect() }
-        let time = try jensen.getTime()
+        let time = try jensen.time.get()
         print("Device Time: \(time.timeString)")
     }
 }
@@ -41,7 +41,7 @@ struct TimeSet: ParsableCommand {
     var verbose: Bool = false
 
     func run() throws {
-        let jensen = Jensen(verbose: verbose)
+        let jensen = JensenFactory.make(verbose)
         try jensen.connect()
         defer { jensen.disconnect() }
         
@@ -71,11 +71,11 @@ struct TimeSet: ParsableCommand {
             print("Setting device time to current system time: \(formatter.string(from: dateToSet))")
         }
         
-        try jensen.setTime(dateToSet)
+        try jensen.time.set(dateToSet)
         print("Time set successfully.")
         
         // Verify by reading back
-        let newTime = try jensen.getTime()
+        let newTime = try jensen.time.get()
         print("Device time now: \(newTime.timeString)")
     }
 }

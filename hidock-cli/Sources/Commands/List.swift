@@ -9,12 +9,12 @@ struct List: ParsableCommand {
     var verbose: Bool = false
 
     func run() throws {
-        let jensen = Jensen(verbose: verbose)
+        let jensen = JensenFactory.make(verbose)
         try jensen.connect()
         defer { jensen.disconnect() }
 
         print("Loading file list...")
-        let files = try jensen.listFiles()
+        let files = try jensen.file.list()
         
         if files.isEmpty {
             print("No files found.")

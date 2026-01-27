@@ -44,7 +44,11 @@ public class FileController {
         while Date() < deadline {
             do {
                 let chunk = try core.transport.receive(timeout: 5.0)
-                allData.append(chunk)
+                allData.append(chunk) // Append raw data, we will parse it later or incrementally
+                
+                // Optional: We could try to parse incrementally here to return early
+                // But parseFileList logic is designed to parse the whole blob.
+                // Let's stick to original behavior: append and try parse.
                 
                 if let files = parseFileList(allData, expectedCount: expectedCount) {
                     return files
@@ -77,34 +81,20 @@ public class FileController {
         let deadline = Date().addingTimeInterval(120.0)
         var lastProgress = 0
         
+        var buffer = Data()
+        
         while Date() < deadline {
             do {
                 let chunk = try core.transport.receive(timeout: 5.0)
+                buffer.append(chunk)
                 
-                var offset = 0
-                while offset + 12 <= chunk.count {
-                    if chunk[offset] == 0x12 && chunk[offset + 1] == 0x34 {
-                        let lengthField = UInt32(chunk[offset + 8]) << 24 |
-                                         UInt32(chunk[offset + 9]) << 16 |
-                                         UInt32(chunk[offset + 10]) << 8 |
-                                         UInt32(chunk[offset + 11])
-                        
-                        let bodyLength = Int(lengthField & 0x00FFFFFF)
-                        let padding = Int((lengthField >> 24) & 0xFF)
-                        
-                        let bodyStart = offset + 12
-                        let bodyEnd = bodyStart + bodyLength
-                        
-                        if bodyEnd <= chunk.count {
-                            fileData.append(chunk[bodyStart..<bodyEnd])
-                            offset = bodyEnd + padding
-                        } else {
-                            break
-                        }
-                    } else {
-                        fileData.append(chunk[offset...])
-                        break
-                    }
+                let (messages, consumed) = ProtocolDecoder.decodeStream(buffer)
+                if consumed > 0 {
+                    buffer.removeFirst(consumed)
+                }
+                
+                for message in messages {
+                    fileData.append(message.body)
                 }
                 
                 let progress = Int(Double(fileData.count) / Double(expectedSize) * 100)
@@ -114,6 +104,11 @@ public class FileController {
                 }
                 
                 if fileData.count >= expectedSize {
+                    // Protocol might send padding/extra bytes in correct packets, 
+                    // ProtocolDecoder handles bodies correctly. 
+                    // So fileData should be clean.
+                    // But if we got more than expected, we truncate? 
+                    // Usually we just return what we got if it matches protocol.
                     return fileData
                 }
                 
@@ -139,35 +134,19 @@ public class FileController {
     }
     
     private func parseFileList(_ data: Data, expectedCount: Int?) -> [FileEntry]? {
-        var bodyData = Data()
-        var offset = 0
+        let (messages, _) = ProtocolDecoder.decodeStream(data)
         
-        while offset + 12 <= data.count {
-            if data[offset] == 0x12 && data[offset + 1] == 0x34 {
-                let lengthField = UInt32(data[offset + 8]) << 24 | 
-                                 UInt32(data[offset + 9]) << 16 | 
-                                 UInt32(data[offset + 10]) << 8 | 
-                                 UInt32(data[offset + 11])
-                
-                let bodyLength = Int(lengthField & 0x00FFFFFF)
-                let padding = Int((lengthField >> 24) & 0xFF)
-                
-                let bodyStart = offset + 12
-                let bodyEnd = bodyStart + bodyLength
-                
-                if bodyEnd <= data.count {
-                    bodyData.append(data[bodyStart..<bodyEnd])
-                    offset = bodyEnd + padding
-                } else {
-                    break
-                }
-            } else {
-                bodyData.append(data[offset...])
-                break
-            }
+        var bodyData = Data()
+        for message in messages {
+            bodyData.append(message.body)
         }
         
-        if bodyData.isEmpty { return nil }
+        // ProtocolDecoder handles skipping invalid headers/resync logic better than previous manual loop.
+        // It consumes all complete messages.
+        
+        if bodyData.isEmpty {
+            return messages.isEmpty ? nil : []
+        }
         
         var fileOffset = 0
         var files: [FileEntry] = []
@@ -259,7 +238,7 @@ public class FileController {
             return nil
         }
         
-        return files.isEmpty ? nil : files
+        return messages.isEmpty ? nil : files
     }
     
     public func getRecordingFile() throws -> RecordingFile? {

@@ -3,6 +3,7 @@
 CLI_DIR = hidock-cli
 CLI_EXECUTABLE = hidock-cli
 CLI_BUILD_PATH = $(CLI_DIR)/.build
+LIBRARY_DIR = JensenUSB
 
 GUI_WORKSPACE = HiDocu.xcworkspace
 GUI_SCHEME = HiDocu
@@ -49,6 +50,13 @@ install: release
 run: build
 	@$(CLI_BUILD_PATH)/debug/$(CLI_EXECUTABLE) $(ARGS)
 
+# Run Tests
+test:
+	@echo "Running JensenUSB Tests..."
+	@cd $(LIBRARY_DIR) && swift test
+	@echo "Running hidock-cli Tests..."
+	@cd $(CLI_DIR) && swift test
+
 # Show help
 help:
 	@echo "HiDocu Monorepo Build System"
@@ -62,4 +70,5 @@ help:
 	@echo "  clean    - Remove all build artifacts"
 	@echo "  install  - Install CLI to /usr/local/bin"
 	@echo "  run      - Build and run CLI (use ARGS='...' for arguments)"
+	@echo "  test     - Run all tests"
 	@echo "  help     - Show this help"

@@ -1,6 +1,6 @@
 import Foundation
 
-public enum JensenError: Error {
+public enum JensenError: Error, Equatable {
     case notConnected
     case commandTimeout
     case invalidResponse

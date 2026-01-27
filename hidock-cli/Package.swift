@@ -21,8 +21,15 @@ let package = Package(
                 .product(name: "JensenUSB", package: "JensenUSB"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser")
             ],
-            path: "Sources",
-            exclude: ["make_prompt.sh"]
+            path: "Sources"
+        ),
+        .testTarget(
+            name: "hidock-cliTests",
+            dependencies: [
+                "hidock-cli",
+                .product(name: "JensenUSB", package: "JensenUSB"),
+                .product(name: "JensenTestSupport", package: "JensenUSB")
+            ]
         ),
     ]
 )

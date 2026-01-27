@@ -5,7 +5,7 @@ import Foundation
 
 // MARK: - Command IDs
 
-enum CommandID: UInt16 {
+public enum CommandID: UInt16 {
     case invalid = 0
     case queryDeviceInfo = 1
     case queryDeviceTime = 2
@@ -54,7 +54,7 @@ enum CommandID: UInt16 {
     case writeWebusbTimeout = 61456
     case readWebusbTimeout = 61457
     
-    var name: String {
+    public var name: String {
         switch self {
         case .invalid: return "invalid"
         case .queryDeviceInfo: return "get-device-info"
@@ -105,71 +105,51 @@ enum CommandID: UInt16 {
 
 // MARK: - Command
 
-struct Command {
-    let id: CommandID
-    var body: [UInt8]
-    var sequence: UInt32 = 0
-    var expireTime: Date?
+public struct Command {
+    public let id: CommandID
+    public var body: [UInt8]
+    public var sequence: UInt32 = 0
+    public var expireTime: Date?
     
-    init(_ id: CommandID, body: [UInt8] = []) {
+    public init(_ id: CommandID, body: [UInt8] = []) {
         self.id = id
         self.body = body
     }
     
-    mutating func setSequence(_ seq: UInt32) {
+    public mutating func setSequence(_ seq: UInt32) {
         self.sequence = seq
     }
     
-    mutating func expireAfter(_ seconds: TimeInterval) {
+    public mutating func expireAfter(_ seconds: TimeInterval) {
         self.expireTime = Date().addingTimeInterval(seconds)
     }
     
-    var isExpired: Bool {
+    public var isExpired: Bool {
         guard let expireTime = expireTime else { return false }
         return Date() > expireTime
     }
     
     /// Build the packet to send to the device
     /// Format: Header (2) + CommandID (2) + Sequence (4) + Length (4) + Body
-    func makePacket() -> Data {
-        var packet = Data(capacity: 12 + body.count)
-        
-        // Header: 0x12 0x34
-        packet.append(0x12)
-        packet.append(0x34)
-        
-        // Command ID (big-endian)
-        packet.append(UInt8((id.rawValue >> 8) & 0xFF))
-        packet.append(UInt8(id.rawValue & 0xFF))
-        
-        // Sequence number (big-endian)
-        packet.append(UInt8((sequence >> 24) & 0xFF))
-        packet.append(UInt8((sequence >> 16) & 0xFF))
-        packet.append(UInt8((sequence >> 8) & 0xFF))
-        packet.append(UInt8(sequence & 0xFF))
-        
-        // Body length (big-endian, 24-bit + 8-bit reserved)
-        let length = UInt32(body.count)
-        packet.append(UInt8((length >> 24) & 0xFF))
-        packet.append(UInt8((length >> 16) & 0xFF))
-        packet.append(UInt8((length >> 8) & 0xFF))
-        packet.append(UInt8(length & 0xFF))
-        
-        // Body
-        packet.append(contentsOf: body)
-        
-        return packet
+    public func makePacket() -> Data {
+        return ProtocolEncoder.encode(self)
     }
 }
 
 // MARK: - Message (Response)
 
-struct Message {
-    let id: UInt16
-    let sequence: UInt32
-    let body: Data
+public struct Message {
+    public let id: UInt16
+    public let sequence: UInt32
+    public let body: Data
     
-    var commandID: CommandID? {
+    public init(id: UInt16, sequence: UInt32, body: Data) {
+        self.id = id
+        self.sequence = sequence
+        self.body = body
+    }
+    
+    public var commandID: CommandID? {
         CommandID(rawValue: id)
     }
 }
@@ -179,46 +159,11 @@ struct Message {
 struct MessageParser {
     /// Parse a response message from raw data
     /// Returns (message, bytesConsumed) or nil if incomplete
-    static func parse(_ data: Data, offset: Int = 0) -> (Message, Int)? {
-        let available = data.count - offset
-        
-        // Need at least 12 bytes for header
-        guard available >= 12 else { return nil }
-        
-        // Check header
-        guard data[offset] == 0x12 && data[offset + 1] == 0x34 else {
-            return nil
-        }
-        
-        // Parse command ID
-        let commandID = UInt16(data[offset + 2]) << 8 | UInt16(data[offset + 3])
-        
-        // Parse sequence number
-        let sequence = UInt32(data[offset + 4]) << 24 |
-                      UInt32(data[offset + 5]) << 16 |
-                      UInt32(data[offset + 6]) << 8 |
-                      UInt32(data[offset + 7])
-        
-        // Parse body length (24-bit) + padding (8-bit stored in high byte)
-        let lengthRaw = UInt32(data[offset + 8]) << 24 |
-                       UInt32(data[offset + 9]) << 16 |
-                       UInt32(data[offset + 10]) << 8 |
-                       UInt32(data[offset + 11])
-        
-        let padding = (lengthRaw >> 24) & 0xFF
-        let bodyLength = Int(lengthRaw & 0x00FFFFFF)
-        
-        // Check if we have complete message
-        let totalLength = 12 + bodyLength + Int(padding)
-        guard available >= totalLength else { return nil }
-        
-        // Extract body
-        let bodyStart = offset + 12
-        let bodyEnd = bodyStart + bodyLength
-        let body = data[bodyStart..<bodyEnd]
-        
-        let message = Message(id: commandID, sequence: sequence, body: Data(body))
-        return (message, totalLength)
+    /// Parse a response message from raw data
+    /// Returns (message, bytesConsumed) or nil if incomplete
+    static func parse(_ data: Data, offset: Int = 0) throws -> (Message, Int)? {
+        // Delegate to ProtocolDecoder
+        return try ProtocolDecoder.decode(data, offset: offset)
     }
 }
 

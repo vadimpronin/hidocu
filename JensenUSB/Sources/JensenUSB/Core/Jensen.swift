@@ -93,7 +93,7 @@ public class Jensen {
         while Date() < deadline {
             do {
                 let data = try transport.receive(timeout: timeout)
-                if let (message, _) = MessageParser.parse(data) {
+                if let (message, _) = try MessageParser.parse(data) {
                     if message.id == command.id.rawValue {
                         if verbose {
                             print("[Jensen] Received response: \(command.id.name) (seq: \(message.sequence))")
@@ -106,6 +106,10 @@ public class Jensen {
                         // Continue waiting
                     }
                 }
+            } catch let error as ProtocolError {
+                if verbose { print("[Jensen] Protocol Error: \(error)") }
+                if Date() >= deadline { throw JensenError.invalidResponse }
+                // Continue waiting
             } catch {
                 if Date() >= deadline { throw JensenError.commandTimeout }
                 throw JensenError.commandTimeout
