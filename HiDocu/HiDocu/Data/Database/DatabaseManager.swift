@@ -15,8 +15,8 @@ final class DatabaseManager: Sendable {
     /// The database connection pool (thread-safe)
     let dbPool: DatabasePool
     
-    /// Database file path
-    let databasePath: String
+    /// Database file path (nil for in-memory databases)
+    let databasePath: String?
     
     /// Initialize the database manager.
     /// Creates the database file and runs migrations if needed.
@@ -39,7 +39,7 @@ final class DatabaseManager: Sendable {
         let dbURL = hidocuDir.appendingPathComponent("hidocu.sqlite")
         self.databasePath = dbURL.path
         
-        AppLogger.database.info("Database path: \(self.databasePath)")
+        AppLogger.database.info("Database path: \(self.databasePath ?? "in-memory")")
         
         // Configure GRDB
         var config = Configuration()
@@ -50,7 +50,7 @@ final class DatabaseManager: Sendable {
         }
         
         // Create database pool
-        self.dbPool = try DatabasePool(path: databasePath, configuration: config)
+        self.dbPool = try DatabasePool(path: dbURL.path, configuration: config)
         
         // Set WAL mode for better concurrency
         try dbPool.write { db in
@@ -63,6 +63,27 @@ final class DatabaseManager: Sendable {
         try Self.migrator.migrate(dbPool)
         
         AppLogger.database.info("Database migrations complete")
+    }
+    
+    /// Initialize an in-memory database for unit testing.
+    /// - Parameter inMemory: Must be true (exists for disambiguation)
+    init(inMemory: Bool) throws {
+        precondition(inMemory, "Use init() for file-based database")
+        
+        self.databasePath = nil
+        
+        // Configure GRDB for in-memory
+        var config = Configuration()
+        config.prepareDatabase { db in
+            try db.execute(sql: "PRAGMA foreign_keys = ON")
+        }
+        
+        // In-memory database uses DatabaseQueue wrapped in pool interface
+        // Using :memory: path creates a fresh in-memory database
+        self.dbPool = try DatabasePool(path: ":memory:", configuration: config)
+        
+        // Run migrations
+        try Self.migrator.migrate(dbPool)
     }
     
     // MARK: - Migrations

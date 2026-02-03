@@ -60,6 +60,10 @@ final class DeviceConnectionService {
     // MARK: - Connection Methods
     
     /// Connect to a HiDock device.
+    /// 
+    /// - Important: Jensen uses `Timer.scheduledTimer` for keep-alive pings, which requires
+    ///   an active RunLoop. This method runs on MainActor to ensure the timer is attached
+    ///   to `RunLoop.main` and will fire correctly.
     /// - Returns: Device connection info on success
     /// - Throws: JensenError if connection fails
     @MainActor
@@ -70,21 +74,19 @@ final class DeviceConnectionService {
         AppLogger.usb.info("Attempting to connect to device...")
         
         do {
-            // Run USB operations on background thread
-            let (device, info) = try await Task.detached { [self] in
-                let device = Jensen()
-                try device.connect()
-                
-                let deviceInfo = try device.getDeviceInfo()
-                let info = DeviceConnectionInfo(
-                    serialNumber: deviceInfo.serialNumber,
-                    model: self.determineModel(from: deviceInfo),
-                    firmwareVersion: deviceInfo.versionCode,
-                    firmwareNumber: deviceInfo.versionNumber
-                )
-                
-                return (device, info)
-            }.value
+            // Create Jensen on MainActor - its Timer.scheduledTimer requires an active RunLoop.
+            // RunLoop.main is always available on the main thread.
+            // Note: connect() is typically fast (IOKit device open), so this won't block UI significantly.
+            let device = Jensen()
+            try device.connect()
+            
+            let deviceInfo = try device.getDeviceInfo()
+            let info = DeviceConnectionInfo(
+                serialNumber: deviceInfo.serialNumber,
+                model: determineModel(from: deviceInfo),
+                firmwareVersion: deviceInfo.versionCode,
+                firmwareNumber: deviceInfo.versionNumber
+            )
             
             // Store reference to keep alive
             self.jensen = device
