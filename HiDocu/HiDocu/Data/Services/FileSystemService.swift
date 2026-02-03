@@ -9,13 +9,19 @@ import Foundation
 
 /// Manages file system operations with sandbox compliance.
 /// Handles security-scoped bookmarks for user-selected directories.
+///
+/// - Important: All file operations on user-selected directories MUST use
+///   `withSecurityScopedAccess` to properly manage sandbox access.
 @Observable
 final class FileSystemService {
     
     // MARK: - Properties
     
-    /// Default storage directory for recordings
+    /// The resolved storage directory URL (may require security scope access)
     private(set) var storageDirectory: URL?
+    
+    /// Whether the storage directory requires security-scoped access
+    private var requiresSecurityScope: Bool = false
     
     /// UserDefaults key for storing the bookmark
     private let bookmarkKey = "com.hidocu.storageDirectoryBookmark"
@@ -26,9 +32,10 @@ final class FileSystemService {
         // Try to restore saved bookmark
         restoreSavedBookmark()
         
-        // If no saved directory, use default
+        // If no saved directory, use default (doesn't require security scope)
         if storageDirectory == nil {
             storageDirectory = defaultStorageDirectory
+            requiresSecurityScope = false
         }
         
         AppLogger.fileSystem.info("FileSystemService initialized. Storage: \(self.storageDirectory?.path ?? "none")")
@@ -36,7 +43,7 @@ final class FileSystemService {
     
     // MARK: - Directory Management
     
-    /// Default storage directory in Application Support
+    /// Default storage directory in Application Support (no security scope needed)
     var defaultStorageDirectory: URL {
         let appSupport = FileManager.default.urls(
             for: .applicationSupportDirectory,
@@ -71,8 +78,17 @@ final class FileSystemService {
         UserDefaults.standard.set(bookmarkData, forKey: bookmarkKey)
         
         self.storageDirectory = url
+        self.requiresSecurityScope = true
         
         AppLogger.fileSystem.info("Storage directory set to: \(url.path)")
+    }
+    
+    /// Reset to default storage directory
+    func resetToDefaultDirectory() {
+        UserDefaults.standard.removeObject(forKey: bookmarkKey)
+        storageDirectory = defaultStorageDirectory
+        requiresSecurityScope = false
+        AppLogger.fileSystem.info("Reset to default storage directory")
     }
     
     /// Restore the saved bookmark from UserDefaults
@@ -92,10 +108,19 @@ final class FileSystemService {
             
             if isStale {
                 // Bookmark is stale, need to regenerate
-                AppLogger.fileSystem.warning("Storage bookmark is stale, will regenerate")
-                try setStorageDirectory(url)
+                AppLogger.fileSystem.warning("Storage bookmark is stale, attempting to regenerate")
+                // Try to start access to regenerate bookmark
+                if url.startAccessingSecurityScopedResource() {
+                    defer { url.stopAccessingSecurityScopedResource() }
+                    try setStorageDirectory(url)
+                } else {
+                    AppLogger.fileSystem.error("Cannot access stale bookmark, falling back to default")
+                    storageDirectory = defaultStorageDirectory
+                    requiresSecurityScope = false
+                }
             } else {
                 self.storageDirectory = url
+                self.requiresSecurityScope = true
                 AppLogger.fileSystem.info("Restored storage directory: \(url.path)")
             }
         } catch {
@@ -103,76 +128,10 @@ final class FileSystemService {
         }
     }
     
-    // MARK: - File Operations
+    // MARK: - Security Scoped Access
     
-    /// Ensure the storage directory exists
-    func ensureStorageDirectoryExists() throws {
-        guard let dir = storageDirectory else {
-            throw FileSystemError.noStorageDirectory
-        }
-        
-        try FileManager.default.createDirectory(
-            at: dir,
-            withIntermediateDirectories: true,
-            attributes: nil
-        )
-    }
-    
-    /// Get the full path for a recording file
-    func recordingPath(for filename: String) throws -> URL {
-        guard let dir = storageDirectory else {
-            throw FileSystemError.noStorageDirectory
-        }
-        
-        try ensureStorageDirectoryExists()
-        return dir.appendingPathComponent(filename)
-    }
-    
-    /// Check if a recording file exists
-    func recordingExists(filename: String) -> Bool {
-        guard let dir = storageDirectory else { return false }
-        let path = dir.appendingPathComponent(filename)
-        return FileManager.default.fileExists(atPath: path.path)
-    }
-    
-    /// Get file size in bytes
-    func fileSize(at url: URL) throws -> Int {
-        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
-        return attributes[.size] as? Int ?? 0
-    }
-    
-    /// Delete a recording file
-    func deleteRecording(filename: String) throws {
-        guard let dir = storageDirectory else {
-            throw FileSystemError.noStorageDirectory
-        }
-        
-        let path = dir.appendingPathComponent(filename)
-        try FileManager.default.removeItem(at: path)
-        
-        AppLogger.fileSystem.info("Deleted: \(filename)")
-    }
-    
-    /// List all recording files in storage
-    func listRecordings() throws -> [URL] {
-        guard let dir = storageDirectory else {
-            throw FileSystemError.noStorageDirectory
-        }
-        
-        let contents = try FileManager.default.contentsOfDirectory(
-            at: dir,
-            includingPropertiesForKeys: [.fileSizeKey, .creationDateKey],
-            options: [.skipsHiddenFiles]
-        )
-        
-        // Filter for audio files
-        let audioExtensions = ["hda", "mp3", "m4a", "wav"]
-        return contents.filter { url in
-            audioExtensions.contains(url.pathExtension.lowercased())
-        }
-    }
-    
-    /// Access a security-scoped resource for operations
+    /// Execute an operation with proper security-scoped access.
+    /// This is required for ALL file operations on user-selected directories.
     func withSecurityScopedAccess<T>(to url: URL, _ operation: () throws -> T) throws -> T {
         let accessed = url.startAccessingSecurityScopedResource()
         defer {
@@ -181,6 +140,99 @@ final class FileSystemService {
             }
         }
         return try operation()
+    }
+    
+    /// Execute an operation on the storage directory with proper access.
+    private func withStorageAccess<T>(_ operation: (URL) throws -> T) throws -> T {
+        guard let dir = storageDirectory else {
+            throw FileSystemError.noStorageDirectory
+        }
+        
+        if requiresSecurityScope {
+            return try withSecurityScopedAccess(to: dir) {
+                try operation(dir)
+            }
+        } else {
+            return try operation(dir)
+        }
+    }
+    
+    // MARK: - File Operations
+    
+    /// Ensure the storage directory exists
+    func ensureStorageDirectoryExists() throws {
+        try withStorageAccess { dir in
+            try FileManager.default.createDirectory(
+                at: dir,
+                withIntermediateDirectories: true,
+                attributes: nil
+            )
+        }
+    }
+    
+    /// Get the full path for a recording file
+    func recordingPath(for filename: String) throws -> URL {
+        try withStorageAccess { dir in
+            try FileManager.default.createDirectory(
+                at: dir,
+                withIntermediateDirectories: true,
+                attributes: nil
+            )
+            return dir.appendingPathComponent(filename)
+        }
+    }
+    
+    /// Check if a recording file exists
+    func recordingExists(filename: String) -> Bool {
+        guard let dir = storageDirectory else { return false }
+        
+        do {
+            return try withStorageAccess { _ in
+                let path = dir.appendingPathComponent(filename)
+                return FileManager.default.fileExists(atPath: path.path)
+            }
+        } catch {
+            return false
+        }
+    }
+    
+    /// Get file size in bytes
+    func fileSize(at url: URL) throws -> Int {
+        if requiresSecurityScope {
+            return try withSecurityScopedAccess(to: url) {
+                let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+                return attributes[.size] as? Int ?? 0
+            }
+        } else {
+            let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+            return attributes[.size] as? Int ?? 0
+        }
+    }
+    
+    /// Delete a recording file
+    func deleteRecording(filename: String) throws {
+        try withStorageAccess { dir in
+            let path = dir.appendingPathComponent(filename)
+            try FileManager.default.removeItem(at: path)
+            AppLogger.fileSystem.info("Deleted: \(filename)")
+        }
+    }
+    
+    /// List all recording files in storage
+    func listRecordings() throws -> [URL] {
+        try withStorageAccess { dir in
+            let contents = try FileManager.default.contentsOfDirectory(
+                at: dir,
+                includingPropertiesForKeys: [.fileSizeKey, .creationDateKey],
+                options: [.skipsHiddenFiles]
+            )
+            
+            // Filter for audio files
+            let audioExtensions = ["hda", "mp3", "m4a", "wav"]
+            return contents.filter { url in
+                audioExtensions.contains(url.pathExtension.lowercased())
+            }
+        }
     }
 }
 

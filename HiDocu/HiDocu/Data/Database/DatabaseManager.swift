@@ -97,6 +97,20 @@ final class DatabaseManager: Sendable {
                 )
                 """)
             
+            // Indexes for search optimization
+            try db.execute(sql: """
+                CREATE INDEX idx_recordings_filename ON recordings(filename)
+                """)
+            try db.execute(sql: """
+                CREATE INDEX idx_recordings_title ON recordings(title)
+                """)
+            try db.execute(sql: """
+                CREATE INDEX idx_recordings_created_at ON recordings(created_at)
+                """)
+            try db.execute(sql: """
+                CREATE INDEX idx_recordings_status ON recordings(status)
+                """)
+            
             // transcriptions table (1:1 with recordings)
             try db.execute(sql: """
                 CREATE TABLE transcriptions (
@@ -110,7 +124,7 @@ final class DatabaseManager: Sendable {
                 )
                 """)
             
-            // segments table (1:N with transcriptions)
+            // segments table (1:N with transcriptions) - for future use
             try db.execute(sql: """
                 CREATE TABLE segments (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -122,10 +136,41 @@ final class DatabaseManager: Sendable {
                     confidence REAL
                 )
                 """)
-            
-            // Index for faster segment lookups
             try db.execute(sql: """
                 CREATE INDEX idx_segments_transcription ON segments(transcription_id)
+                """)
+            
+            // api_logs table - for tracking AI API usage and costs
+            try db.execute(sql: """
+                CREATE TABLE api_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    recording_id INTEGER REFERENCES recordings(id) ON DELETE SET NULL,
+                    provider TEXT NOT NULL,
+                    model TEXT NOT NULL,
+                    request_type TEXT NOT NULL,
+                    input_tokens INTEGER,
+                    output_tokens INTEGER,
+                    cost_usd REAL,
+                    duration_ms INTEGER,
+                    status TEXT NOT NULL,
+                    error_message TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+                """)
+            try db.execute(sql: """
+                CREATE INDEX idx_api_logs_recording ON api_logs(recording_id)
+                """)
+            try db.execute(sql: """
+                CREATE INDEX idx_api_logs_created_at ON api_logs(created_at)
+                """)
+            
+            // settings table - key-value store for app configuration
+            try db.execute(sql: """
+                CREATE TABLE settings (
+                    key TEXT PRIMARY KEY NOT NULL,
+                    value TEXT,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
                 """)
             
             AppLogger.database.info("Migration v1_initial complete")
