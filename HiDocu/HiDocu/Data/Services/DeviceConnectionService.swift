@@ -222,6 +222,10 @@ final class DeviceConnectionService {
     }
 }
 
+// MARK: - DeviceFileProvider Conformance
+
+extension DeviceConnectionService: DeviceFileProvider {}
+
 // MARK: - Errors
 
 enum DeviceServiceError: LocalizedError {

@@ -26,9 +26,25 @@
 		F0000021F0000021 /* FileSystemService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000031F0000031 /* FileSystemService.swift */; };
 		F0000022F0000022 /* SQLiteRecordingRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000032F0000032 /* SQLiteRecordingRepository.swift */; };
 		F0000023F0000023 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000033F0000033 /* ContentView.swift */; };
+		F0000024F0000024 /* AudioCompatibilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000034F0000034 /* AudioCompatibilityService.swift */; };
+		F0000025F0000025 /* RecordingSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000035F0000035 /* RecordingSyncService.swift */; };
 		F0000050F0000050 /* JensenUSB in Frameworks */ = {isa = PBXBuildFile; productRef = F0000051F0000051 /* JensenUSB */; };
 		F0000052F0000052 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = F0000053F0000053 /* GRDB */; };
+		F0A00001F0A00001 /* HiDocuTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A00011F0A00011 /* HiDocuTests.swift */; };
+		F0A00002F0A00002 /* DatabaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A00012F0A00012 /* DatabaseTests.swift */; };
+		F0A00003F0A00003 /* SyncLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A00013F0A00013 /* SyncLogicTests.swift */; };
+		F0A00052F0A00052 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = F0A00053F0A00053 /* GRDB */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		F0A00060F0A00060 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F5000000F5000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F3000000F3000000;
+			remoteInfo = HiDocu;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		F0000000F0000000 /* HiDocu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HiDocu.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -51,8 +67,14 @@
 		F0000031F0000031 /* FileSystemService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSystemService.swift; sourceTree = "<group>"; };
 		F0000032F0000032 /* SQLiteRecordingRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteRecordingRepository.swift; sourceTree = "<group>"; };
 		F0000033F0000033 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		F0000034F0000034 /* AudioCompatibilityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCompatibilityService.swift; sourceTree = "<group>"; };
+		F0000035F0000035 /* RecordingSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSyncService.swift; sourceTree = "<group>"; };
 		F0000040F0000040 /* HiDocu.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HiDocu.entitlements; sourceTree = "<group>"; };
 		F0000041F0000041 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F0A00000F0A00000 /* HiDocuTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HiDocuTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F0A00011F0A00011 /* HiDocuTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiDocuTests.swift; sourceTree = "<group>"; };
+		F0A00012F0A00012 /* DatabaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseTests.swift; sourceTree = "<group>"; };
+		F0A00013F0A00013 /* SyncLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncLogicTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -65,6 +87,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F1A00001F1A00001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F0A00052F0A00052 /* GRDB in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -72,6 +102,7 @@
 			isa = PBXGroup;
 			children = (
 				F2000001F2000001 /* HiDocu */,
+				F2A00001F2A00001 /* HiDocuTests */,
 				F2000099F2000099 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -196,6 +227,8 @@
 			children = (
 				F0000030F0000030 /* DeviceConnectionService.swift */,
 				F0000031F0000031 /* FileSystemService.swift */,
+				F0000034F0000034 /* AudioCompatibilityService.swift */,
+				F0000035F0000035 /* RecordingSyncService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -236,8 +269,19 @@
 			isa = PBXGroup;
 			children = (
 				F0000000F0000000 /* HiDocu.app */,
+				F0A00000F0A00000 /* HiDocuTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		F2A00001F2A00001 /* HiDocuTests */ = {
+			isa = PBXGroup;
+			children = (
+				F0A00011F0A00011 /* HiDocuTests.swift */,
+				F0A00012F0A00012 /* DatabaseTests.swift */,
+				F0A00013F0A00013 /* SyncLogicTests.swift */,
+			);
+			path = HiDocuTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -264,6 +308,26 @@
 			productReference = F0000000F0000000 /* HiDocu.app */;
 			productType = "com.apple.product-type.application";
 		};
+		F3A00000F3A00000 /* HiDocuTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F4A00000F4A00000 /* Build configuration list for PBXNativeTarget "HiDocuTests" */;
+			buildPhases = (
+				F1A00000F1A00000 /* Sources */,
+				F1A00001F1A00001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F0A00061F0A00061 /* PBXTargetDependency */,
+			);
+			name = HiDocuTests;
+			packageProductDependencies = (
+				F0A00053F0A00053 /* GRDB */,
+			);
+			productName = HiDocuTests;
+			productReference = F0A00000F0A00000 /* HiDocuTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -276,6 +340,10 @@
 				TargetAttributes = {
 					F3000000F3000000 = {
 						CreatedOnToolsVersion = 15.2;
+					};
+					F3A00000F3A00000 = {
+						CreatedOnToolsVersion = 15.2;
+						TestTargetID = F3000000F3000000;
 					};
 				};
 			};
@@ -297,9 +365,18 @@
 			projectRoot = "";
 			targets = (
 				F3000000F3000000 /* HiDocu */,
+				F3A00000F3A00000 /* HiDocuTests */,
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXTargetDependency section */
+		F0A00061F0A00061 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F3000000F3000000 /* HiDocu */;
+			targetProxy = F0A00060F0A00060 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXShellScriptBuildPhase section */
 		F1000002F1000002 /* SwiftLint */ = {
@@ -347,6 +424,18 @@
 				F0000021F0000021 /* FileSystemService.swift in Sources */,
 				F0000022F0000022 /* SQLiteRecordingRepository.swift in Sources */,
 				F0000023F0000023 /* ContentView.swift in Sources */,
+				F0000024F0000024 /* AudioCompatibilityService.swift in Sources */,
+				F0000025F0000025 /* RecordingSyncService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F1A00000F1A00000 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F0A00001F0A00001 /* HiDocuTests.swift in Sources */,
+				F0A00002F0A00002 /* DatabaseTests.swift in Sources */,
+				F0A00003F0A00003 /* SyncLogicTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -527,6 +616,40 @@
 			};
 			name = Release;
 		};
+		F7A00000F7A00000 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hidocu.HiDocuTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HiDocu.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HiDocu";
+			};
+			name = Debug;
+		};
+		F7A00001F7A00001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hidocu.HiDocuTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HiDocu.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HiDocu";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -544,6 +667,15 @@
 			buildConfigurations = (
 				F7000000F7000000 /* Debug */,
 				F7000001F7000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F4A00000F4A00000 /* Build configuration list for PBXNativeTarget "HiDocuTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F7A00000F7A00000 /* Debug */,
+				F7A00001F7A00001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -574,6 +706,11 @@
 			productName = JensenUSB;
 		};
 		F0000053F0000053 /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			productName = GRDB;
+		};
+		F0A00053F0A00053 /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
 			productName = GRDB;

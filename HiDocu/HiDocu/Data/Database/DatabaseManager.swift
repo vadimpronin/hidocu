@@ -65,23 +65,24 @@ final class DatabaseManager: Sendable {
         AppLogger.database.info("Database migrations complete")
     }
     
-    /// Initialize an in-memory database for unit testing.
+    /// Initialize a temporary file-based database for unit testing.
+    /// Uses a unique temp file per instance so tests remain isolated.
     /// - Parameter inMemory: Must be true (exists for disambiguation)
     init(inMemory: Bool) throws {
         precondition(inMemory, "Use init() for file-based database")
-        
-        self.databasePath = nil
-        
-        // Configure GRDB for in-memory
+
+        let tempPath = NSTemporaryDirectory() + "hidocu_test_\(UUID().uuidString).sqlite"
+        self.databasePath = tempPath
+
+        // Configure GRDB
         var config = Configuration()
         config.prepareDatabase { db in
             try db.execute(sql: "PRAGMA foreign_keys = ON")
         }
-        
-        // In-memory database uses DatabaseQueue wrapped in pool interface
-        // Using :memory: path creates a fresh in-memory database
-        self.dbPool = try DatabasePool(path: ":memory:", configuration: config)
-        
+
+        // Use a temp file — DatabasePool requires WAL which needs a real file
+        self.dbPool = try DatabasePool(path: tempPath, configuration: config)
+
         // Run migrations
         try Self.migrator.migrate(dbPool)
     }

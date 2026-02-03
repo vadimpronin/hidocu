@@ -234,6 +234,178 @@ final class FileSystemService {
             }
         }
     }
+    
+    // MARK: - Relative Path Handling
+    
+    /// Resolve a relative path to an absolute URL.
+    /// Used when reading from database (which stores relative paths).
+    ///
+    /// - Parameter relativePath: Path relative to storage directory
+    /// - Returns: Absolute URL combining storage directory and relative path
+    /// - Throws: FileSystemError.noStorageDirectory if storage not configured
+    func resolve(relativePath: String) throws -> URL {
+        guard let dir = storageDirectory else {
+            throw FileSystemError.noStorageDirectory
+        }
+        return dir.appendingPathComponent(relativePath)
+    }
+    
+    /// Get the relative path by stripping the storage directory prefix.
+    /// Used when writing to database (to store relative paths).
+    ///
+    /// - Parameter absoluteURL: An absolute file URL
+    /// - Returns: Relative path string, or nil if URL is not within storage directory
+    func relativePath(for absoluteURL: URL) -> String? {
+        guard let dir = storageDirectory else { return nil }
+        
+        let storagePath = dir.standardizedFileURL.path
+        let filePath = absoluteURL.standardizedFileURL.path
+        
+        // Check if file is within storage directory
+        guard filePath.hasPrefix(storagePath) else { return nil }
+        
+        // Strip the storage directory prefix and leading slash
+        var relative = String(filePath.dropFirst(storagePath.count))
+        if relative.hasPrefix("/") {
+            relative = String(relative.dropFirst())
+        }
+        return relative
+    }
+    
+    // MARK: - File Movement & Renaming
+    
+    /// Atomically rename a file.
+    /// Used during conflict resolution when a new version of a file arrives from device.
+    ///
+    /// - Parameters:
+    ///   - sourceURL: Current file URL
+    ///   - newFilename: New filename (same directory)
+    /// - Returns: URL with new filename
+    /// - Throws: FileSystemError if rename fails
+    func renameFile(at sourceURL: URL, to newFilename: String) throws -> URL {
+        let destinationURL = sourceURL.deletingLastPathComponent().appendingPathComponent(newFilename)
+        
+        let operation = {
+            try FileManager.default.moveItem(at: sourceURL, to: destinationURL)
+        }
+        
+        if requiresSecurityScope, let dir = storageDirectory {
+            try withSecurityScopedAccess(to: dir, operation)
+        } else {
+            try operation()
+        }
+        
+        AppLogger.fileSystem.info("Renamed \(sourceURL.lastPathComponent) to \(newFilename)")
+        return destinationURL
+    }
+    
+    /// Move a file from a temporary location into the storage directory.
+    ///
+    /// - Parameters:
+    ///   - sourceURL: Source file URL (typically in temp directory)
+    ///   - filename: Target filename within storage directory
+    /// - Returns: Final URL of the moved file
+    /// - Throws: FileSystemError if move fails
+    func moveToStorage(from sourceURL: URL, filename: String) throws -> URL {
+        let destinationURL = try recordingPath(for: filename)
+        
+        let operation = {
+            // Remove existing file if present (shouldn't happen with our flow, but safety first)
+            if FileManager.default.fileExists(atPath: destinationURL.path) {
+                try FileManager.default.removeItem(at: destinationURL)
+            }
+            try FileManager.default.moveItem(at: sourceURL, to: destinationURL)
+        }
+        
+        if requiresSecurityScope, let dir = storageDirectory {
+            try withSecurityScopedAccess(to: dir, operation)
+        } else {
+            try operation()
+        }
+        
+        AppLogger.fileSystem.info("Moved \(sourceURL.lastPathComponent) to storage as \(filename)")
+        return destinationURL
+    }
+    
+    /// Copy a file into the storage directory.
+    /// Used for manual import when we can't move (e.g., from external volumes).
+    ///
+    /// - Parameters:
+    ///   - sourceURL: Source file URL
+    ///   - filename: Target filename within storage directory
+    /// - Returns: Final URL of the copied file
+    /// - Throws: FileSystemError if copy fails
+    func copyToStorage(from sourceURL: URL, filename: String) throws -> URL {
+        let destinationURL = try recordingPath(for: filename)
+        
+        let operation = {
+            // Remove existing file if present
+            if FileManager.default.fileExists(atPath: destinationURL.path) {
+                try FileManager.default.removeItem(at: destinationURL)
+            }
+            try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
+        }
+        
+        if requiresSecurityScope, let dir = storageDirectory {
+            try withSecurityScopedAccess(to: dir, operation)
+        } else {
+            try operation()
+        }
+        
+        AppLogger.fileSystem.info("Copied \(sourceURL.lastPathComponent) to storage as \(filename)")
+        return destinationURL
+    }
+    
+    // MARK: - Async Wrappers
+    
+    /// Execute an async operation with proper storage directory access.
+    /// Runs on a background thread to avoid blocking UI.
+    ///
+    /// - Parameter operation: Closure receiving the storage directory URL
+    /// - Returns: Result of the operation
+    /// - Throws: FileSystemError or operation errors
+    func withStorageAccessAsync<T: Sendable>(_ operation: @Sendable @escaping (URL) throws -> T) async throws -> T {
+        guard let dir = storageDirectory else {
+            throw FileSystemError.noStorageDirectory
+        }
+        
+        let requiresScope = self.requiresSecurityScope
+        
+        return try await Task.detached {
+            if requiresScope {
+                let accessed = dir.startAccessingSecurityScopedResource()
+                defer {
+                    if accessed {
+                        dir.stopAccessingSecurityScopedResource()
+                    }
+                }
+                return try operation(dir)
+            } else {
+                return try operation(dir)
+            }
+        }.value
+    }
+    
+    /// Generate a unique backup filename for conflict resolution.
+    /// Example: "Recording.hda" -> "Recording_backup_1.hda"
+    ///
+    /// - Parameter filename: Original filename
+    /// - Returns: Backup filename that doesn't exist in storage
+    func generateBackupFilename(for filename: String) throws -> String {
+        let url = URL(fileURLWithPath: filename)
+        let name = url.deletingPathExtension().lastPathComponent
+        let ext = url.pathExtension
+        
+        var counter = 1
+        var backupName: String
+        
+        repeat {
+            backupName = "\(name)_backup_\(counter).\(ext)"
+            counter += 1
+        } while recordingExists(filename: backupName)
+        
+        return backupName
+    }
 }
 
 // MARK: - Errors
@@ -243,6 +415,9 @@ enum FileSystemError: LocalizedError {
     case accessDenied(String)
     case fileNotFound(String)
     case deleteFailed(String)
+    case renameFailed(String)
+    case moveFailed(String)
+    case copyFailed(String)
     
     var errorDescription: String? {
         switch self {
@@ -254,6 +429,12 @@ enum FileSystemError: LocalizedError {
             return "File not found: \(path)"
         case .deleteFailed(let reason):
             return "Delete failed: \(reason)"
+        case .renameFailed(let reason):
+            return "Rename failed: \(reason)"
+        case .moveFailed(let reason):
+            return "Move failed: \(reason)"
+        case .copyFailed(let reason):
+            return "Copy failed: \(reason)"
         }
     }
 }

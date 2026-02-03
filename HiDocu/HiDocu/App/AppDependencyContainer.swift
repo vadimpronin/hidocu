@@ -28,10 +28,18 @@ final class AppDependencyContainer {
     /// Device connection service - wraps JensenUSB (MUST stay alive)
     let deviceService: DeviceConnectionService
     
+    /// Audio compatibility service - handles .hda format and validation
+    let audioService: AudioCompatibilityService
+    
     // MARK: - Repositories
     
     /// Recording repository for data access
     let recordingRepository: SQLiteRecordingRepository
+    
+    // MARK: - Sync Services
+    
+    /// Recording sync service - handles device-to-local synchronization
+    let syncService: RecordingSyncService
     
     // MARK: - Initialization
     
@@ -52,8 +60,22 @@ final class AppDependencyContainer {
         // Initialize device service (long-lived singleton)
         self.deviceService = DeviceConnectionService()
         
-        // Initialize repositories
-        self.recordingRepository = SQLiteRecordingRepository(databaseManager: databaseManager)
+        // Initialize audio compatibility service
+        self.audioService = AudioCompatibilityService()
+        
+        // Initialize repositories (with FileSystemService for path mapping)
+        self.recordingRepository = SQLiteRecordingRepository(
+            databaseManager: databaseManager,
+            fileSystemService: fileSystemService
+        )
+        
+        // Initialize sync service
+        self.syncService = RecordingSyncService(
+            deviceService: deviceService,
+            fileSystemService: fileSystemService,
+            audioService: audioService,
+            repository: recordingRepository
+        )
         
         AppLogger.general.info("AppDependencyContainer initialized successfully")
     }
