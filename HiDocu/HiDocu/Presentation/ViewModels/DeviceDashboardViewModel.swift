@@ -1,0 +1,110 @@
+//
+//  DeviceDashboardViewModel.swift
+//  HiDocu
+//
+//  ViewModel for the device dashboard view. Manages file listing,
+//  sync status checking, and sorting for the device file browser.
+//
+
+import Foundation
+
+/// Represents a device file with its local sync status.
+struct DeviceFileRow: Identifiable {
+    let fileInfo: DeviceFileInfo
+    let isSynced: Bool
+
+    var id: String { fileInfo.filename }
+    var filename: String { fileInfo.filename }
+    var size: Int { fileInfo.size }
+    var durationSeconds: Int { fileInfo.durationSeconds }
+    var createdAt: Date? { fileInfo.createdAt }
+    var mode: RecordingMode? { fileInfo.mode }
+
+    // Sortable proxy properties
+    var sortableDate: Double { createdAt?.timeIntervalSince1970 ?? 0 }
+    var modeDisplayName: String { mode?.displayName ?? "—" }
+}
+
+@Observable
+@MainActor
+final class DeviceDashboardViewModel {
+
+    // MARK: - State
+
+    private(set) var files: [DeviceFileRow] = []
+    private(set) var isLoading: Bool = false
+    private(set) var errorMessage: String?
+
+    var selection: Set<String> = []
+
+    var sortOrder: [KeyPathComparator<DeviceFileRow>] = [
+        .init(\.sortableDate, order: .reverse)
+    ]
+
+    var sortedFiles: [DeviceFileRow] {
+        files.sorted(using: sortOrder)
+    }
+
+    // MARK: - Dependencies
+
+    private let deviceService: DeviceConnectionService
+    private let repository: any RecordingRepository
+
+    // MARK: - Initialization
+
+    init(
+        deviceService: DeviceConnectionService,
+        repository: any RecordingRepository
+    ) {
+        self.deviceService = deviceService
+        self.repository = repository
+    }
+
+    // MARK: - Actions
+
+    func loadFiles() async {
+        guard !isLoading else { return }
+
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            let deviceFiles = try await deviceService.listFiles()
+            var rows: [DeviceFileRow] = []
+
+            for file in deviceFiles {
+                let synced = try await repository.exists(
+                    filename: file.filename,
+                    sizeBytes: file.size
+                )
+                rows.append(DeviceFileRow(fileInfo: file, isSynced: synced))
+            }
+
+            files = rows
+        } catch {
+            errorMessage = error.localizedDescription
+            AppLogger.ui.error("Failed to load device files: \(error.localizedDescription)")
+        }
+
+        isLoading = false
+    }
+
+    func deleteFiles(_ filenames: Set<String>) async {
+        for filename in filenames {
+            do {
+                try await deviceService.deleteFile(filename: filename)
+            } catch {
+                AppLogger.ui.error("Failed to delete \(filename): \(error.localizedDescription)")
+            }
+        }
+
+        selection.removeAll()
+        await loadFiles()
+        await deviceService.refreshStorageInfo()
+    }
+
+    /// Returns the DeviceFileInfo objects for the given set of filenames.
+    func deviceFiles(for filenames: Set<String>) -> [DeviceFileInfo] {
+        files.filter { filenames.contains($0.filename) }.map(\.fileInfo)
+    }
+}

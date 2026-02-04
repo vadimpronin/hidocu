@@ -125,21 +125,36 @@ final class RecordingSyncService {
     }
     
     // MARK: - Sync from Device
-    
-    /// Synchronize recordings from the connected HiDock device.
-    ///
-    /// Algorithm:
-    /// 1. Get file list from device
-    /// 2. For each file:
-    ///    - Skip if exists with matching size
-    ///    - Handle conflict if exists with different size (rename existing)
-    ///    - Download to temp, validate, move to storage, insert into DB
+
+    /// Synchronize all recordings from the connected HiDock device.
     func syncFromDevice() async {
         guard !isSyncing else {
             AppLogger.fileSystem.warning("Sync already in progress")
             return
         }
 
+        do {
+            let deviceFiles = try await deviceService.listFiles()
+            await performSync(files: deviceFiles)
+        } catch {
+            AppLogger.fileSystem.error("Failed to list device files: \(error.localizedDescription)")
+            await MainActor.run {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    /// Synchronize specific files from the connected HiDock device.
+    func syncFiles(_ files: [DeviceFileInfo]) async {
+        guard !isSyncing else {
+            AppLogger.fileSystem.warning("Sync already in progress")
+            return
+        }
+        await performSync(files: files)
+    }
+
+    /// Shared sync pipeline for a given list of device files.
+    private func performSync(files deviceFiles: [DeviceFileInfo]) async {
         completedBytes = 0
         syncStartTime = Date()
         lastStatsUpdateTime = .distantPast
@@ -160,11 +175,8 @@ final class RecordingSyncService {
         var failed = 0
 
         do {
-            // Ensure storage directory exists
             try fileSystemService.ensureStorageDirectoryExists()
 
-            // Get file list from device
-            let deviceFiles = try await deviceService.listFiles()
             let total = deviceFiles.count
             let totalBytes = deviceFiles.reduce(Int64(0)) { $0 + Int64($1.size) }
 
@@ -172,10 +184,9 @@ final class RecordingSyncService {
                 totalBytesExpected = totalBytes
             }
 
-            AppLogger.fileSystem.info("Starting sync: \(total) files, \(totalBytes) bytes on device")
+            AppLogger.fileSystem.info("Starting sync: \(total) files, \(totalBytes) bytes")
 
             for fileInfo in deviceFiles {
-                // Check for cancellation
                 try Task.checkCancellation()
 
                 await MainActor.run {
@@ -195,7 +206,6 @@ final class RecordingSyncService {
                     failed += 1
                 }
 
-                // Advance completed bytes after each file (downloaded, skipped, or failed)
                 completedBytes += Int64(fileInfo.size)
                 await MainActor.run {
                     totalBytesSynced = completedBytes

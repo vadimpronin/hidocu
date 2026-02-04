@@ -12,6 +12,14 @@ enum RecordingMode: String, Sendable, CaseIterable, Hashable {
     case call       // Call recording mode
     case room       // Room/ambient recording
     case whisper    // Whisper/voice memo mode
+
+    var displayName: String {
+        switch self {
+        case .call:    return "Call"
+        case .room:    return "Room"
+        case .whisper: return "Whisper"
+        }
+    }
 }
 
 /// Status of a recording in the HiDocu workflow.

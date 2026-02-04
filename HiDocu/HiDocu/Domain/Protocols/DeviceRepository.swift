@@ -30,6 +30,14 @@ enum DeviceModel: String, Sendable, CaseIterable {
         case .unknown: return "HiDock"
         }
     }
+
+    var sfSymbolName: String {
+        switch self {
+        case .p1, .p1Mini: return "rectangle.fill.on.rectangle.fill"
+        case .h1, .h1e:    return "dock.rectangle"
+        case .unknown:      return "externaldrive.fill"
+        }
+    }
 }
 
 // MARK: - Battery & Storage

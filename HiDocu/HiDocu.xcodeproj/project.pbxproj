@@ -8,56 +8,58 @@
 
 /* Begin PBXBuildFile section */
 		0119A84E4F2840779DA2E2B3 /* TimeInterval+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86F8B131B8884602A9CF022F /* TimeInterval+Extensions.swift */; };
-		BC4EA7F4581C465AA4D4DD27 /* AudioPlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEAA5B6EF8BD448A951ED65A /* AudioPlayerService.swift */; };
+		0A00F6148A494D6993BC603C /* RecordingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D94AC78A25E4E2BB61D52CE /* RecordingDetailView.swift */; };
 		5144798C75A74F938E8BE58F /* WaveformAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A89E47CB68BC4872B206B230 /* WaveformAnalyzer.swift */; };
+		68054ABA82DDCF81977052B3 /* DeviceDashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14B1464F9B61FF0B4ED761F6 /* DeviceDashboardViewModel.swift */; };
+		87474A9B92E8EEC01F279E7F /* DeviceDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09134FD2A3C89DFB7EA7BB0F /* DeviceDashboardView.swift */; };
+		BC4EA7F4581C465AA4D4DD27 /* AudioPlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEAA5B6EF8BD448A951ED65A /* AudioPlayerService.swift */; };
 		C74E3B38C1704D5DB058DD1B /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37EBA1836F0C4065A5595AFC /* WaveformView.swift */; };
 		E30FDC8F82064C09BC26710D /* RecordingDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79432DA08D5943A38BE62137 /* RecordingDetailViewModel.swift */; };
-		0A00F6148A494D6993BC603C /* RecordingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D94AC78A25E4E2BB61D52CE /* RecordingDetailView.swift */; };
-		F0000001F0000001 /* HiDocuApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000011F0000011 /* HiDocuApp.swift */; };
-		F0000002F0000002 /* AppDependencyContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000012F0000012 /* AppDependencyContainer.swift */; };
-		F0000003F0000003 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000013F0000013 /* AppLogger.swift */; };
-		F0000004F0000004 /* Date+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000014F0000014 /* Date+Extensions.swift */; };
-		F0000005F0000005 /* Int+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000015F0000015 /* Int+Extensions.swift */; };
-		F0000006F0000006 /* Recording.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000016F0000016 /* Recording.swift */; };
-		F0000007F0000007 /* Transcription.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000017F0000017 /* Transcription.swift */; };
-		F0000008F0000008 /* Segment.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000018F0000018 /* Segment.swift */; };
-		F0000009F0000009 /* RecordingRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000019F0000019 /* RecordingRepository.swift */; };
-		F000000AF000000A /* TranscriptionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000001AF000001A /* TranscriptionRepository.swift */; };
-		F000000BF000000B /* DeviceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000001BF000001B /* DeviceRepository.swift */; };
-		F000000CF000000C /* DatabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000001CF000001C /* DatabaseManager.swift */; };
-		F000000DF000000D /* RecordingDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000001DF000001D /* RecordingDTO.swift */; };
-		F000000EF000000E /* TranscriptionDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000001EF000001E /* TranscriptionDTO.swift */; };
-		F000000FF000000F /* SegmentDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000001FF000001F /* SegmentDTO.swift */; };
-		F0000020F0000020 /* DeviceConnectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000030F0000030 /* DeviceConnectionService.swift */; };
-		F0000021F0000021 /* FileSystemService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000031F0000031 /* FileSystemService.swift */; };
-		F0000022F0000022 /* SQLiteRecordingRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000032F0000032 /* SQLiteRecordingRepository.swift */; };
-		F0000023F0000023 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000033F0000033 /* ContentView.swift */; };
-		F0000024F0000024 /* AudioCompatibilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000034F0000034 /* AudioCompatibilityService.swift */; };
-		F0000025F0000025 /* RecordingSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000035F0000035 /* RecordingSyncService.swift */; };
-		F0000050F0000050 /* JensenUSB in Frameworks */ = {isa = PBXBuildFile; productRef = F0000051F0000051 /* JensenUSB */; };
-		F0000052F0000052 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = F0000053F0000053 /* GRDB */; };
-		F0A00001F0A00001 /* HiDocuTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A00011F0A00011 /* HiDocuTests.swift */; };
-		F0A00002F0A00002 /* DatabaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A00012F0A00012 /* DatabaseTests.swift */; };
-		F0A00003F0A00003 /* SyncLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A00013F0A00013 /* SyncLogicTests.swift */; };
-		F0A00052F0A00052 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = F0A00053F0A00053 /* GRDB */; };
-		F3000060F3000060 /* NavigationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000050F3000050 /* NavigationViewModel.swift */; };
-		F3000061F3000061 /* RecordingsListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000051F3000051 /* RecordingsListViewModel.swift */; };
-		F3000062F3000062 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000052F3000052 /* SidebarView.swift */; };
-		F3000063F3000063 /* RecordingsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000053F3000053 /* RecordingsListView.swift */; };
-		F3000064F3000064 /* RecordingRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000054F3000054 /* RecordingRowView.swift */; };
-		F5000001F5000001 /* SQLiteTranscriptionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5000011F5000011 /* SQLiteTranscriptionRepository.swift */; };
-		F5000002F5000002 /* TranscriptionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5000012F5000012 /* TranscriptionViewModel.swift */; };
-		F5000003F5000003 /* TranscriptionSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5000013F5000013 /* TranscriptionSectionView.swift */; };
-		F5A00001F5A00001 /* TranscriptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A00011F5A00011 /* TranscriptionTests.swift */; };
-		F8000020F8000020 /* ErrorBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8000010F8000010 /* ErrorBannerView.swift */; };
-		F8000021F8000021 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8000011F8000011 /* SettingsView.swift */; };
-		F8000022F8000022 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8000012F8000012 /* OnboardingView.swift */; };
+		'F0000001F0000001' = {isa = PBXBuildFile; fileRef = F0000011F0000011; };
+		'F0000002F0000002' = {isa = PBXBuildFile; fileRef = F0000012F0000012; };
+		'F0000003F0000003' = {isa = PBXBuildFile; fileRef = F0000013F0000013; };
+		'F0000004F0000004' = {isa = PBXBuildFile; fileRef = F0000014F0000014; };
+		'F0000005F0000005' = {isa = PBXBuildFile; fileRef = F0000015F0000015; };
+		'F0000006F0000006' = {isa = PBXBuildFile; fileRef = F0000016F0000016; };
+		'F0000007F0000007' = {isa = PBXBuildFile; fileRef = F0000017F0000017; };
+		'F0000008F0000008' = {isa = PBXBuildFile; fileRef = F0000018F0000018; };
+		'F0000009F0000009' = {isa = PBXBuildFile; fileRef = F0000019F0000019; };
+		'F000000AF000000A' = {isa = PBXBuildFile; fileRef = F000001AF000001A; };
+		'F000000BF000000B' = {isa = PBXBuildFile; fileRef = F000001BF000001B; };
+		'F000000CF000000C' = {isa = PBXBuildFile; fileRef = F000001CF000001C; };
+		'F000000DF000000D' = {isa = PBXBuildFile; fileRef = F000001DF000001D; };
+		'F000000EF000000E' = {isa = PBXBuildFile; fileRef = F000001EF000001E; };
+		'F000000FF000000F' = {isa = PBXBuildFile; fileRef = F000001FF000001F; };
+		'F0000020F0000020' = {isa = PBXBuildFile; fileRef = F0000030F0000030; };
+		'F0000021F0000021' = {isa = PBXBuildFile; fileRef = F0000031F0000031; };
+		'F0000022F0000022' = {isa = PBXBuildFile; fileRef = F0000032F0000032; };
+		'F0000023F0000023' = {isa = PBXBuildFile; fileRef = F0000033F0000033; };
+		'F0000024F0000024' = {isa = PBXBuildFile; fileRef = F0000034F0000034; };
+		'F0000025F0000025' = {isa = PBXBuildFile; fileRef = F0000035F0000035; };
+		'F0000050F0000050' = {isa = PBXBuildFile; productRef = F0000051F0000051; };
+		'F0000052F0000052' = {isa = PBXBuildFile; productRef = F0000053F0000053; };
+		'F0A00001F0A00001' = {isa = PBXBuildFile; fileRef = F0A00011F0A00011; };
+		'F0A00002F0A00002' = {isa = PBXBuildFile; fileRef = F0A00012F0A00012; };
+		'F0A00003F0A00003' = {isa = PBXBuildFile; fileRef = F0A00013F0A00013; };
+		'F0A00052F0A00052' = {isa = PBXBuildFile; productRef = F0A00053F0A00053; };
+		'F3000060F3000060' = {isa = PBXBuildFile; fileRef = F3000050F3000050; };
+		'F3000061F3000061' = {isa = PBXBuildFile; fileRef = F3000051F3000051; };
+		'F3000062F3000062' = {isa = PBXBuildFile; fileRef = F3000052F3000052; };
+		'F3000063F3000063' = {isa = PBXBuildFile; fileRef = F3000053F3000053; };
+		'F3000064F3000064' = {isa = PBXBuildFile; fileRef = F3000054F3000054; };
+		'F5000001F5000001' = {isa = PBXBuildFile; fileRef = F5000011F5000011; };
+		'F5000002F5000002' = {isa = PBXBuildFile; fileRef = F5000012F5000012; };
+		'F5000003F5000003' = {isa = PBXBuildFile; fileRef = F5000013F5000013; };
+		'F5A00001F5A00001' = {isa = PBXBuildFile; fileRef = F5A00011F5A00011; };
+		'F8000020F8000020' = {isa = PBXBuildFile; fileRef = F8000010F8000010; };
+		'F8000021F8000021' = {isa = PBXBuildFile; fileRef = F8000011F8000011; };
+		'F8000022F8000022' = {isa = PBXBuildFile; fileRef = F8000012F8000012; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		F0A00060F0A00060 /* PBXContainerItemProxy */ = {
+		'F0A00060F0A00060' = {
 			isa = PBXContainerItemProxy;
-			containerPortal = F5000000F5000000 /* Project object */;
+			containerPortal = F5000000F5000000;
 			proxyType = 1;
 			remoteGlobalIDString = F3000000F3000000;
 			remoteInfo = HiDocu;
@@ -65,315 +67,319 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		86F8B131B8884602A9CF022F /* TimeInterval+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimeInterval+Extensions.swift"; sourceTree = "<group>"; };
-		FEAA5B6EF8BD448A951ED65A /* AudioPlayerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AudioPlayerService.swift"; sourceTree = "<group>"; };
-		A89E47CB68BC4872B206B230 /* WaveformAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WaveformAnalyzer.swift"; sourceTree = "<group>"; };
+		09134FD2A3C89DFB7EA7BB0F /* DeviceDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DeviceDashboardView.swift; path = HiDocu/Presentation/Views/Device/DeviceDashboardView.swift; sourceTree = SOURCE_ROOT; };
+		14B1464F9B61FF0B4ED761F6 /* DeviceDashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DeviceDashboardViewModel.swift; path = HiDocu/Presentation/ViewModels/DeviceDashboardViewModel.swift; sourceTree = SOURCE_ROOT; };
 		37EBA1836F0C4065A5595AFC /* WaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformView.swift; sourceTree = "<group>"; };
-		79432DA08D5943A38BE62137 /* RecordingDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingDetailViewModel.swift"; sourceTree = "<group>"; };
-		9D94AC78A25E4E2BB61D52CE /* RecordingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingDetailView.swift"; sourceTree = "<group>"; };
-		F0000000F0000000 /* HiDocu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HiDocu.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		F0000011F0000011 /* HiDocuApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiDocuApp.swift; sourceTree = "<group>"; };
-		F0000012F0000012 /* AppDependencyContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencyContainer.swift; sourceTree = "<group>"; };
-		F0000013F0000013 /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
-		F0000014F0000014 /* Date+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Extensions.swift"; sourceTree = "<group>"; };
-		F0000015F0000015 /* Int+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Int+Extensions.swift"; sourceTree = "<group>"; };
-		F0000016F0000016 /* Recording.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recording.swift; sourceTree = "<group>"; };
-		F0000017F0000017 /* Transcription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transcription.swift; sourceTree = "<group>"; };
-		F0000018F0000018 /* Segment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Segment.swift; sourceTree = "<group>"; };
-		F0000019F0000019 /* RecordingRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingRepository.swift; sourceTree = "<group>"; };
-		F000001AF000001A /* TranscriptionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionRepository.swift; sourceTree = "<group>"; };
-		F000001BF000001B /* DeviceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceRepository.swift; sourceTree = "<group>"; };
-		F000001CF000001C /* DatabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseManager.swift; sourceTree = "<group>"; };
-		F000001DF000001D /* RecordingDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingDTO.swift; sourceTree = "<group>"; };
-		F000001EF000001E /* TranscriptionDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionDTO.swift; sourceTree = "<group>"; };
-		F000001FF000001F /* SegmentDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmentDTO.swift; sourceTree = "<group>"; };
-		F0000030F0000030 /* DeviceConnectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceConnectionService.swift; sourceTree = "<group>"; };
-		F0000031F0000031 /* FileSystemService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSystemService.swift; sourceTree = "<group>"; };
-		F0000032F0000032 /* SQLiteRecordingRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteRecordingRepository.swift; sourceTree = "<group>"; };
-		F0000033F0000033 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		F0000034F0000034 /* AudioCompatibilityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCompatibilityService.swift; sourceTree = "<group>"; };
-		F0000035F0000035 /* RecordingSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSyncService.swift; sourceTree = "<group>"; };
-		F0000040F0000040 /* HiDocu.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HiDocu.entitlements; sourceTree = "<group>"; };
-		F0000041F0000041 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		F0A00000F0A00000 /* HiDocuTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HiDocuTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		F0A00011F0A00011 /* HiDocuTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiDocuTests.swift; sourceTree = "<group>"; };
-		F0A00012F0A00012 /* DatabaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseTests.swift; sourceTree = "<group>"; };
-		F0A00013F0A00013 /* SyncLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncLogicTests.swift; sourceTree = "<group>"; };
-		F3000050F3000050 /* NavigationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationViewModel.swift; sourceTree = "<group>"; };
-		F3000051F3000051 /* RecordingsListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingsListViewModel.swift; sourceTree = "<group>"; };
-		F3000052F3000052 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
-		F3000053F3000053 /* RecordingsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingsListView.swift; sourceTree = "<group>"; };
-		F3000054F3000054 /* RecordingRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingRowView.swift; sourceTree = "<group>"; };
-		F5000011F5000011 /* SQLiteTranscriptionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteTranscriptionRepository.swift; sourceTree = "<group>"; };
-		F5000012F5000012 /* TranscriptionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionViewModel.swift; sourceTree = "<group>"; };
-		F5000013F5000013 /* TranscriptionSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionSectionView.swift; sourceTree = "<group>"; };
-		F5A00011F5A00011 /* TranscriptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionTests.swift; sourceTree = "<group>"; };
-		F8000010F8000010 /* ErrorBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBannerView.swift; sourceTree = "<group>"; };
-		F8000011F8000011 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		F8000012F8000012 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		79432DA08D5943A38BE62137 /* RecordingDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingDetailViewModel.swift; sourceTree = "<group>"; };
+		86F8B131B8884602A9CF022F /* TimeInterval+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimeInterval+Extensions.swift"; sourceTree = "<group>"; };
+		9D94AC78A25E4E2BB61D52CE /* RecordingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingDetailView.swift; sourceTree = "<group>"; };
+		A89E47CB68BC4872B206B230 /* WaveformAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformAnalyzer.swift; sourceTree = "<group>"; };
+		'F0000000F0000000' = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HiDocu.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		'F0000011F0000011' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiDocuApp.swift; sourceTree = "<group>"; };
+		'F0000012F0000012' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencyContainer.swift; sourceTree = "<group>"; };
+		'F0000013F0000013' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
+		'F0000014F0000014' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Extensions.swift"; sourceTree = "<group>"; };
+		'F0000015F0000015' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Int+Extensions.swift"; sourceTree = "<group>"; };
+		'F0000016F0000016' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recording.swift; sourceTree = "<group>"; };
+		'F0000017F0000017' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transcription.swift; sourceTree = "<group>"; };
+		'F0000018F0000018' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Segment.swift; sourceTree = "<group>"; };
+		'F0000019F0000019' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingRepository.swift; sourceTree = "<group>"; };
+		'F000001AF000001A' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionRepository.swift; sourceTree = "<group>"; };
+		'F000001BF000001B' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceRepository.swift; sourceTree = "<group>"; };
+		'F000001CF000001C' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseManager.swift; sourceTree = "<group>"; };
+		'F000001DF000001D' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingDTO.swift; sourceTree = "<group>"; };
+		'F000001EF000001E' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionDTO.swift; sourceTree = "<group>"; };
+		'F000001FF000001F' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmentDTO.swift; sourceTree = "<group>"; };
+		'F0000030F0000030' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceConnectionService.swift; sourceTree = "<group>"; };
+		'F0000031F0000031' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSystemService.swift; sourceTree = "<group>"; };
+		'F0000032F0000032' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteRecordingRepository.swift; sourceTree = "<group>"; };
+		'F0000033F0000033' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		'F0000034F0000034' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCompatibilityService.swift; sourceTree = "<group>"; };
+		'F0000035F0000035' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSyncService.swift; sourceTree = "<group>"; };
+		'F0000040F0000040' = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HiDocu.entitlements; sourceTree = "<group>"; };
+		'F0000041F0000041' = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		'F0A00000F0A00000' = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HiDocuTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		'F0A00011F0A00011' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiDocuTests.swift; sourceTree = "<group>"; };
+		'F0A00012F0A00012' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseTests.swift; sourceTree = "<group>"; };
+		'F0A00013F0A00013' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncLogicTests.swift; sourceTree = "<group>"; };
+		'F3000050F3000050' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationViewModel.swift; sourceTree = "<group>"; };
+		'F3000051F3000051' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingsListViewModel.swift; sourceTree = "<group>"; };
+		'F3000052F3000052' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
+		'F3000053F3000053' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingsListView.swift; sourceTree = "<group>"; };
+		'F3000054F3000054' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingRowView.swift; sourceTree = "<group>"; };
+		'F5000011F5000011' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteTranscriptionRepository.swift; sourceTree = "<group>"; };
+		'F5000012F5000012' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionViewModel.swift; sourceTree = "<group>"; };
+		'F5000013F5000013' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionSectionView.swift; sourceTree = "<group>"; };
+		'F5A00011F5A00011' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionTests.swift; sourceTree = "<group>"; };
+		'F8000010F8000010' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBannerView.swift; sourceTree = "<group>"; };
+		'F8000011F8000011' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		'F8000012F8000012' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		FEAA5B6EF8BD448A951ED65A /* AudioPlayerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayerService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		F1000001F1000001 /* Frameworks */ = {
+		'F1000001F1000001' = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F0000050F0000050 /* JensenUSB in Frameworks */,
-				F0000052F0000052 /* GRDB in Frameworks */,
+				F0000050F0000050,
+				F0000052F0000052,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		F1A00001F1A00001 /* Frameworks */ = {
+		'F1A00001F1A00001' = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F0A00052F0A00052 /* GRDB in Frameworks */,
+				F0A00052F0A00052,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		F2000000F2000000 = {
+		D8402727206E439A8869D212 /* Components */ = {
 			isa = PBXGroup;
 			children = (
-				F2000001F2000001 /* HiDocu */,
-				F2A00001F2A00001 /* HiDocuTests */,
-				F2000099F2000099 /* Products */,
+				37EBA1836F0C4065A5595AFC /* WaveformView.swift */,
+				F8000010F8000010,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		'F2000000F2000000' = {
+			isa = PBXGroup;
+			children = (
+				F2000001F2000001,
+				F2A00001F2A00001,
+				F2000099F2000099,
+				14B1464F9B61FF0B4ED761F6 /* DeviceDashboardViewModel.swift */,
+				09134FD2A3C89DFB7EA7BB0F /* DeviceDashboardView.swift */,
 			);
 			sourceTree = "<group>";
 		};
-		F2000001F2000001 /* HiDocu */ = {
+		'F2000001F2000001' = {
 			isa = PBXGroup;
 			children = (
-				F2000002F2000002 /* App */,
-				F2000003F2000003 /* Core */,
-				F2000004F2000004 /* Domain */,
-				F2000005F2000005 /* Data */,
-				F2000006F2000006 /* Presentation */,
-				F0000040F0000040 /* HiDocu.entitlements */,
-				F0000041F0000041 /* Info.plist */,
+				F2000002F2000002,
+				F2000003F2000003,
+				F2000004F2000004,
+				F2000005F2000005,
+				F2000006F2000006,
+				F0000040F0000040,
+				F0000041F0000041,
 			);
 			path = HiDocu;
 			sourceTree = "<group>";
 		};
-		F2000002F2000002 /* App */ = {
+		'F2000002F2000002' = {
 			isa = PBXGroup;
 			children = (
-				F0000011F0000011 /* HiDocuApp.swift */,
-				F0000012F0000012 /* AppDependencyContainer.swift */,
+				F0000011F0000011,
+				F0000012F0000012,
 			);
 			path = App;
 			sourceTree = "<group>";
 		};
-		F2000003F2000003 /* Core */ = {
+		'F2000003F2000003' = {
 			isa = PBXGroup;
 			children = (
-				F0000013F0000013 /* AppLogger.swift */,
-				F2000007F2000007 /* Extensions */,
+				F0000013F0000013,
+				F2000007F2000007,
 			);
 			path = Core;
 			sourceTree = "<group>";
 		};
-		F2000007F2000007 /* Extensions */ = {
+		'F2000004F2000004' = {
 			isa = PBXGroup;
 			children = (
-				86F8B131B8884602A9CF022F /* TimeInterval+Extensions.swift */,
-				F0000014F0000014 /* Date+Extensions.swift */,
-				F0000015F0000015 /* Int+Extensions.swift */,
-			);
-			path = Extensions;
-			sourceTree = "<group>";
-		};
-		F2000004F2000004 /* Domain */ = {
-			isa = PBXGroup;
-			children = (
-				F2000008F2000008 /* Models */,
-				F2000009F2000009 /* Protocols */,
-				F200000AF200000A /* UseCases */,
+				F2000008F2000008,
+				F2000009F2000009,
+				F200000AF200000A,
 			);
 			path = Domain;
 			sourceTree = "<group>";
 		};
-		F2000008F2000008 /* Models */ = {
+		'F2000005F2000005' = {
 			isa = PBXGroup;
 			children = (
-				F0000016F0000016 /* Recording.swift */,
-				F0000017F0000017 /* Transcription.swift */,
-				F0000018F0000018 /* Segment.swift */,
+				F200000BF200000B,
+				F200000CF200000C,
+				F200000DF200000D,
+			);
+			path = Data;
+			sourceTree = "<group>";
+		};
+		'F2000006F2000006' = {
+			isa = PBXGroup;
+			children = (
+				F2000010F2000010,
+				F2000011F2000011,
+			);
+			path = Presentation;
+			sourceTree = "<group>";
+		};
+		'F2000007F2000007' = {
+			isa = PBXGroup;
+			children = (
+				86F8B131B8884602A9CF022F /* TimeInterval+Extensions.swift */,
+				F0000014F0000014,
+				F0000015F0000015,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		'F2000008F2000008' = {
+			isa = PBXGroup;
+			children = (
+				F0000016F0000016,
+				F0000017F0000017,
+				F0000018F0000018,
 			);
 			path = Models;
 			sourceTree = "<group>";
 		};
-		F2000009F2000009 /* Protocols */ = {
+		'F2000009F2000009' = {
 			isa = PBXGroup;
 			children = (
-				F0000019F0000019 /* RecordingRepository.swift */,
-				F000001AF000001A /* TranscriptionRepository.swift */,
-				F000001BF000001B /* DeviceRepository.swift */,
+				F0000019F0000019,
+				F000001AF000001A,
+				F000001BF000001B,
 			);
 			path = Protocols;
 			sourceTree = "<group>";
 		};
-		F200000AF200000A /* UseCases */ = {
+		'F200000AF200000A' = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = UseCases;
 			sourceTree = "<group>";
 		};
-		F2000005F2000005 /* Data */ = {
+		'F200000BF200000B' = {
 			isa = PBXGroup;
 			children = (
-				F200000BF200000B /* Database */,
-				F200000CF200000C /* Services */,
-				F200000DF200000D /* Repositories */,
-			);
-			path = Data;
-			sourceTree = "<group>";
-		};
-		F200000BF200000B /* Database */ = {
-			isa = PBXGroup;
-			children = (
-				F000001CF000001C /* DatabaseManager.swift */,
-				F200000EF200000E /* DTOs */,
-				F200000FF200000F /* Migrations */,
+				F000001CF000001C,
+				F200000EF200000E,
+				F200000FF200000F,
 			);
 			path = Database;
 			sourceTree = "<group>";
 		};
-		F200000EF200000E /* DTOs */ = {
+		'F200000CF200000C' = {
 			isa = PBXGroup;
 			children = (
-				F000001DF000001D /* RecordingDTO.swift */,
-				F000001EF000001E /* TranscriptionDTO.swift */,
-				F000001FF000001F /* SegmentDTO.swift */,
+				FEAA5B6EF8BD448A951ED65A /* AudioPlayerService.swift */,
+				A89E47CB68BC4872B206B230 /* WaveformAnalyzer.swift */,
+				F0000030F0000030,
+				F0000031F0000031,
+				F0000034F0000034,
+				F0000035F0000035,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		'F200000DF200000D' = {
+			isa = PBXGroup;
+			children = (
+				F0000032F0000032,
+				F5000011F5000011,
+			);
+			path = Repositories;
+			sourceTree = "<group>";
+		};
+		'F200000EF200000E' = {
+			isa = PBXGroup;
+			children = (
+				F000001DF000001D,
+				F000001EF000001E,
+				F000001FF000001F,
 			);
 			path = DTOs;
 			sourceTree = "<group>";
 		};
-		F200000FF200000F /* Migrations */ = {
+		'F200000FF200000F' = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = Migrations;
 			sourceTree = "<group>";
 		};
-		F200000CF200000C /* Services */ = {
+		'F2000010F2000010' = {
 			isa = PBXGroup;
 			children = (
-				FEAA5B6EF8BD448A951ED65A /* AudioPlayerService.swift */,
-				A89E47CB68BC4872B206B230 /* WaveformAnalyzer.swift */,
-				F0000030F0000030 /* DeviceConnectionService.swift */,
-				F0000031F0000031 /* FileSystemService.swift */,
-				F0000034F0000034 /* AudioCompatibilityService.swift */,
-				F0000035F0000035 /* RecordingSyncService.swift */,
-			);
-			path = Services;
-			sourceTree = "<group>";
-		};
-		F200000DF200000D /* Repositories */ = {
-			isa = PBXGroup;
-			children = (
-				F0000032F0000032 /* SQLiteRecordingRepository.swift */,
-				F5000011F5000011 /* SQLiteTranscriptionRepository.swift */,
-			);
-			path = Repositories;
-			sourceTree = "<group>";
-		};
-		F2000006F2000006 /* Presentation */ = {
-			isa = PBXGroup;
-			children = (
-				F2000010F2000010 /* Views */,
-				F2000011F2000011 /* ViewModels */,
-			);
-			path = Presentation;
-			sourceTree = "<group>";
-		};
-		F2000010F2000010 /* Views */ = {
-			isa = PBXGroup;
-			children = (
-				F0000033F0000033 /* ContentView.swift */,
-				F3000070F3000070 /* Sidebar */,
-				F3000071F3000071 /* Library */,
+				F0000033F0000033,
+				F3000070F3000070,
+				F3000071F3000071,
 				D8402727206E439A8869D212 /* Components */,
-				F8000030F8000030 /* Settings */,
-				F8000031F8000031 /* Onboarding */,
+				F8000030F8000030,
+				F8000031F8000031,
 			);
 			path = Views;
 			sourceTree = "<group>";
 		};
-		F2000011F2000011 /* ViewModels */ = {
+		'F2000011F2000011' = {
 			isa = PBXGroup;
 			children = (
 				79432DA08D5943A38BE62137 /* RecordingDetailViewModel.swift */,
-				F3000050F3000050 /* NavigationViewModel.swift */,
-				F3000051F3000051 /* RecordingsListViewModel.swift */,
-				F5000012F5000012 /* TranscriptionViewModel.swift */,
+				F3000050F3000050,
+				F3000051F3000051,
+				F5000012F5000012,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
 		};
-		F2000099F2000099 /* Products */ = {
+		'F2000099F2000099' = {
 			isa = PBXGroup;
 			children = (
-				F0000000F0000000 /* HiDocu.app */,
-				F0A00000F0A00000 /* HiDocuTests.xctest */,
+				F0000000F0000000,
+				F0A00000F0A00000,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		F2A00001F2A00001 /* HiDocuTests */ = {
+		'F2A00001F2A00001' = {
 			isa = PBXGroup;
 			children = (
-				F0A00011F0A00011 /* HiDocuTests.swift */,
-				F0A00012F0A00012 /* DatabaseTests.swift */,
-				F0A00013F0A00013 /* SyncLogicTests.swift */,
-				F5A00011F5A00011 /* TranscriptionTests.swift */,
+				F0A00011F0A00011,
+				F0A00012F0A00012,
+				F0A00013F0A00013,
+				F5A00011F5A00011,
 			);
 			path = HiDocuTests;
 			sourceTree = "<group>";
 		};
-		F3000070F3000070 /* Sidebar */ = {
+		'F3000070F3000070' = {
 			isa = PBXGroup;
 			children = (
-				F3000052F3000052 /* SidebarView.swift */,
+				F3000052F3000052,
 			);
 			path = Sidebar;
 			sourceTree = "<group>";
 		};
-		F3000071F3000071 /* Library */ = {
+		'F3000071F3000071' = {
 			isa = PBXGroup;
 			children = (
 				9D94AC78A25E4E2BB61D52CE /* RecordingDetailView.swift */,
-				F3000053F3000053 /* RecordingsListView.swift */,
-				F3000054F3000054 /* RecordingRowView.swift */,
-				F5000013F5000013 /* TranscriptionSectionView.swift */,
+				F3000053F3000053,
+				F3000054F3000054,
+				F5000013F5000013,
 			);
 			path = Library;
 			sourceTree = "<group>";
 		};
-		D8402727206E439A8869D212 /* Components */ = {
+		'F8000030F8000030' = {
 			isa = PBXGroup;
 			children = (
-				37EBA1836F0C4065A5595AFC /* WaveformView.swift */,
-				F8000010F8000010 /* ErrorBannerView.swift */,
-			);
-			path = Components;
-			sourceTree = "<group>";
-		};
-		F8000030F8000030 /* Settings */ = {
-			isa = PBXGroup;
-			children = (
-				F8000011F8000011 /* SettingsView.swift */,
+				F8000011F8000011,
 			);
 			path = Settings;
 			sourceTree = "<group>";
 		};
-		F8000031F8000031 /* Onboarding */ = {
+		'F8000031F8000031' = {
 			isa = PBXGroup;
 			children = (
-				F8000012F8000012 /* OnboardingView.swift */,
+				F8000012F8000012,
 			);
 			path = Onboarding;
 			sourceTree = "<group>";
@@ -381,13 +387,13 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		F3000000F3000000 /* HiDocu */ = {
+		'F3000000F3000000' = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = F4000000F4000000 /* Build configuration list for PBXNativeTarget "HiDocu" */;
+			buildConfigurationList = F4000000F4000000;
 			buildPhases = (
-				F1000000F1000000 /* Sources */,
-				F1000001F1000001 /* Frameworks */,
-				F1000002F1000002 /* SwiftLint */,
+				F1000000F1000000,
+				F1000001F1000001,
+				F1000002F1000002,
 			);
 			buildRules = (
 			);
@@ -395,37 +401,37 @@
 			);
 			name = HiDocu;
 			packageProductDependencies = (
-				F0000051F0000051 /* JensenUSB */,
-				F0000053F0000053 /* GRDB */,
+				F0000051F0000051,
+				F0000053F0000053,
 			);
 			productName = HiDocu;
-			productReference = F0000000F0000000 /* HiDocu.app */;
+			productReference = F0000000F0000000;
 			productType = "com.apple.product-type.application";
 		};
-		F3A00000F3A00000 /* HiDocuTests */ = {
+		'F3A00000F3A00000' = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = F4A00000F4A00000 /* Build configuration list for PBXNativeTarget "HiDocuTests" */;
+			buildConfigurationList = F4A00000F4A00000;
 			buildPhases = (
-				F1A00000F1A00000 /* Sources */,
-				F1A00001F1A00001 /* Frameworks */,
+				F1A00000F1A00000,
+				F1A00001F1A00001,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				F0A00061F0A00061 /* PBXTargetDependency */,
+				F0A00061F0A00061,
 			);
 			name = HiDocuTests;
 			packageProductDependencies = (
-				F0A00053F0A00053 /* GRDB */,
+				F0A00053F0A00053,
 			);
 			productName = HiDocuTests;
-			productReference = F0A00000F0A00000 /* HiDocuTests.xctest */;
+			productReference = F0A00000F0A00000;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		F5000000F5000000 /* Project object */ = {
+		'F5000000F5000000' = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
@@ -441,7 +447,7 @@
 					};
 				};
 			};
-			buildConfigurationList = F4000001F4000001 /* Build configuration list for PBXProject "HiDocu" */;
+			buildConfigurationList = F4000001F4000001;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -451,29 +457,21 @@
 			);
 			mainGroup = F2000000F2000000;
 			packageReferences = (
-				F6000000F6000000 /* XCLocalSwiftPackageReference "../JensenUSB" */,
-				F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+				F6000000F6000000,
+				F6000001F6000001,
 			);
-			productRefGroup = F2000099F2000099 /* Products */;
+			productRefGroup = F2000099F2000099;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				F3000000F3000000 /* HiDocu */,
-				F3A00000F3A00000 /* HiDocuTests */,
+				F3000000F3000000,
+				F3A00000F3A00000,
 			);
 		};
 /* End PBXProject section */
 
-/* Begin PBXTargetDependency section */
-		F0A00061F0A00061 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = F3000000F3000000 /* HiDocu */;
-			targetProxy = F0A00060F0A00060 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
-
 /* Begin PBXShellScriptBuildPhase section */
-		F1000002F1000002 /* SwiftLint */ = {
+		'F1000002F1000002' = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -495,7 +493,7 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		F1000000F1000000 /* Sources */ = {
+		'F1000000F1000000' = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -505,56 +503,66 @@
 				C74E3B38C1704D5DB058DD1B /* WaveformView.swift in Sources */,
 				E30FDC8F82064C09BC26710D /* RecordingDetailViewModel.swift in Sources */,
 				0A00F6148A494D6993BC603C /* RecordingDetailView.swift in Sources */,
-				F0000001F0000001 /* HiDocuApp.swift in Sources */,
-				F0000002F0000002 /* AppDependencyContainer.swift in Sources */,
-				F0000003F0000003 /* AppLogger.swift in Sources */,
-				F0000004F0000004 /* Date+Extensions.swift in Sources */,
-				F0000005F0000005 /* Int+Extensions.swift in Sources */,
-				F0000006F0000006 /* Recording.swift in Sources */,
-				F0000007F0000007 /* Transcription.swift in Sources */,
-				F0000008F0000008 /* Segment.swift in Sources */,
-				F0000009F0000009 /* RecordingRepository.swift in Sources */,
-				F000000AF000000A /* TranscriptionRepository.swift in Sources */,
-				F000000BF000000B /* DeviceRepository.swift in Sources */,
-				F000000CF000000C /* DatabaseManager.swift in Sources */,
-				F000000DF000000D /* RecordingDTO.swift in Sources */,
-				F000000EF000000E /* TranscriptionDTO.swift in Sources */,
-				F000000FF000000F /* SegmentDTO.swift in Sources */,
-				F0000020F0000020 /* DeviceConnectionService.swift in Sources */,
-				F0000021F0000021 /* FileSystemService.swift in Sources */,
-				F0000022F0000022 /* SQLiteRecordingRepository.swift in Sources */,
-				F0000023F0000023 /* ContentView.swift in Sources */,
-				F0000024F0000024 /* AudioCompatibilityService.swift in Sources */,
-				F0000025F0000025 /* RecordingSyncService.swift in Sources */,
-				F3000060F3000060 /* NavigationViewModel.swift in Sources */,
-				F3000061F3000061 /* RecordingsListViewModel.swift in Sources */,
-				F3000062F3000062 /* SidebarView.swift in Sources */,
-				F3000063F3000063 /* RecordingsListView.swift in Sources */,
-				F3000064F3000064 /* RecordingRowView.swift in Sources */,
-				F5000001F5000001 /* SQLiteTranscriptionRepository.swift in Sources */,
-				F5000002F5000002 /* TranscriptionViewModel.swift in Sources */,
-				F5000003F5000003 /* TranscriptionSectionView.swift in Sources */,
-				F8000020F8000020 /* ErrorBannerView.swift in Sources */,
-				F8000021F8000021 /* SettingsView.swift in Sources */,
-				F8000022F8000022 /* OnboardingView.swift in Sources */,
+				F0000001F0000001,
+				F0000002F0000002,
+				F0000003F0000003,
+				F0000004F0000004,
+				F0000005F0000005,
+				F0000006F0000006,
+				F0000007F0000007,
+				F0000008F0000008,
+				F0000009F0000009,
+				F000000AF000000A,
+				F000000BF000000B,
+				F000000CF000000C,
+				F000000DF000000D,
+				F000000EF000000E,
+				F000000FF000000F,
+				F0000020F0000020,
+				F0000021F0000021,
+				F0000022F0000022,
+				F0000023F0000023,
+				F0000024F0000024,
+				F0000025F0000025,
+				F3000060F3000060,
+				F3000061F3000061,
+				F3000062F3000062,
+				F3000063F3000063,
+				F3000064F3000064,
+				F5000001F5000001,
+				F5000002F5000002,
+				F5000003F5000003,
+				F8000020F8000020,
+				F8000021F8000021,
+				F8000022F8000022,
+				68054ABA82DDCF81977052B3 /* DeviceDashboardViewModel.swift in Sources */,
+				87474A9B92E8EEC01F279E7F /* DeviceDashboardView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		F1A00000F1A00000 /* Sources */ = {
+		'F1A00000F1A00000' = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F0A00001F0A00001 /* HiDocuTests.swift in Sources */,
-				F0A00002F0A00002 /* DatabaseTests.swift in Sources */,
-				F0A00003F0A00003 /* SyncLogicTests.swift in Sources */,
-				F5A00001F5A00001 /* TranscriptionTests.swift in Sources */,
+				F0A00001F0A00001,
+				F0A00002F0A00002,
+				F0A00003F0A00003,
+				F5A00001F5A00001,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		'F0A00061F0A00061' = {
+			isa = PBXTargetDependency;
+			target = F3000000F3000000;
+			targetProxy = F0A00060F0A00060;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
-		F7000000F7000000 /* Debug */ = {
+		'F7000000F7000000' = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -616,7 +624,7 @@
 			};
 			name = Debug;
 		};
-		F7000001F7000001 /* Release */ = {
+		'F7000001F7000001' = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -670,7 +678,7 @@
 			};
 			name = Release;
 		};
-		F7000002F7000002 /* Debug */ = {
+		'F7000002F7000002' = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -690,6 +698,10 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(SRCROOT)/HiDocu/Presentation/ViewModels",
+					"$(SRCROOT)/HiDocu/Presentation/Views/Device",
 				);
 				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hidocu.app;
@@ -699,7 +711,7 @@
 			};
 			name = Debug;
 		};
-		F7000003F7000003 /* Release */ = {
+		'F7000003F7000003' = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -720,6 +732,10 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(SRCROOT)/HiDocu/Presentation/ViewModels",
+					"$(SRCROOT)/HiDocu/Presentation/Views/Device",
+				);
 				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hidocu.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -728,13 +744,17 @@
 			};
 			name = Release;
 		};
-		F7A00000F7A00000 /* Debug */ = {
+		'F7A00000F7A00000' = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				LIBRARY_SEARCH_PATHS = (
+					"$(SRCROOT)/HiDocu/Presentation/ViewModels",
+					"$(SRCROOT)/HiDocu/Presentation/Views/Device",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hidocu.HiDocuTests;
@@ -745,13 +765,17 @@
 			};
 			name = Debug;
 		};
-		F7A00001F7A00001 /* Release */ = {
+		'F7A00001F7A00001' = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				LIBRARY_SEARCH_PATHS = (
+					"$(SRCROOT)/HiDocu/Presentation/ViewModels",
+					"$(SRCROOT)/HiDocu/Presentation/Views/Device",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hidocu.HiDocuTests;
@@ -765,29 +789,29 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		F4000000F4000000 /* Build configuration list for PBXNativeTarget "HiDocu" */ = {
+		'F4000000F4000000' = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				F7000002F7000002 /* Debug */,
-				F7000003F7000003 /* Release */,
+				F7000002F7000002,
+				F7000003F7000003,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F4000001F4000001 /* Build configuration list for PBXProject "HiDocu" */ = {
+		'F4000001F4000001' = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				F7000000F7000000 /* Debug */,
-				F7000001F7000001 /* Release */,
+				F7000000F7000000,
+				F7000001F7000001,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F4A00000F4A00000 /* Build configuration list for PBXNativeTarget "HiDocuTests" */ = {
+		'F4A00000F4A00000' = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				F7A00000F7A00000 /* Debug */,
-				F7A00001F7A00001 /* Release */,
+				F7A00000F7A00000,
+				F7A00001F7A00001,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -795,14 +819,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		F6000000F6000000 /* XCLocalSwiftPackageReference "../JensenUSB" */ = {
+		'F6000000F6000000' = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../JensenUSB;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+		'F6000001F6000001' = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/groue/GRDB.swift";
 			requirement = {
@@ -813,21 +837,21 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		F0000051F0000051 /* JensenUSB */ = {
+		'F0000051F0000051' = {
 			isa = XCSwiftPackageProductDependency;
 			productName = JensenUSB;
 		};
-		F0000053F0000053 /* GRDB */ = {
+		'F0000053F0000053' = {
 			isa = XCSwiftPackageProductDependency;
-			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			package = F6000001F6000001;
 			productName = GRDB;
 		};
-		F0A00053F0A00053 /* GRDB */ = {
+		'F0A00053F0A00053' = {
 			isa = XCSwiftPackageProductDependency;
-			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			package = F6000001F6000001;
 			productName = GRDB;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
-	rootObject = F5000000F5000000 /* Project object */;
+	rootObject = F5000000F5000000;
 }

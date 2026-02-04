@@ -9,11 +9,14 @@ import Foundation
 
 /// Represents a selectable item in the sidebar.
 enum SidebarItem: Hashable {
+    case device
     case allRecordings
     case filteredByStatus(RecordingStatus)
 
     var title: String {
         switch self {
+        case .device:
+            return "Device"
         case .allRecordings:
             return "All Recordings"
         case .filteredByStatus(let status):
@@ -27,6 +30,8 @@ enum SidebarItem: Hashable {
 
     var iconName: String {
         switch self {
+        case .device:
+            return "externaldrive.fill"
         case .allRecordings:
             return "waveform"
         case .filteredByStatus(let status):
@@ -41,10 +46,18 @@ enum SidebarItem: Hashable {
     /// The status filter to pass to the repository, or nil for "all".
     var statusFilter: RecordingStatus? {
         switch self {
-        case .allRecordings:
+        case .device, .allRecordings:
             return nil
         case .filteredByStatus(let status):
             return status
+        }
+    }
+
+    /// Whether this item shows the recordings library views.
+    var isLibraryItem: Bool {
+        switch self {
+        case .device: return false
+        default: return true
         }
     }
 }

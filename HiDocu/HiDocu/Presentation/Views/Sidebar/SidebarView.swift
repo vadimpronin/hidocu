@@ -2,7 +2,7 @@
 //  SidebarView.swift
 //  HiDocu
 //
-//  Sidebar with library filters and device status section.
+//  Sidebar with library filters and device navigation item.
 //
 
 import SwiftUI
@@ -14,6 +14,13 @@ struct SidebarView: View {
 
     var body: some View {
         List(selection: $navigationVM.selectedSidebarItem) {
+            // Locations section — shown when device is connected or connecting
+            if shouldShowLocations {
+                Section("Locations") {
+                    locationContent
+                }
+            }
+
             Section("Library") {
                 Label("All Recordings", systemImage: "waveform")
                     .tag(SidebarItem.allRecordings)
@@ -30,181 +37,51 @@ struct SidebarView: View {
                     .foregroundStyle(.purple)
                     .tag(SidebarItem.filteredByStatus(.transcribed))
             }
-
-            Section("Device") {
-                DeviceSidebarView(
-                    deviceService: deviceService,
-                    syncService: syncService
-                )
-            }
         }
         .navigationSplitViewColumnWidth(min: 180, ideal: 220)
     }
-}
 
-// MARK: - Device Sidebar View
+    // MARK: - Locations Content
 
-struct DeviceSidebarView: View {
-    var deviceService: DeviceConnectionService
-    var syncService: RecordingSyncService
-
-    var body: some View {
+    private var shouldShowLocations: Bool {
         switch deviceService.connectionState {
-        case .disconnected:
-            disconnectedView
+        case .connecting, .connected:
+            return true
+        case .disconnected, .error:
+            return false
+        }
+    }
+
+    @ViewBuilder
+    private var locationContent: some View {
+        switch deviceService.connectionState {
         case .connecting:
-            connectingView
-        case .connected:
-            connectedView
-        case .error(let message):
-            errorView(message)
-        }
-    }
-
-    // MARK: - Disconnected
-
-    private var disconnectedView: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("No Device", systemImage: "cable.connector")
-                .foregroundStyle(.secondary)
-
-            Button("Connect") {
-                Task {
-                    do {
-                        _ = try await deviceService.connect()
-                    } catch {
-                        // Error shown via connectionState
-                    }
-                }
+            HStack(spacing: 6) {
+                ProgressView()
+                    .controlSize(.small)
+                Text("Connecting...")
+                    .foregroundStyle(.secondary)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.small)
-        }
-    }
-
-    // MARK: - Connecting
-
-    private var connectingView: some View {
-        HStack(spacing: 8) {
-            ProgressView()
-                .controlSize(.small)
-            Text("Connecting...")
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    // MARK: - Connected
-
-    private var connectedView: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Device name
+        case .connected:
             Label(
                 deviceService.connectionInfo?.model.displayName ?? "HiDock",
-                systemImage: "cable.connector"
+                systemImage: deviceService.connectionInfo?.model.sfSymbolName ?? "externaldrive.fill"
             )
-            .fontWeight(.medium)
-
-            // Battery (P1 only)
-            if let battery = deviceService.batteryInfo,
-               deviceService.connectionInfo?.supportsBattery == true {
-                BatteryIndicatorView(battery: battery)
-            }
-
-            // Storage bar
-            if let storage = deviceService.storageInfo {
-                StorageBarView(storage: storage)
-            }
-
-            // Sync button / progress
-            if syncService.isSyncing {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text("Syncing...")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    ProgressView(value: syncService.progress)
-                        .progressViewStyle(.linear)
-                    if let file = syncService.currentFile {
-                        Text(file)
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                    }
-                    if syncService.totalBytesExpected > 0 {
-                        Text(syncService.formattedBytesProgress)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                        if syncService.bytesPerSecond > 0 {
-                            Text(syncService.formattedTelemetry)
-                                .font(.caption2)
-                                .foregroundStyle(.tertiary)
-                                .monospacedDigit()
-                        }
-                    }
+            .tag(SidebarItem.device)
+            .contextMenu {
+                Button("Sync All") {
+                    Task { await syncService.syncFromDevice() }
                 }
-            } else {
-                Button("Sync") {
-                    Task {
-                        await syncService.syncFromDevice()
-                    }
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-            }
+                .disabled(syncService.isSyncing)
 
-            // Disconnect
-            Button("Disconnect") {
-                Task { @MainActor in
-                    deviceService.disconnect()
+                Divider()
+
+                Button("Eject \(deviceService.connectionInfo?.model.displayName ?? "Device")") {
+                    Task { @MainActor in deviceService.disconnect() }
                 }
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
-            .controlSize(.small)
-
-            // Sync stats
-            if let stats = syncService.syncStats, !syncService.isSyncing {
-                Text("\(stats.downloaded) downloaded, \(stats.skipped) skipped")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-
-            // Error
-            if let error = syncService.errorMessage, !syncService.isSyncing {
-                Text(error)
-                    .font(.caption2)
-                    .foregroundStyle(.red)
-            }
-        }
-    }
-
-    // MARK: - Error
-
-    private func errorView(_ message: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("Connection Error", systemImage: "exclamationmark.triangle.fill")
-                .foregroundStyle(.red)
-
-            Text(message)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Button("Retry") {
-                Task {
-                    do {
-                        _ = try await deviceService.connect()
-                    } catch {
-                        // Error shown via connectionState
-                    }
-                }
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.small)
+        default:
+            EmptyView()
         }
     }
 }
@@ -243,37 +120,5 @@ struct BatteryIndicatorView: View {
         if battery.percentage < 15 { return .red }
         if battery.percentage < 30 { return .orange }
         return .green
-    }
-}
-
-// MARK: - Storage Bar
-
-struct StorageBarView: View {
-    let storage: DeviceStorageInfo
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(.quaternary)
-                        .frame(height: 6)
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(barColor)
-                        .frame(width: geo.size.width * storage.usedPercentage, height: 6)
-                }
-            }
-            .frame(height: 6)
-
-            Text("\(storage.formattedFree) free of \(storage.formattedTotal)")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-        }
-    }
-
-    private var barColor: Color {
-        if storage.usedPercentage > 0.9 { return .red }
-        if storage.usedPercentage > 0.75 { return .orange }
-        return .blue
     }
 }
