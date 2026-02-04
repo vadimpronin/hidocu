@@ -65,16 +65,16 @@ public class FileController {
     public func download(filename: String, expectedSize: UInt32, progressHandler: ((Int, Int) -> Void)? = nil) throws -> Data {
         core.suppressKeepAlive = true
         defer { core.suppressKeepAlive = false }
-        
+
         var filenameBytes: [UInt8] = []
         for char in filename.utf8 { filenameBytes.append(char) }
-        
+
         var command = Command(.transferFile, body: filenameBytes)
         command.setSequence(core.nextSequence())
         let packet = command.makePacket()
-        
+
         try core.transport.send(data: packet)
-        
+
         var fileData = Data()
         let deadline = Date().addingTimeInterval(120.0)
 
@@ -107,8 +107,83 @@ public class FileController {
                 break
             }
         }
-        
+
         if fileData.count > 0 { return fileData }
+        throw JensenError.commandTimeout
+    }
+
+    /// Download a file from the device directly to disk via streaming.
+    ///
+    /// Unlike `download()` which accumulates the entire file in memory,
+    /// this method writes data to a `FileHandle` as it arrives. This
+    /// keeps memory usage low and allows the progress callback to fire
+    /// continuously throughout the transfer (no freeze at the end).
+    ///
+    /// - Parameters:
+    ///   - filename: Name of the file on the device
+    ///   - expectedSize: Expected file size in bytes
+    ///   - toURL: Local file URL to write to
+    ///   - progressHandler: Called with (bytesWritten, expectedTotal) after each chunk
+    /// - Throws: `JensenError.commandTimeout` if the transfer stalls
+    public func downloadToFile(
+        filename: String,
+        expectedSize: UInt32,
+        toURL: URL,
+        progressHandler: ((Int, Int) -> Void)? = nil
+    ) throws {
+        core.suppressKeepAlive = true
+        defer { core.suppressKeepAlive = false }
+
+        var filenameBytes: [UInt8] = []
+        for char in filename.utf8 { filenameBytes.append(char) }
+
+        var command = Command(.transferFile, body: filenameBytes)
+        command.setSequence(core.nextSequence())
+        let packet = command.makePacket()
+
+        try core.transport.send(data: packet)
+
+        // Create the output file and open a handle for writing
+        FileManager.default.createFile(atPath: toURL.path, contents: nil)
+        let fileHandle = try FileHandle(forWritingTo: toURL)
+        defer { try? fileHandle.close() }
+
+        var totalBytesWritten: Int = 0
+        let deadline = Date().addingTimeInterval(120.0)
+        var buffer = Data()
+
+        while Date() < deadline {
+            guard core.transport.isConnected else { break }
+            do {
+                let chunk = try core.transport.receive(timeout: 5.0)
+                buffer.append(chunk)
+
+                let (messages, consumed) = ProtocolDecoder.decodeStream(buffer)
+                if consumed > 0 {
+                    buffer.removeFirst(consumed)
+                }
+
+                for message in messages {
+                    fileHandle.write(message.body)
+                    totalBytesWritten += message.body.count
+                }
+
+                progressHandler?(totalBytesWritten, Int(expectedSize))
+
+                if totalBytesWritten >= expectedSize {
+                    return
+                }
+
+            } catch {
+                guard core.transport.isConnected else { break }
+                // Report progress even on timeout so the UI doesn't freeze
+                progressHandler?(totalBytesWritten, Int(expectedSize))
+                if totalBytesWritten < expectedSize && Date() < deadline { continue }
+                break
+            }
+        }
+
+        if totalBytesWritten > 0 { return }
         throw JensenError.commandTimeout
     }
     

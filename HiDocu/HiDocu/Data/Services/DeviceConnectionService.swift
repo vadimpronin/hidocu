@@ -200,7 +200,10 @@ final class DeviceConnectionService {
         }.value
     }
 
-    /// Download a file from the device.
+    /// Download a file from the device directly to disk.
+    ///
+    /// Uses streaming I/O — data is written to disk as it arrives from USB,
+    /// keeping memory usage low and progress updates continuous.
     func downloadFile(
         filename: String,
         expectedSize: Int,
@@ -211,17 +214,16 @@ final class DeviceConnectionService {
             throw DeviceServiceError.notConnected
         }
 
-        let data = try await Task.detached {
-            try device.file.download(
+        try await Task.detached {
+            try device.file.downloadToFile(
                 filename: filename,
                 expectedSize: UInt32(expectedSize),
+                toURL: toPath,
                 progressHandler: { current, total in
                     progress(Int64(current), Int64(total))
                 }
             )
         }.value
-
-        try data.write(to: toPath)
     }
 
     /// Delete a file from the device.

@@ -100,6 +100,8 @@ final class RecordingSyncService {
     private var completedBytes: Int64 = 0
     private var syncStartTime: Date = .distantPast
     private var lastStatsUpdateTime: Date = .distantPast
+    /// Sliding window samples for speed calculation (last ~3 seconds)
+    private var speedSamples: [(time: Date, bytes: Int64)] = []
 
     // MARK: - Dependencies
     
@@ -160,6 +162,7 @@ final class RecordingSyncService {
         completedBytes = 0
         syncStartTime = Date()
         lastStatsUpdateTime = .distantPast
+        speedSamples = []
 
         await MainActor.run {
             isSyncing = true
@@ -390,6 +393,8 @@ final class RecordingSyncService {
     }
 
     /// Update progress state from the USB download callback. Throttled to ~4 updates/sec.
+    /// Speed is computed over a 3-second sliding window so it reflects the
+    /// current transfer rate rather than the diluted overall average.
     private func updateSyncProgress(currentFileBytes: Int64) {
         let now = Date()
         guard now.timeIntervalSince(lastStatsUpdateTime) >= 0.25 else { return }
@@ -397,9 +402,23 @@ final class RecordingSyncService {
 
         let cappedCurrent = min(currentFileBytes, Int64(totalBytesExpected - completedBytes))
         let globalBytes = completedBytes + max(cappedCurrent, 0)
-        let elapsed = now.timeIntervalSince(syncStartTime)
-        let speed = elapsed > 1.0 ? Double(globalBytes) / elapsed : 0
-        let remaining: TimeInterval = speed > 0 ? Double(totalBytesExpected - globalBytes) / speed : 0
+
+        // Sliding window: keep samples from the last 3 seconds
+        speedSamples.append((time: now, bytes: globalBytes))
+        speedSamples.removeAll { now.timeIntervalSince($0.time) > 3.0 }
+
+        let speed: Double
+        if let oldest = speedSamples.first, speedSamples.count >= 2 {
+            let dt = now.timeIntervalSince(oldest.time)
+            let db = Double(globalBytes - oldest.bytes)
+            speed = dt > 0.1 ? db / dt : 0
+        } else {
+            speed = 0
+        }
+
+        let remaining: TimeInterval = speed > 0
+            ? Double(totalBytesExpected - globalBytes) / speed
+            : 0
 
         Task { @MainActor in
             self.totalBytesSynced = globalBytes
