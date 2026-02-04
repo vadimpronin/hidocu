@@ -93,14 +93,18 @@ public enum HiDockModel: String {
 public class USBDevice {
     // HiDock vendor IDs
     public static let vendorIDs: [UInt16] = [4310, 14471]
-    
+
     private var deviceInterface: UnsafeMutablePointer<UnsafeMutablePointer<IOUSBDeviceInterface>?>?
     private var interfaceInterface: UnsafeMutablePointer<UnsafeMutablePointer<IOUSBInterfaceInterface>?>?
-    
+
+    /// Serializes close() vs transferIn()/transferOut() to prevent use-after-free
+    /// when the device is physically disconnected during an in-flight transfer.
+    private let ioLock = NSLock()
+
     public let productID: UInt16
     public let vendorID: UInt16
     public let model: HiDockModel
-    
+
     public private(set) var isOpen: Bool = false
     public private(set) var isInterfaceClaimed: Bool = false
     
@@ -293,13 +297,16 @@ public class USBDevice {
     }
     
     public func close() {
+        ioLock.lock()
+        defer { ioLock.unlock() }
+
         if isInterfaceClaimed, let intf = interfaceInterface {
             _ = intf.pointee?.pointee.USBInterfaceClose(intf)
             _ = intf.pointee?.pointee.Release(intf)
             interfaceInterface = nil
             isInterfaceClaimed = false
         }
-        
+
         if isOpen, let device = deviceInterface {
             _ = device.pointee?.pointee.USBDeviceClose(device)
             _ = device.pointee?.pointee.Release(device)
@@ -311,41 +318,49 @@ public class USBDevice {
     // MARK: - Transfers
     
     public func transferOut(endpoint: UInt8, data: Data) throws {
+        ioLock.lock()
+        defer { ioLock.unlock() }
+
         guard isInterfaceClaimed, let intf = interfaceInterface?.pointee?.pointee else {
             throw USBError.interfaceNotClaimed
         }
-        
+
         // Find the pipe number for the endpoint
         let pipeRef = try findPipeRef(for: endpoint, direction: kUSBOut)
-        
+        let localIntf = interfaceInterface
+
         var mutableData = data
         let result = mutableData.withUnsafeMutableBytes { buffer in
             intf.WritePipe(
-                interfaceInterface,
+                localIntf,
                 pipeRef,
                 buffer.baseAddress,
                 UInt32(data.count)
             )
         }
-        
+
         guard result == kIOReturnSuccess else {
             throw USBError.transferFailed("WritePipe failed: \(String(format: "0x%08X", result))")
         }
     }
     
     public func transferIn(endpoint: UInt8, length: Int, timeout: UInt32 = 5000) throws -> Data {
+        ioLock.lock()
+        defer { ioLock.unlock() }
+
         guard isInterfaceClaimed, let intf = interfaceInterface?.pointee?.pointee else {
             throw USBError.interfaceNotClaimed
         }
-        
+
         let pipeRef = try findPipeRef(for: endpoint, direction: kUSBIn)
-        
+        let localIntf = interfaceInterface
+
         var buffer = Data(count: length)
         var actualLength = UInt32(length)
-        
+
         let result = buffer.withUnsafeMutableBytes { bufferPtr in
             intf.ReadPipeTO(
-                interfaceInterface,
+                localIntf,
                 pipeRef,
                 bufferPtr.baseAddress,
                 &actualLength,
@@ -353,17 +368,17 @@ public class USBDevice {
                 timeout   // completionTimeout
             )
         }
-        
+
         // IOKit timeout error code (0xe0004051 as signed Int32)
         let kIOUSBTransactionTimeoutValue: IOReturn = Int32(bitPattern: 0xe0004051)
         if result == kIOUSBTransactionTimeoutValue {
             throw USBError.timeout
         }
-        
+
         guard result == kIOReturnSuccess else {
             throw USBError.transferFailed("ReadPipe failed: \(String(format: "0x%08X", result))")
         }
-        
+
         return buffer.prefix(Int(actualLength))
     }
     

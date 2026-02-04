@@ -14,7 +14,7 @@ import Foundation
 protocol DeviceFileProvider {
     var connectionInfo: DeviceConnectionInfo? { get }
     func listFiles() async throws -> [DeviceFileInfo]
-    func downloadFile(filename: String, toPath: URL, progress: @escaping (Double) -> Void) async throws
+    func downloadFile(filename: String, expectedSize: Int, toPath: URL, progress: @escaping (Int64, Int64) -> Void) async throws
 }
 
 /// Statistics from a sync operation
@@ -43,22 +43,64 @@ struct SyncStats: Sendable {
 final class RecordingSyncService {
     
     // MARK: - Observable State (for UI)
-    
-    /// Whether a sync operation is currently in progress
+
     private(set) var isSyncing: Bool = false
-    
-    /// Current progress (0.0 - 1.0) across all files
-    private(set) var progress: Double = 0.0
-    
-    /// Currently processing file name
     private(set) var currentFile: String?
-    
-    /// Error message if sync failed
     private(set) var errorMessage: String?
-    
-    /// Statistics from the last sync operation
     private(set) var syncStats: SyncStats?
-    
+
+    // Byte-level progress tracking
+    private(set) var totalBytesExpected: Int64 = 0
+    private(set) var totalBytesSynced: Int64 = 0
+    private(set) var bytesPerSecond: Double = 0
+    private(set) var estimatedSecondsRemaining: TimeInterval = 0
+
+    var progress: Double {
+        guard totalBytesExpected > 0 else { return 0 }
+        return min(Double(totalBytesSynced) / Double(totalBytesExpected), 1.0)
+    }
+
+    var formattedBytesProgress: String {
+        let synced = ByteCountFormatter.string(fromByteCount: totalBytesSynced, countStyle: .file)
+        let total = ByteCountFormatter.string(fromByteCount: totalBytesExpected, countStyle: .file)
+        return "\(synced) of \(total)"
+    }
+
+    var formattedSpeed: String {
+        guard bytesPerSecond > 0 else { return "" }
+        return ByteCountFormatter.string(fromByteCount: Int64(bytesPerSecond), countStyle: .file) + "/s"
+    }
+
+    var formattedTimeRemaining: String {
+        guard estimatedSecondsRemaining > 1, bytesPerSecond > 0 else { return "" }
+        let secs = Int(estimatedSecondsRemaining)
+        if secs < 10 { return "a few seconds left" }
+        if secs < 60 {
+            let rounded = max((secs / 5) * 5, 5)
+            return "about \(rounded) sec left"
+        }
+        let mins = (secs + 30) / 60
+        if mins == 1 { return "about 1 min left" }
+        if mins < 60 { return "about \(mins) min left" }
+        let hrs = mins / 60
+        let remMins = mins % 60
+        if remMins == 0 { return "about \(hrs) hr left" }
+        return "about \(hrs) hr \(remMins) min left"
+    }
+
+    var formattedTelemetry: String {
+        var parts: [String] = []
+        if !formattedSpeed.isEmpty { parts.append(formattedSpeed) }
+        if !formattedTimeRemaining.isEmpty { parts.append(formattedTimeRemaining) }
+        return parts.joined(separator: " \u{2022} ")
+    }
+
+    // MARK: - Private Progress Tracking
+
+    private var completedBytes: Int64 = 0
+    private var syncStartTime: Date = .distantPast
+    private var lastStatsUpdateTime: Date = .distantPast
+
     // MARK: - Dependencies
     
     private let deviceService: any DeviceFileProvider
@@ -97,38 +139,49 @@ final class RecordingSyncService {
             AppLogger.fileSystem.warning("Sync already in progress")
             return
         }
-        
+
+        completedBytes = 0
+        syncStartTime = Date()
+        lastStatsUpdateTime = .distantPast
+
         await MainActor.run {
             isSyncing = true
-            progress = 0.0
+            totalBytesExpected = 0
+            totalBytesSynced = 0
+            bytesPerSecond = 0
+            estimatedSecondsRemaining = 0
             currentFile = nil
             errorMessage = nil
             syncStats = nil
         }
-        
+
         var downloaded = 0
         var skipped = 0
         var failed = 0
-        
+
         do {
             // Ensure storage directory exists
             try fileSystemService.ensureStorageDirectoryExists()
-            
+
             // Get file list from device
             let deviceFiles = try await deviceService.listFiles()
             let total = deviceFiles.count
-            
-            AppLogger.fileSystem.info("Starting sync: \(total) files on device")
-            
-            for (index, fileInfo) in deviceFiles.enumerated() {
+            let totalBytes = deviceFiles.reduce(Int64(0)) { $0 + Int64($1.size) }
+
+            await MainActor.run {
+                totalBytesExpected = totalBytes
+            }
+
+            AppLogger.fileSystem.info("Starting sync: \(total) files, \(totalBytes) bytes on device")
+
+            for fileInfo in deviceFiles {
                 // Check for cancellation
                 try Task.checkCancellation()
-                
+
                 await MainActor.run {
                     currentFile = fileInfo.filename
-                    progress = Double(index) / Double(max(total, 1))
                 }
-                
+
                 do {
                     let result = try await processFile(fileInfo)
                     switch result {
@@ -141,17 +194,25 @@ final class RecordingSyncService {
                     AppLogger.fileSystem.error("Failed to sync \(fileInfo.filename): \(error.localizedDescription)")
                     failed += 1
                 }
+
+                // Advance completed bytes after each file (downloaded, skipped, or failed)
+                completedBytes += Int64(fileInfo.size)
+                await MainActor.run {
+                    totalBytesSynced = completedBytes
+                }
             }
-            
+
             let stats = SyncStats(total: total, downloaded: downloaded, skipped: skipped, failed: failed)
             await MainActor.run {
                 syncStats = stats
-                progress = 1.0
+                totalBytesSynced = totalBytesExpected
                 currentFile = nil
+                bytesPerSecond = 0
+                estimatedSecondsRemaining = 0
             }
-            
+
             AppLogger.fileSystem.info("Sync complete: \(stats.description)")
-            
+
         } catch is CancellationError {
             AppLogger.fileSystem.info("Sync cancelled by user")
             await MainActor.run {
@@ -163,7 +224,7 @@ final class RecordingSyncService {
                 errorMessage = error.localizedDescription
             }
         }
-        
+
         await MainActor.run {
             isSyncing = false
         }
@@ -249,8 +310,11 @@ final class RecordingSyncService {
         AppLogger.fileSystem.info("Downloading \(filename) to temp...")
         try await deviceService.downloadFile(
             filename: filename,
+            expectedSize: fileInfo.size,
             toPath: tempURL,
-            progress: { _ in }
+            progress: { bytesDownloaded, _ in
+                self.updateSyncProgress(currentFileBytes: bytesDownloaded)
+            }
         )
         
         // Validate the download
@@ -286,7 +350,26 @@ final class RecordingSyncService {
         
         AppLogger.fileSystem.info("Stored \(filename) successfully")
     }
-    
+
+    /// Update progress state from the USB download callback. Throttled to ~4 updates/sec.
+    private func updateSyncProgress(currentFileBytes: Int64) {
+        let now = Date()
+        guard now.timeIntervalSince(lastStatsUpdateTime) >= 0.25 else { return }
+        lastStatsUpdateTime = now
+
+        let cappedCurrent = min(currentFileBytes, Int64(totalBytesExpected - completedBytes))
+        let globalBytes = completedBytes + max(cappedCurrent, 0)
+        let elapsed = now.timeIntervalSince(syncStartTime)
+        let speed = elapsed > 1.0 ? Double(globalBytes) / elapsed : 0
+        let remaining: TimeInterval = speed > 0 ? Double(totalBytesExpected - globalBytes) / speed : 0
+
+        Task { @MainActor in
+            self.totalBytesSynced = globalBytes
+            self.bytesPerSecond = speed
+            self.estimatedSecondsRemaining = remaining
+        }
+    }
+
     // MARK: - Manual Import
     
     /// Import audio files from user-selected URLs (drag-and-drop or file picker).

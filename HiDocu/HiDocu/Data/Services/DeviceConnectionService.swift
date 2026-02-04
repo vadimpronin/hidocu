@@ -203,27 +203,23 @@ final class DeviceConnectionService {
     /// Download a file from the device.
     func downloadFile(
         filename: String,
+        expectedSize: Int,
         toPath: URL,
-        progress: @escaping (Double) -> Void
+        progress: @escaping (Int64, Int64) -> Void
     ) async throws {
         guard let device = jensen else {
             throw DeviceServiceError.notConnected
         }
 
-        // Get file size first for progress reporting
-        let files = try device.file.list()
-        guard let fileEntry = files.first(where: { $0.name == filename }) else {
-            throw DeviceServiceError.downloadFailed("File not found on device")
-        }
-
-        let data = try device.file.download(
-            filename: filename,
-            expectedSize: fileEntry.length,
-            progressHandler: { current, total in
-                let pct = total > 0 ? Double(current) / Double(total) : 0
-                Task { @MainActor in progress(pct) }
-            }
-        )
+        let data = try await Task.detached {
+            try device.file.download(
+                filename: filename,
+                expectedSize: UInt32(expectedSize),
+                progressHandler: { current, total in
+                    progress(Int64(current), Int64(total))
+                }
+            )
+        }.value
 
         try data.write(to: toPath)
     }

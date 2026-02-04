@@ -42,10 +42,11 @@ public class FileController {
         let deadline = Date().addingTimeInterval(30.0)
         
         while Date() < deadline {
+            guard core.transport.isConnected else { break }
             do {
                 let chunk = try core.transport.receive(timeout: 5.0)
                 allData.append(chunk)
-                
+
                 if let files = parseFileList(allData, expectedCount: expectedCount) {
                     return files
                 }
@@ -53,6 +54,7 @@ public class FileController {
                 if !allData.isEmpty, let files = parseFileList(allData, expectedCount: expectedCount) {
                     return files
                 }
+                guard core.transport.isConnected else { break }
                 if Date() >= deadline { break }
             }
         }
@@ -75,35 +77,32 @@ public class FileController {
         
         var fileData = Data()
         let deadline = Date().addingTimeInterval(120.0)
-        var lastProgress = 0
-        
+
         var buffer = Data()
-        
+
         while Date() < deadline {
+            guard core.transport.isConnected else { break }
             do {
                 let chunk = try core.transport.receive(timeout: 5.0)
                 buffer.append(chunk)
-                
+
                 let (messages, consumed) = ProtocolDecoder.decodeStream(buffer)
                 if consumed > 0 {
                     buffer.removeFirst(consumed)
                 }
-                
+
                 for message in messages {
                     fileData.append(message.body)
                 }
-                
-                let progress = Int(Double(fileData.count) / Double(expectedSize) * 100)
-                if progress > lastProgress && progress % 5 == 0 {
-                    progressHandler?(fileData.count, Int(expectedSize))
-                    lastProgress = progress
-                }
-                
+
+                progressHandler?(fileData.count, Int(expectedSize))
+
                 if fileData.count >= expectedSize {
                     return fileData
                 }
-                
+
             } catch {
+                guard core.transport.isConnected else { break }
                 if fileData.count < expectedSize && Date() < deadline { continue }
                 break
             }

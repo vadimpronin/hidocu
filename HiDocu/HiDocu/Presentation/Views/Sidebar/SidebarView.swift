@@ -134,6 +134,18 @@ struct DeviceSidebarView: View {
                             .lineLimit(1)
                             .truncationMode(.middle)
                     }
+                    if syncService.totalBytesExpected > 0 {
+                        Text(syncService.formattedBytesProgress)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                        if syncService.bytesPerSecond > 0 {
+                            Text(syncService.formattedTelemetry)
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                                .monospacedDigit()
+                        }
+                    }
                 }
             } else {
                 Button("Sync") {
