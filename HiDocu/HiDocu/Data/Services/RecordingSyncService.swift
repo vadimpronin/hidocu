@@ -219,6 +219,9 @@ final class RecordingSyncService {
                 currentFile = nil
                 bytesPerSecond = 0
                 estimatedSecondsRemaining = 0
+                if failed > 0 {
+                    errorMessage = "Failed to import \(failed) file\(failed == 1 ? "" : "s")"
+                }
             }
 
             AppLogger.fileSystem.info("Sync complete: \(stats.description)")

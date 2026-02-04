@@ -221,16 +221,23 @@ private struct DeviceHeaderSection: View {
                             recordingsBytes: recordingsBytes
                         )
 
-                        if syncService.isSyncing {
-                            ProgressView()
-                                .controlSize(.small)
-                                .padding(.top, 2)
-                        } else {
-                            Button("Sync") {
-                                Task { await syncService.syncFromDevice() }
+                        ZStack {
+                            // Invisible button to reserve space
+                            Button("Sync") {}
+                                .buttonStyle(.borderedProminent)
+                                .controlSize(.regular)
+                                .hidden()
+
+                            if syncService.isSyncing {
+                                ProgressView()
+                                    .controlSize(.small)
+                            } else {
+                                Button("Sync") {
+                                    Task { await syncService.syncFromDevice() }
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .controlSize(.regular)
                             }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.regular)
                         }
                     }
                     .padding(.top, 4)
