@@ -188,6 +188,54 @@ final class SQLiteRecordingRepository: RecordingRepository, @unchecked Sendable 
         }
     }
     
+    // MARK: - Observation
+
+    func observeAll(
+        filterStatus: RecordingStatus?,
+        sortBy: RecordingSortField,
+        ascending: Bool
+    ) -> AsyncThrowingStream<[Recording], Error> {
+        AsyncThrowingStream { continuation in
+            let observation = ValueObservation.tracking { database -> [RecordingDTO] in
+                var query = RecordingDTO.all()
+
+                if let status = filterStatus {
+                    query = query.filter(RecordingDTO.Columns.status == status.rawValue)
+                }
+
+                let column: Column
+                switch sortBy {
+                case .createdAt:
+                    column = RecordingDTO.Columns.createdAt
+                case .modifiedAt:
+                    column = RecordingDTO.Columns.modifiedAt
+                case .title:
+                    column = RecordingDTO.Columns.title
+                case .filename:
+                    column = RecordingDTO.Columns.filename
+                case .durationSeconds:
+                    column = RecordingDTO.Columns.durationSeconds
+                case .fileSizeBytes:
+                    column = RecordingDTO.Columns.fileSizeBytes
+                }
+
+                query = ascending ? query.order(column.asc) : query.order(column.desc)
+                return try query.fetchAll(database)
+            }
+
+            let cancellable = observation.start(in: db.dbPool, scheduling: .async(onQueue: .main)) { error in
+                continuation.finish(throwing: error)
+            } onChange: { dtos in
+                let recordings = dtos.map { self.toDomainWithAbsolutePath($0) }
+                continuation.yield(recordings)
+            }
+
+            continuation.onTermination = { _ in
+                cancellable.cancel()
+            }
+        }
+    }
+
     // MARK: - Sync Operations
     
     func exists(filename: String, sizeBytes: Int) async throws -> Bool {

@@ -40,7 +40,17 @@ protocol RecordingRepository: Sendable {
     
     /// Search recordings by title or filename
     func search(query: String) async throws -> [Recording]
-    
+
+    // MARK: - Observation
+
+    /// Observe all recordings reactively. Returns a stream that emits a fresh
+    /// array whenever the `recordings` table changes.
+    func observeAll(
+        filterStatus: RecordingStatus?,
+        sortBy: RecordingSortField,
+        ascending: Bool
+    ) -> AsyncThrowingStream<[Recording], Error>
+
     // MARK: - Sync Operations
     
     /// Check if a recording exists with matching filename AND size.

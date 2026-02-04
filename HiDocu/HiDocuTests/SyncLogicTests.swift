@@ -16,7 +16,7 @@ import GRDB
 final class MockDeviceFileProvider: DeviceFileProvider {
     var connectionInfo: DeviceConnectionInfo? = DeviceConnectionInfo(
         serialNumber: "TEST-001",
-        model: "H1",
+        model: .h1,
         firmwareVersion: "1.0.0",
         firmwareNumber: 100
     )
@@ -124,6 +124,14 @@ final class MockRecordingRepository: RecordingRepository, @unchecked Sendable {
         callOrder.append("search")
         return recordings.values.filter {
             $0.filename.contains(query) || ($0.title?.contains(query) ?? false)
+        }
+    }
+
+    func observeAll(filterStatus: RecordingStatus?, sortBy: RecordingSortField, ascending: Bool) -> AsyncThrowingStream<[Recording], Error> {
+        callOrder.append("observeAll")
+        return AsyncThrowingStream { continuation in
+            continuation.yield(Array(recordings.values))
+            continuation.finish()
         }
     }
 

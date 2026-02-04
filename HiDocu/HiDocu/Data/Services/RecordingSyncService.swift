@@ -278,7 +278,7 @@ final class RecordingSyncService {
             createdAt: fileInfo.createdAt ?? Date(),
             modifiedAt: Date(),
             deviceSerial: deviceService.connectionInfo?.serialNumber,
-            deviceModel: deviceService.connectionInfo?.model,
+            deviceModel: deviceService.connectionInfo?.model.rawValue,
             recordingMode: fileInfo.mode,
             status: .downloaded,
             playbackPositionSeconds: 0
