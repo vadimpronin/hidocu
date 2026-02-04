@@ -1,0 +1,833 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 60;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0119A84E4F2840779DA2E2B3 /* TimeInterval+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86F8B131B8884602A9CF022F /* TimeInterval+Extensions.swift */; };
+		BC4EA7F4581C465AA4D4DD27 /* AudioPlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEAA5B6EF8BD448A951ED65A /* AudioPlayerService.swift */; };
+		5144798C75A74F938E8BE58F /* WaveformAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A89E47CB68BC4872B206B230 /* WaveformAnalyzer.swift */; };
+		C74E3B38C1704D5DB058DD1B /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37EBA1836F0C4065A5595AFC /* WaveformView.swift */; };
+		E30FDC8F82064C09BC26710D /* RecordingDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79432DA08D5943A38BE62137 /* RecordingDetailViewModel.swift */; };
+		0A00F6148A494D6993BC603C /* RecordingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D94AC78A25E4E2BB61D52CE /* RecordingDetailView.swift */; };
+		F0000001F0000001 /* HiDocuApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000011F0000011 /* HiDocuApp.swift */; };
+		F0000002F0000002 /* AppDependencyContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000012F0000012 /* AppDependencyContainer.swift */; };
+		F0000003F0000003 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000013F0000013 /* AppLogger.swift */; };
+		F0000004F0000004 /* Date+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000014F0000014 /* Date+Extensions.swift */; };
+		F0000005F0000005 /* Int+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000015F0000015 /* Int+Extensions.swift */; };
+		F0000006F0000006 /* Recording.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000016F0000016 /* Recording.swift */; };
+		F0000007F0000007 /* Transcription.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000017F0000017 /* Transcription.swift */; };
+		F0000008F0000008 /* Segment.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000018F0000018 /* Segment.swift */; };
+		F0000009F0000009 /* RecordingRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000019F0000019 /* RecordingRepository.swift */; };
+		F000000AF000000A /* TranscriptionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000001AF000001A /* TranscriptionRepository.swift */; };
+		F000000BF000000B /* DeviceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000001BF000001B /* DeviceRepository.swift */; };
+		F000000CF000000C /* DatabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000001CF000001C /* DatabaseManager.swift */; };
+		F000000DF000000D /* RecordingDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000001DF000001D /* RecordingDTO.swift */; };
+		F000000EF000000E /* TranscriptionDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000001EF000001E /* TranscriptionDTO.swift */; };
+		F000000FF000000F /* SegmentDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000001FF000001F /* SegmentDTO.swift */; };
+		F0000020F0000020 /* DeviceConnectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000030F0000030 /* DeviceConnectionService.swift */; };
+		F0000021F0000021 /* FileSystemService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000031F0000031 /* FileSystemService.swift */; };
+		F0000022F0000022 /* SQLiteRecordingRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000032F0000032 /* SQLiteRecordingRepository.swift */; };
+		F0000023F0000023 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000033F0000033 /* ContentView.swift */; };
+		F0000024F0000024 /* AudioCompatibilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000034F0000034 /* AudioCompatibilityService.swift */; };
+		F0000025F0000025 /* RecordingSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000035F0000035 /* RecordingSyncService.swift */; };
+		F0000050F0000050 /* JensenUSB in Frameworks */ = {isa = PBXBuildFile; productRef = F0000051F0000051 /* JensenUSB */; };
+		F0000052F0000052 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = F0000053F0000053 /* GRDB */; };
+		F0A00001F0A00001 /* HiDocuTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A00011F0A00011 /* HiDocuTests.swift */; };
+		F0A00002F0A00002 /* DatabaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A00012F0A00012 /* DatabaseTests.swift */; };
+		F0A00003F0A00003 /* SyncLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A00013F0A00013 /* SyncLogicTests.swift */; };
+		F0A00052F0A00052 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = F0A00053F0A00053 /* GRDB */; };
+		F3000060F3000060 /* NavigationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000050F3000050 /* NavigationViewModel.swift */; };
+		F3000061F3000061 /* RecordingsListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000051F3000051 /* RecordingsListViewModel.swift */; };
+		F3000062F3000062 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000052F3000052 /* SidebarView.swift */; };
+		F3000063F3000063 /* RecordingsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000053F3000053 /* RecordingsListView.swift */; };
+		F3000064F3000064 /* RecordingRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000054F3000054 /* RecordingRowView.swift */; };
+		F5000001F5000001 /* SQLiteTranscriptionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5000011F5000011 /* SQLiteTranscriptionRepository.swift */; };
+		F5000002F5000002 /* TranscriptionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5000012F5000012 /* TranscriptionViewModel.swift */; };
+		F5000003F5000003 /* TranscriptionSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5000013F5000013 /* TranscriptionSectionView.swift */; };
+		F5A00001F5A00001 /* TranscriptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A00011F5A00011 /* TranscriptionTests.swift */; };
+		F8000020F8000020 /* ErrorBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8000010F8000010 /* ErrorBannerView.swift */; };
+		F8000021F8000021 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8000011F8000011 /* SettingsView.swift */; };
+		F8000022F8000022 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8000012F8000012 /* OnboardingView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		F0A00060F0A00060 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F5000000F5000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F3000000F3000000;
+			remoteInfo = HiDocu;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		86F8B131B8884602A9CF022F /* TimeInterval+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimeInterval+Extensions.swift"; sourceTree = "<group>"; };
+		FEAA5B6EF8BD448A951ED65A /* AudioPlayerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AudioPlayerService.swift"; sourceTree = "<group>"; };
+		A89E47CB68BC4872B206B230 /* WaveformAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WaveformAnalyzer.swift"; sourceTree = "<group>"; };
+		37EBA1836F0C4065A5595AFC /* WaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformView.swift; sourceTree = "<group>"; };
+		79432DA08D5943A38BE62137 /* RecordingDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingDetailViewModel.swift"; sourceTree = "<group>"; };
+		9D94AC78A25E4E2BB61D52CE /* RecordingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingDetailView.swift"; sourceTree = "<group>"; };
+		F0000000F0000000 /* HiDocu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HiDocu.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F0000011F0000011 /* HiDocuApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiDocuApp.swift; sourceTree = "<group>"; };
+		F0000012F0000012 /* AppDependencyContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencyContainer.swift; sourceTree = "<group>"; };
+		F0000013F0000013 /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
+		F0000014F0000014 /* Date+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Extensions.swift"; sourceTree = "<group>"; };
+		F0000015F0000015 /* Int+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Int+Extensions.swift"; sourceTree = "<group>"; };
+		F0000016F0000016 /* Recording.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recording.swift; sourceTree = "<group>"; };
+		F0000017F0000017 /* Transcription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transcription.swift; sourceTree = "<group>"; };
+		F0000018F0000018 /* Segment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Segment.swift; sourceTree = "<group>"; };
+		F0000019F0000019 /* RecordingRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingRepository.swift; sourceTree = "<group>"; };
+		F000001AF000001A /* TranscriptionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionRepository.swift; sourceTree = "<group>"; };
+		F000001BF000001B /* DeviceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceRepository.swift; sourceTree = "<group>"; };
+		F000001CF000001C /* DatabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseManager.swift; sourceTree = "<group>"; };
+		F000001DF000001D /* RecordingDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingDTO.swift; sourceTree = "<group>"; };
+		F000001EF000001E /* TranscriptionDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionDTO.swift; sourceTree = "<group>"; };
+		F000001FF000001F /* SegmentDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmentDTO.swift; sourceTree = "<group>"; };
+		F0000030F0000030 /* DeviceConnectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceConnectionService.swift; sourceTree = "<group>"; };
+		F0000031F0000031 /* FileSystemService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSystemService.swift; sourceTree = "<group>"; };
+		F0000032F0000032 /* SQLiteRecordingRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteRecordingRepository.swift; sourceTree = "<group>"; };
+		F0000033F0000033 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		F0000034F0000034 /* AudioCompatibilityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCompatibilityService.swift; sourceTree = "<group>"; };
+		F0000035F0000035 /* RecordingSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSyncService.swift; sourceTree = "<group>"; };
+		F0000040F0000040 /* HiDocu.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HiDocu.entitlements; sourceTree = "<group>"; };
+		F0000041F0000041 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F0A00000F0A00000 /* HiDocuTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HiDocuTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F0A00011F0A00011 /* HiDocuTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiDocuTests.swift; sourceTree = "<group>"; };
+		F0A00012F0A00012 /* DatabaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseTests.swift; sourceTree = "<group>"; };
+		F0A00013F0A00013 /* SyncLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncLogicTests.swift; sourceTree = "<group>"; };
+		F3000050F3000050 /* NavigationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationViewModel.swift; sourceTree = "<group>"; };
+		F3000051F3000051 /* RecordingsListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingsListViewModel.swift; sourceTree = "<group>"; };
+		F3000052F3000052 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
+		F3000053F3000053 /* RecordingsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingsListView.swift; sourceTree = "<group>"; };
+		F3000054F3000054 /* RecordingRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingRowView.swift; sourceTree = "<group>"; };
+		F5000011F5000011 /* SQLiteTranscriptionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteTranscriptionRepository.swift; sourceTree = "<group>"; };
+		F5000012F5000012 /* TranscriptionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionViewModel.swift; sourceTree = "<group>"; };
+		F5000013F5000013 /* TranscriptionSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionSectionView.swift; sourceTree = "<group>"; };
+		F5A00011F5A00011 /* TranscriptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionTests.swift; sourceTree = "<group>"; };
+		F8000010F8000010 /* ErrorBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBannerView.swift; sourceTree = "<group>"; };
+		F8000011F8000011 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		F8000012F8000012 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		F1000001F1000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F0000050F0000050 /* JensenUSB in Frameworks */,
+				F0000052F0000052 /* GRDB in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F1A00001F1A00001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F0A00052F0A00052 /* GRDB in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		F2000000F2000000 = {
+			isa = PBXGroup;
+			children = (
+				F2000001F2000001 /* HiDocu */,
+				F2A00001F2A00001 /* HiDocuTests */,
+				F2000099F2000099 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		F2000001F2000001 /* HiDocu */ = {
+			isa = PBXGroup;
+			children = (
+				F2000002F2000002 /* App */,
+				F2000003F2000003 /* Core */,
+				F2000004F2000004 /* Domain */,
+				F2000005F2000005 /* Data */,
+				F2000006F2000006 /* Presentation */,
+				F0000040F0000040 /* HiDocu.entitlements */,
+				F0000041F0000041 /* Info.plist */,
+			);
+			path = HiDocu;
+			sourceTree = "<group>";
+		};
+		F2000002F2000002 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				F0000011F0000011 /* HiDocuApp.swift */,
+				F0000012F0000012 /* AppDependencyContainer.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		F2000003F2000003 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				F0000013F0000013 /* AppLogger.swift */,
+				F2000007F2000007 /* Extensions */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		F2000007F2000007 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				86F8B131B8884602A9CF022F /* TimeInterval+Extensions.swift */,
+				F0000014F0000014 /* Date+Extensions.swift */,
+				F0000015F0000015 /* Int+Extensions.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		F2000004F2000004 /* Domain */ = {
+			isa = PBXGroup;
+			children = (
+				F2000008F2000008 /* Models */,
+				F2000009F2000009 /* Protocols */,
+				F200000AF200000A /* UseCases */,
+			);
+			path = Domain;
+			sourceTree = "<group>";
+		};
+		F2000008F2000008 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				F0000016F0000016 /* Recording.swift */,
+				F0000017F0000017 /* Transcription.swift */,
+				F0000018F0000018 /* Segment.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		F2000009F2000009 /* Protocols */ = {
+			isa = PBXGroup;
+			children = (
+				F0000019F0000019 /* RecordingRepository.swift */,
+				F000001AF000001A /* TranscriptionRepository.swift */,
+				F000001BF000001B /* DeviceRepository.swift */,
+			);
+			path = Protocols;
+			sourceTree = "<group>";
+		};
+		F200000AF200000A /* UseCases */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = UseCases;
+			sourceTree = "<group>";
+		};
+		F2000005F2000005 /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				F200000BF200000B /* Database */,
+				F200000CF200000C /* Services */,
+				F200000DF200000D /* Repositories */,
+			);
+			path = Data;
+			sourceTree = "<group>";
+		};
+		F200000BF200000B /* Database */ = {
+			isa = PBXGroup;
+			children = (
+				F000001CF000001C /* DatabaseManager.swift */,
+				F200000EF200000E /* DTOs */,
+				F200000FF200000F /* Migrations */,
+			);
+			path = Database;
+			sourceTree = "<group>";
+		};
+		F200000EF200000E /* DTOs */ = {
+			isa = PBXGroup;
+			children = (
+				F000001DF000001D /* RecordingDTO.swift */,
+				F000001EF000001E /* TranscriptionDTO.swift */,
+				F000001FF000001F /* SegmentDTO.swift */,
+			);
+			path = DTOs;
+			sourceTree = "<group>";
+		};
+		F200000FF200000F /* Migrations */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Migrations;
+			sourceTree = "<group>";
+		};
+		F200000CF200000C /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				FEAA5B6EF8BD448A951ED65A /* AudioPlayerService.swift */,
+				A89E47CB68BC4872B206B230 /* WaveformAnalyzer.swift */,
+				F0000030F0000030 /* DeviceConnectionService.swift */,
+				F0000031F0000031 /* FileSystemService.swift */,
+				F0000034F0000034 /* AudioCompatibilityService.swift */,
+				F0000035F0000035 /* RecordingSyncService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		F200000DF200000D /* Repositories */ = {
+			isa = PBXGroup;
+			children = (
+				F0000032F0000032 /* SQLiteRecordingRepository.swift */,
+				F5000011F5000011 /* SQLiteTranscriptionRepository.swift */,
+			);
+			path = Repositories;
+			sourceTree = "<group>";
+		};
+		F2000006F2000006 /* Presentation */ = {
+			isa = PBXGroup;
+			children = (
+				F2000010F2000010 /* Views */,
+				F2000011F2000011 /* ViewModels */,
+			);
+			path = Presentation;
+			sourceTree = "<group>";
+		};
+		F2000010F2000010 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				F0000033F0000033 /* ContentView.swift */,
+				F3000070F3000070 /* Sidebar */,
+				F3000071F3000071 /* Library */,
+				D8402727206E439A8869D212 /* Components */,
+				F8000030F8000030 /* Settings */,
+				F8000031F8000031 /* Onboarding */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		F2000011F2000011 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				79432DA08D5943A38BE62137 /* RecordingDetailViewModel.swift */,
+				F3000050F3000050 /* NavigationViewModel.swift */,
+				F3000051F3000051 /* RecordingsListViewModel.swift */,
+				F5000012F5000012 /* TranscriptionViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		F2000099F2000099 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F0000000F0000000 /* HiDocu.app */,
+				F0A00000F0A00000 /* HiDocuTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		F2A00001F2A00001 /* HiDocuTests */ = {
+			isa = PBXGroup;
+			children = (
+				F0A00011F0A00011 /* HiDocuTests.swift */,
+				F0A00012F0A00012 /* DatabaseTests.swift */,
+				F0A00013F0A00013 /* SyncLogicTests.swift */,
+				F5A00011F5A00011 /* TranscriptionTests.swift */,
+			);
+			path = HiDocuTests;
+			sourceTree = "<group>";
+		};
+		F3000070F3000070 /* Sidebar */ = {
+			isa = PBXGroup;
+			children = (
+				F3000052F3000052 /* SidebarView.swift */,
+			);
+			path = Sidebar;
+			sourceTree = "<group>";
+		};
+		F3000071F3000071 /* Library */ = {
+			isa = PBXGroup;
+			children = (
+				9D94AC78A25E4E2BB61D52CE /* RecordingDetailView.swift */,
+				F3000053F3000053 /* RecordingsListView.swift */,
+				F3000054F3000054 /* RecordingRowView.swift */,
+				F5000013F5000013 /* TranscriptionSectionView.swift */,
+			);
+			path = Library;
+			sourceTree = "<group>";
+		};
+		D8402727206E439A8869D212 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				37EBA1836F0C4065A5595AFC /* WaveformView.swift */,
+				F8000010F8000010 /* ErrorBannerView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		F8000030F8000030 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				F8000011F8000011 /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		F8000031F8000031 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				F8000012F8000012 /* OnboardingView.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F3000000F3000000 /* HiDocu */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F4000000F4000000 /* Build configuration list for PBXNativeTarget "HiDocu" */;
+			buildPhases = (
+				F1000000F1000000 /* Sources */,
+				F1000001F1000001 /* Frameworks */,
+				F1000002F1000002 /* SwiftLint */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = HiDocu;
+			packageProductDependencies = (
+				F0000051F0000051 /* JensenUSB */,
+				F0000053F0000053 /* GRDB */,
+			);
+			productName = HiDocu;
+			productReference = F0000000F0000000 /* HiDocu.app */;
+			productType = "com.apple.product-type.application";
+		};
+		F3A00000F3A00000 /* HiDocuTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F4A00000F4A00000 /* Build configuration list for PBXNativeTarget "HiDocuTests" */;
+			buildPhases = (
+				F1A00000F1A00000 /* Sources */,
+				F1A00001F1A00001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F0A00061F0A00061 /* PBXTargetDependency */,
+			);
+			name = HiDocuTests;
+			packageProductDependencies = (
+				F0A00053F0A00053 /* GRDB */,
+			);
+			productName = HiDocuTests;
+			productReference = F0A00000F0A00000 /* HiDocuTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F5000000F5000000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1520;
+				LastUpgradeCheck = 1520;
+				TargetAttributes = {
+					F3000000F3000000 = {
+						CreatedOnToolsVersion = 15.2;
+					};
+					F3A00000F3A00000 = {
+						CreatedOnToolsVersion = 15.2;
+						TestTargetID = F3000000F3000000;
+					};
+				};
+			};
+			buildConfigurationList = F4000001F4000001 /* Build configuration list for PBXProject "HiDocu" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = F2000000F2000000;
+			packageReferences = (
+				F6000000F6000000 /* XCLocalSwiftPackageReference "../JensenUSB" */,
+				F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+			);
+			productRefGroup = F2000099F2000099 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F3000000F3000000 /* HiDocu */,
+				F3A00000F3A00000 /* HiDocuTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXTargetDependency section */
+		F0A00061F0A00061 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F3000000F3000000 /* HiDocu */;
+			targetProxy = F0A00060F0A00060 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		F1000002F1000002 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint > /dev/null; then\n  swiftlint --config \"${PROJECT_DIR}/../.swiftlint.yml\"\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		F1000000F1000000 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0119A84E4F2840779DA2E2B3 /* TimeInterval+Extensions.swift in Sources */,
+				BC4EA7F4581C465AA4D4DD27 /* AudioPlayerService.swift in Sources */,
+				5144798C75A74F938E8BE58F /* WaveformAnalyzer.swift in Sources */,
+				C74E3B38C1704D5DB058DD1B /* WaveformView.swift in Sources */,
+				E30FDC8F82064C09BC26710D /* RecordingDetailViewModel.swift in Sources */,
+				0A00F6148A494D6993BC603C /* RecordingDetailView.swift in Sources */,
+				F0000001F0000001 /* HiDocuApp.swift in Sources */,
+				F0000002F0000002 /* AppDependencyContainer.swift in Sources */,
+				F0000003F0000003 /* AppLogger.swift in Sources */,
+				F0000004F0000004 /* Date+Extensions.swift in Sources */,
+				F0000005F0000005 /* Int+Extensions.swift in Sources */,
+				F0000006F0000006 /* Recording.swift in Sources */,
+				F0000007F0000007 /* Transcription.swift in Sources */,
+				F0000008F0000008 /* Segment.swift in Sources */,
+				F0000009F0000009 /* RecordingRepository.swift in Sources */,
+				F000000AF000000A /* TranscriptionRepository.swift in Sources */,
+				F000000BF000000B /* DeviceRepository.swift in Sources */,
+				F000000CF000000C /* DatabaseManager.swift in Sources */,
+				F000000DF000000D /* RecordingDTO.swift in Sources */,
+				F000000EF000000E /* TranscriptionDTO.swift in Sources */,
+				F000000FF000000F /* SegmentDTO.swift in Sources */,
+				F0000020F0000020 /* DeviceConnectionService.swift in Sources */,
+				F0000021F0000021 /* FileSystemService.swift in Sources */,
+				F0000022F0000022 /* SQLiteRecordingRepository.swift in Sources */,
+				F0000023F0000023 /* ContentView.swift in Sources */,
+				F0000024F0000024 /* AudioCompatibilityService.swift in Sources */,
+				F0000025F0000025 /* RecordingSyncService.swift in Sources */,
+				F3000060F3000060 /* NavigationViewModel.swift in Sources */,
+				F3000061F3000061 /* RecordingsListViewModel.swift in Sources */,
+				F3000062F3000062 /* SidebarView.swift in Sources */,
+				F3000063F3000063 /* RecordingsListView.swift in Sources */,
+				F3000064F3000064 /* RecordingRowView.swift in Sources */,
+				F5000001F5000001 /* SQLiteTranscriptionRepository.swift in Sources */,
+				F5000002F5000002 /* TranscriptionViewModel.swift in Sources */,
+				F5000003F5000003 /* TranscriptionSectionView.swift in Sources */,
+				F8000020F8000020 /* ErrorBannerView.swift in Sources */,
+				F8000021F8000021 /* SettingsView.swift in Sources */,
+				F8000022F8000022 /* OnboardingView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F1A00000F1A00000 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F0A00001F0A00001 /* HiDocuTests.swift in Sources */,
+				F0A00002F0A00002 /* DatabaseTests.swift in Sources */,
+				F0A00003F0A00003 /* SyncLogicTests.swift in Sources */,
+				F5A00001F5A00001 /* TranscriptionTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		F7000000F7000000 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		F7000001F7000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		F7000002F7000002 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = HiDocu/HiDocu.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = HiDocu/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = HiDocu;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2024 HiDocu. MIT License.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hidocu.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		F7000003F7000003 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = HiDocu/HiDocu.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = HiDocu/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = HiDocu;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2024 HiDocu. MIT License.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hidocu.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		F7A00000F7A00000 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hidocu.HiDocuTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HiDocu.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HiDocu";
+			};
+			name = Debug;
+		};
+		F7A00001F7A00001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hidocu.HiDocuTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HiDocu.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HiDocu";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F4000000F4000000 /* Build configuration list for PBXNativeTarget "HiDocu" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F7000002F7000002 /* Debug */,
+				F7000003F7000003 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F4000001F4000001 /* Build configuration list for PBXProject "HiDocu" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F7000000F7000000 /* Debug */,
+				F7000001F7000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F4A00000F4A00000 /* Build configuration list for PBXNativeTarget "HiDocuTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F7A00000F7A00000 /* Debug */,
+				F7A00001F7A00001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		F6000000F6000000 /* XCLocalSwiftPackageReference "../JensenUSB" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../JensenUSB;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/groue/GRDB.swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.24.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F0000051F0000051 /* JensenUSB */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = JensenUSB;
+		};
+		F0000053F0000053 /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			productName = GRDB;
+		};
+		F0A00053F0A00053 /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			productName = GRDB;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = F5000000F5000000 /* Project object */;
+}
