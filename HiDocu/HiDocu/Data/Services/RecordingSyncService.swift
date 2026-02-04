@@ -147,9 +147,11 @@ final class RecordingSyncService {
     /// Synchronize specific files from the connected HiDock device.
     func syncFiles(_ files: [DeviceFileInfo]) async {
         guard !isSyncing else {
-            AppLogger.fileSystem.warning("Sync already in progress")
+            AppLogger.fileSystem.warning("[sync] Sync already in progress — ignoring syncFiles call")
             return
         }
+        let names = files.map(\.filename).joined(separator: ", ")
+        AppLogger.fileSystem.info("[sync] syncFiles called with \(files.count) file(s): \(names)")
         await performSync(files: files)
     }
 
@@ -173,6 +175,7 @@ final class RecordingSyncService {
         var downloaded = 0
         var skipped = 0
         var failed = 0
+        var failedErrors: [String] = []
 
         do {
             try fileSystemService.ensureStorageDirectoryExists()
@@ -204,6 +207,7 @@ final class RecordingSyncService {
                 } catch {
                     AppLogger.fileSystem.error("Failed to sync \(fileInfo.filename): \(error.localizedDescription)")
                     failed += 1
+                    failedErrors.append("\(fileInfo.filename): \(error.localizedDescription)")
                 }
 
                 completedBytes += Int64(fileInfo.size)
@@ -220,7 +224,7 @@ final class RecordingSyncService {
                 bytesPerSecond = 0
                 estimatedSecondsRemaining = 0
                 if failed > 0 {
-                    errorMessage = "Failed to import \(failed) file\(failed == 1 ? "" : "s")"
+                    errorMessage = failedErrors.joined(separator: "\n")
                 }
             }
 
@@ -254,23 +258,25 @@ final class RecordingSyncService {
     private func processFile(_ fileInfo: DeviceFileInfo) async throws -> ProcessResult {
         let filename = fileInfo.filename
         let expectedSize = fileInfo.size
-        
+
+        AppLogger.fileSystem.info("[sync] Processing \(filename) (\(expectedSize) bytes)")
+
         // Step A: Check if file already exists in database
         if let existing = try await repository.fetchByFilename(filename) {
             // Step B: Exact match - skip if size matches
             if existing.fileSizeBytes == expectedSize || existing.fileSizeBytes == nil {
-                AppLogger.fileSystem.debug("Skipping \(filename) - already synced")
+                AppLogger.fileSystem.info("[sync] Skipping \(filename) — already synced (DB size: \(existing.fileSizeBytes ?? -1))")
                 return .skipped
             }
-            
+
             // Step C: Conflict - same filename, different content
-            // CRITICAL: Must rename existing file and update DB BEFORE inserting new
+            AppLogger.fileSystem.info("[sync] Conflict: \(filename) DB size=\(existing.fileSizeBytes ?? -1) vs device size=\(expectedSize)")
             try await resolveConflict(existing: existing)
         }
-        
+
         // Step D: Download new file
         try await downloadAndStore(fileInfo)
-        
+
         return .downloaded
     }
     
@@ -306,21 +312,27 @@ final class RecordingSyncService {
         AppLogger.fileSystem.info("Conflict resolved: \(existing.filename) -> \(backupFilename)")
     }
     
-    /// Download a file from device, validate it, and store in local storage.
+    /// Download a file from device, verify size, and store in local storage.
+    ///
+    /// Validation strategy: file size is the integrity check. AVFoundation
+    /// validation is skipped because HiDock `.hda` files (MP3 data with a
+    /// proprietary extension) are not reliably readable by AVURLAsset.
+    /// The device already provides duration metadata, so we don't need
+    /// AVFoundation to extract it.
     private func downloadAndStore(_ fileInfo: DeviceFileInfo) async throws {
         let filename = fileInfo.filename
-        
-        // Create temp file path
+
+        // Temp file keeps original extension — it doesn't matter since we
+        // no longer run AVFoundation validation on device downloads.
         let tempDir = FileManager.default.temporaryDirectory
         let tempURL = tempDir.appendingPathComponent("download_\(UUID().uuidString)_\(filename)")
-        
+
         defer {
-            // Cleanup temp file if it exists
             try? FileManager.default.removeItem(at: tempURL)
         }
-        
+
         // Download to temp
-        AppLogger.fileSystem.info("Downloading \(filename) to temp...")
+        AppLogger.fileSystem.info("[sync] Downloading \(filename) → \(tempURL.lastPathComponent)")
         try await deviceService.downloadFile(
             filename: filename,
             expectedSize: fileInfo.size,
@@ -329,24 +341,38 @@ final class RecordingSyncService {
                 self.updateSyncProgress(currentFileBytes: bytesDownloaded)
             }
         )
-        
-        // Validate the download
-        try await audioService.validateAsync(url: tempURL, expectedSize: fileInfo.size)
-        
-        // Move to storage
+
+        // Verify file size — the real integrity check
+        let downloadedAttrs = try FileManager.default.attributesOfItem(atPath: tempURL.path)
+        let downloadedSize = downloadedAttrs[.size] as? Int ?? 0
+        AppLogger.fileSystem.info("[sync] Download complete: \(filename), \(downloadedSize) of \(fileInfo.size) bytes")
+
+        if downloadedSize != fileInfo.size {
+            AppLogger.fileSystem.error("[sync] Size mismatch for \(filename): got \(downloadedSize), expected \(fileInfo.size)")
+            throw SyncError.downloadIncomplete(
+                filename: filename,
+                expectedBytes: fileInfo.size,
+                actualBytes: downloadedSize
+            )
+        }
+
+        // Move to storage (preserves original filename and extension)
         let finalURL = try fileSystemService.moveToStorage(from: tempURL, filename: filename)
-        
+        AppLogger.fileSystem.info("[sync] Moved to storage: \(finalURL.path)")
+
         // Verify storage path is resolvable
-        guard fileSystemService.relativePath(for: finalURL) != nil else {
+        guard let relativePath = fileSystemService.relativePath(for: finalURL) else {
+            AppLogger.fileSystem.error("[sync] Cannot resolve relative path for \(finalURL.path)")
             throw SyncError.storagePathResolutionFailed
         }
-        
+        AppLogger.fileSystem.debug("[sync] Relative path: \(relativePath)")
+
         // Create Recording model with metadata from device
         let recording = Recording(
-            id: 0, // Will be assigned by DB
+            id: 0,
             filename: filename,
-            filepath: finalURL.path, // Repository will convert to relative on insert
-            title: nil, // Can be set by user later
+            filepath: finalURL.path,
+            title: nil,
             durationSeconds: fileInfo.durationSeconds,
             fileSizeBytes: fileInfo.size,
             createdAt: fileInfo.createdAt ?? Date(),
@@ -357,11 +383,10 @@ final class RecordingSyncService {
             status: .downloaded,
             playbackPositionSeconds: 0
         )
-        
+
         // Insert into repository
-        _ = try await repository.insert(recording)
-        
-        AppLogger.fileSystem.info("Stored \(filename) successfully")
+        let inserted = try await repository.insert(recording)
+        AppLogger.fileSystem.info("[sync] Stored \(filename) → DB id=\(inserted.id)")
     }
 
     /// Update progress state from the USB download callback. Throttled to ~4 updates/sec.
@@ -391,16 +416,17 @@ final class RecordingSyncService {
     /// - Returns: Array of imported Recording models
     /// - Throws: Error if import fails
     func importFiles(_ urls: [URL]) async throws -> [Recording] {
+        AppLogger.fileSystem.info("[import] importFiles called with \(urls.count) URL(s)")
         var imported: [Recording] = []
-        
+
         for url in urls {
-            // Get source file info
             let filename = url.lastPathComponent
-            
+            AppLogger.fileSystem.info("[import] Processing \(filename) from \(url.path)")
+
             // Check if file with this name already exists
             if try await repository.fetchByFilename(filename) != nil {
-                // Generate a unique name
                 let uniqueFilename = try fileSystemService.generateBackupFilename(for: filename)
+                AppLogger.fileSystem.info("[import] Name conflict — using \(uniqueFilename)")
                 let recording = try await importSingleFile(from: url, as: uniqueFilename)
                 imported.append(recording)
             } else {
@@ -408,13 +434,15 @@ final class RecordingSyncService {
                 imported.append(recording)
             }
         }
-        
-        AppLogger.fileSystem.info("Imported \(imported.count) files")
+
+        AppLogger.fileSystem.info("[import] Imported \(imported.count) of \(urls.count) files")
         return imported
     }
     
     /// Import a single file.
     private func importSingleFile(from sourceURL: URL, as filename: String) async throws -> Recording {
+        AppLogger.fileSystem.info("[import] Importing \(sourceURL.lastPathComponent) as \(filename)")
+
         // Start accessing security-scoped resource (for files from file picker)
         let accessed = sourceURL.startAccessingSecurityScopedResource()
         defer {
@@ -422,16 +450,19 @@ final class RecordingSyncService {
                 sourceURL.stopAccessingSecurityScopedResource()
             }
         }
-        
+
         // Get file attributes
         let attributes = try FileManager.default.attributesOfItem(atPath: sourceURL.path)
         let fileSize = attributes[.size] as? Int ?? 0
-        
+        AppLogger.fileSystem.info("[import] Source file size: \(fileSize) bytes")
+
         // Copy to storage
         let finalURL = try fileSystemService.copyToStorage(from: sourceURL, filename: filename)
-        
+        AppLogger.fileSystem.info("[import] Copied to storage: \(finalURL.path)")
+
         // Get duration
         let duration = try await audioService.getDuration(url: finalURL)
+        AppLogger.fileSystem.info("[import] Duration: \(duration)s")
         
         // Create Recording
         let recording = Recording(
@@ -450,7 +481,9 @@ final class RecordingSyncService {
             playbackPositionSeconds: 0
         )
         
-        return try await repository.insert(recording)
+        let inserted = try await repository.insert(recording)
+        AppLogger.fileSystem.info("[import] Stored \(filename) → DB id=\(inserted.id)")
+        return inserted
     }
 }
 
@@ -460,21 +493,25 @@ enum SyncError: LocalizedError {
     case notConnected
     case conflictResolutionFailed(String)
     case downloadFailed(String)
+    case downloadIncomplete(filename: String, expectedBytes: Int, actualBytes: Int)
     case validationFailed(String)
     case storagePathResolutionFailed
-    
+
     var errorDescription: String? {
         switch self {
         case .notConnected:
-            return "No device connected"
+            return "No HiDock device is connected. Please reconnect and try again."
         case .conflictResolutionFailed(let reason):
-            return "Conflict resolution failed: \(reason)"
+            return "Could not resolve a file name conflict: \(reason)"
         case .downloadFailed(let reason):
-            return "Download failed: \(reason)"
+            return "The file could not be downloaded from the device: \(reason)"
+        case .downloadIncomplete(let filename, let expected, let actual):
+            let pct = expected > 0 ? Int(Double(actual) / Double(expected) * 100) : 0
+            return "\"\(filename)\" was only partially downloaded (\(pct)%). Please try again."
         case .validationFailed(let reason):
-            return "Validation failed: \(reason)"
+            return "The downloaded file appears to be corrupted: \(reason)"
         case .storagePathResolutionFailed:
-            return "Could not determine storage path"
+            return "Could not save the file to the recordings folder. Check that the storage location is accessible."
         }
     }
 }

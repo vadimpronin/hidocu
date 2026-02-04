@@ -51,24 +51,46 @@ final class AudioCompatibilityService: @unchecked Sendable {
     ///   - expectedSize: Expected file size in bytes
     /// - Throws: AudioValidationError on validation failure
     func validate(url: URL, expectedSize: Int) async throws {
-        // Check 1: File size
+        AppLogger.fileSystem.info("Validating \(url.lastPathComponent) (expected \(expectedSize) bytes)")
+
+        // Check 1: File size — hard requirement
         let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
         let actualSize = attributes[.size] as? Int ?? 0
 
         if actualSize != expectedSize {
+            AppLogger.fileSystem.error("Size mismatch for \(url.lastPathComponent): expected \(expectedSize), got \(actualSize)")
             throw AudioValidationError.fileSizeMismatch(expected: expectedSize, actual: actualSize)
         }
 
-        // Check 2: Audio integrity via AVURLAsset
-        let asset = AVURLAsset(url: url)
-        let cmDuration = try await asset.load(.duration)
-        let duration = cmDuration.seconds
-
-        if duration.isNaN || duration <= 0 {
-            throw AudioValidationError.invalidAudioFile("Duration is invalid: \(duration)")
+        // Check 2: Audio integrity via AVURLAsset — best effort.
+        // Non-standard extensions (e.g. .hda) may not be readable by AVFoundation
+        // even though they contain valid audio data. Log a warning but don't fail.
+        let ext = url.pathExtension.lowercased()
+        let validationURL: URL
+        if standardExtensions.contains(ext) {
+            validationURL = url
+        } else {
+            do {
+                validationURL = try await createPlaybackLink(for: url)
+            } catch {
+                AppLogger.fileSystem.warning("Could not create validation link for .\(ext) file — skipping audio check")
+                return
+            }
         }
 
-        AppLogger.fileSystem.debug("Validated \(url.lastPathComponent): \(actualSize) bytes, \(duration)s")
+        do {
+            let asset = AVURLAsset(url: validationURL)
+            let cmDuration = try await asset.load(.duration)
+            let duration = cmDuration.seconds
+
+            if duration.isNaN || duration <= 0 {
+                AppLogger.fileSystem.warning("AVFoundation reports invalid duration for \(url.lastPathComponent): \(duration) — file may still be playable")
+            } else {
+                AppLogger.fileSystem.info("Validated \(url.lastPathComponent): \(actualSize) bytes, \(String(format: "%.1f", duration))s")
+            }
+        } catch {
+            AppLogger.fileSystem.warning("AVFoundation could not read \(url.lastPathComponent): \(error.localizedDescription) — file size is correct, continuing")
+        }
     }
 
     /// Validate a downloaded audio file asynchronously.
@@ -84,7 +106,16 @@ final class AudioCompatibilityService: @unchecked Sendable {
     /// - Returns: Duration in seconds (rounded)
     /// - Throws: AudioValidationError if duration cannot be read
     func getDuration(url: URL) async throws -> Int {
-        let asset = AVURLAsset(url: url)
+        // For non-standard extensions (e.g. .hda), use a playback-compatible link
+        let ext = url.pathExtension.lowercased()
+        let assetURL: URL
+        if standardExtensions.contains(ext) {
+            assetURL = url
+        } else {
+            assetURL = try await createPlaybackLink(for: url)
+        }
+
+        let asset = AVURLAsset(url: assetURL)
         let cmDuration = try await asset.load(.duration)
         let duration = cmDuration.seconds
 
@@ -201,17 +232,19 @@ enum AudioValidationError: LocalizedError {
     case invalidAudioFile(String)
     case cannotReadDuration
     case playbackPreparationFailed(String)
-    
+
     var errorDescription: String? {
         switch self {
         case .fileSizeMismatch(let expected, let actual):
-            return "File size mismatch: expected \(expected) bytes, got \(actual) bytes"
-        case .invalidAudioFile(let reason):
-            return "Invalid audio file: \(reason)"
+            let expectedStr = ByteCountFormatter.string(fromByteCount: Int64(expected), countStyle: .file)
+            let actualStr = ByteCountFormatter.string(fromByteCount: Int64(actual), countStyle: .file)
+            return "The file size does not match: expected \(expectedStr) but got \(actualStr). The file may be corrupted."
+        case .invalidAudioFile:
+            return "The file does not appear to be a valid audio recording."
         case .cannotReadDuration:
-            return "Cannot read audio duration"
-        case .playbackPreparationFailed(let reason):
-            return "Playback preparation failed: \(reason)"
+            return "Could not determine the audio duration. The file format may not be supported."
+        case .playbackPreparationFailed:
+            return "Could not prepare the file for playback. Try re-importing the recording."
         }
     }
 }
