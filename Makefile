@@ -32,6 +32,9 @@ hidocu:
 		-derivedDataPath $(GUI_BUILD_DIR) build 2>&1 | grep -E "(error:|warning:|BUILD SUCCEEDED|BUILD FAILED)" || true
 	@echo "Built: $(GUI_BUILD_DIR)/Build/Products/Release/HiDocu.app"
 
+run-hidocu:
+	@open "$(GUI_BUILD_DIR)/Build/Products/Release/HiDocu.app"
+
 # Clean build artifacts
 clean:
 	@echo "Cleaning..."

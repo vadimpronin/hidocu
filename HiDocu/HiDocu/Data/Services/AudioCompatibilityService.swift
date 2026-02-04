@@ -50,31 +50,30 @@ final class AudioCompatibilityService: @unchecked Sendable {
     ///   - url: URL of the downloaded file
     ///   - expectedSize: Expected file size in bytes
     /// - Throws: AudioValidationError on validation failure
-    func validate(url: URL, expectedSize: Int) throws {
+    func validate(url: URL, expectedSize: Int) async throws {
         // Check 1: File size
         let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
         let actualSize = attributes[.size] as? Int ?? 0
-        
+
         if actualSize != expectedSize {
             throw AudioValidationError.fileSizeMismatch(expected: expectedSize, actual: actualSize)
         }
-        
+
         // Check 2: Audio integrity via AVURLAsset
         let asset = AVURLAsset(url: url)
-        let duration = asset.duration.seconds
-        
+        let cmDuration = try await asset.load(.duration)
+        let duration = cmDuration.seconds
+
         if duration.isNaN || duration <= 0 {
             throw AudioValidationError.invalidAudioFile("Duration is invalid: \(duration)")
         }
-        
+
         AppLogger.fileSystem.debug("Validated \(url.lastPathComponent): \(actualSize) bytes, \(duration)s")
     }
-    
+
     /// Validate a downloaded audio file asynchronously.
     func validateAsync(url: URL, expectedSize: Int) async throws {
-        try await Task.detached {
-            try self.validate(url: url, expectedSize: expectedSize)
-        }.value
+        try await validate(url: url, expectedSize: expectedSize)
     }
     
     // MARK: - Duration Extraction
@@ -85,16 +84,15 @@ final class AudioCompatibilityService: @unchecked Sendable {
     /// - Returns: Duration in seconds (rounded)
     /// - Throws: AudioValidationError if duration cannot be read
     func getDuration(url: URL) async throws -> Int {
-        try await Task.detached {
-            let asset = AVURLAsset(url: url)
-            let duration = asset.duration.seconds
-            
-            if duration.isNaN || duration <= 0 {
-                throw AudioValidationError.cannotReadDuration
-            }
-            
-            return Int(duration.rounded())
-        }.value
+        let asset = AVURLAsset(url: url)
+        let cmDuration = try await asset.load(.duration)
+        let duration = cmDuration.seconds
+
+        if duration.isNaN || duration <= 0 {
+            throw AudioValidationError.cannotReadDuration
+        }
+
+        return Int(duration.rounded())
     }
     
     // MARK: - Playback Preparation (The Hard Link Trick)

@@ -271,23 +271,22 @@ private struct MetadataRow: View {
 // MARK: - Preview
 
 #Preview {
+    let container = AppDependencyContainer()
     NavigationStack {
-        if let container = try? AppDependencyContainer() {
-            RecordingDetailView(
-                recording: Recording(
-                    id: 1,
-                    filename: "CALL_20260203_140500.hda",
-                    filepath: "2026/02/CALL_20260203_140500.hda",
-                    title: "Team Sync Meeting",
-                    durationSeconds: 3665,
-                    fileSizeBytes: 52428800,
-                    createdAt: Date(),
-                    deviceModel: "HiDock P1",
-                    recordingMode: .call,
-                    status: .downloaded
-                ),
-                container: container
-            )
-        }
+        RecordingDetailView(
+            recording: Recording(
+                id: 1,
+                filename: "CALL_20260203_140500.hda",
+                filepath: "2026/02/CALL_20260203_140500.hda",
+                title: "Team Sync Meeting",
+                durationSeconds: 3665,
+                fileSizeBytes: 52428800,
+                createdAt: Date(),
+                deviceModel: "HiDock P1",
+                recordingMode: .call,
+                status: .downloaded
+            ),
+            container: container
+        )
     }
 }

@@ -36,22 +36,19 @@ final class WaveformAnalyzer: @unchecked Sendable {
     func analyze(url: URL, targetSampleCount: Int = 200) async throws -> [Float] {
         AppLogger.fileSystem.info("Starting waveform analysis for \(url.lastPathComponent)")
 
-        return try await Task.detached { [self] in
-            // Ensure file access is within security scope
-            return try self.fileSystemService.withSecurityScopedAccess(to: url) {
-                try self.extractWaveformData(from: url, targetSampleCount: targetSampleCount)
-            }
-        }.value
+        return try await self.fileSystemService.withSecurityScopedAccess(to: url) {
+            try await self.extractWaveformData(from: url, targetSampleCount: targetSampleCount)
+        }
     }
 
     // MARK: - Private Implementation
 
     /// Extract waveform data using AVAssetReader
-    private func extractWaveformData(from url: URL, targetSampleCount: Int) throws -> [Float] {
+    private func extractWaveformData(from url: URL, targetSampleCount: Int) async throws -> [Float] {
         let asset = AVURLAsset(url: url)
 
         // Get audio track
-        guard let audioTrack = asset.tracks(withMediaType: .audio).first else {
+        guard let audioTrack = try await asset.loadTracks(withMediaType: .audio).first else {
             throw WaveformError.noAudioTrack
         }
 

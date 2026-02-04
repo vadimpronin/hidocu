@@ -39,7 +39,7 @@ final class AudioPlayerService {
 
     private var player: AVPlayer?
     private var timeObserver: Any?
-    private var positionSaveTimer: Timer?
+    private var positionSaveTask: Task<Void, Never>?
     private var lastSavedPosition: TimeInterval = 0
 
     // MARK: - Constants
@@ -69,7 +69,7 @@ final class AudioPlayerService {
         if let observer = timeObserver {
             player?.removeTimeObserver(observer)
         }
-        positionSaveTimer?.invalidate()
+        positionSaveTask?.cancel()
 
         AppLogger.general.info("AudioPlayerService deinitialized")
     }
@@ -260,26 +260,25 @@ final class AudioPlayerService {
         throw AudioPlayerError.loadTimeout
     }
 
-    /// Start timer to periodically save playback position
+    /// Start task to periodically save playback position
     @MainActor
     private func startPositionSaveTimer() {
         stopPositionSaveTimer()
 
-        positionSaveTimer = Timer.scheduledTimer(
-            withTimeInterval: positionSaveInterval,
-            repeats: true
-        ) { [weak self] _ in
-            Task { @MainActor in
-                await self?.saveCurrentPosition()
+        positionSaveTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(positionSaveInterval))
+                guard !Task.isCancelled else { break }
+                await saveCurrentPosition()
             }
         }
     }
 
-    /// Stop position save timer
+    /// Stop position save task
     @MainActor
     private func stopPositionSaveTimer() {
-        positionSaveTimer?.invalidate()
-        positionSaveTimer = nil
+        positionSaveTask?.cancel()
+        positionSaveTask = nil
     }
 
     /// Save current playback position to database

@@ -141,6 +141,17 @@ final class FileSystemService {
         }
         return try operation()
     }
+
+    /// Execute an async operation with proper security-scoped access.
+    func withSecurityScopedAccess<T>(to url: URL, _ operation: () async throws -> T) async throws -> T {
+        let accessed = url.startAccessingSecurityScopedResource()
+        defer {
+            if accessed {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+        return try await operation()
+    }
     
     /// Execute an operation on the storage directory with proper access.
     private func withStorageAccess<T>(_ operation: (URL) throws -> T) throws -> T {

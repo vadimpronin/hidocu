@@ -250,10 +250,7 @@ final class RecordingSyncService {
         try await deviceService.downloadFile(
             filename: filename,
             toPath: tempURL,
-            progress: { [weak self] pct in
-                // Sub-progress for current file (optional UI enhancement)
-                _ = pct
-            }
+            progress: { _ in }
         )
         
         // Validate the download
@@ -262,8 +259,8 @@ final class RecordingSyncService {
         // Move to storage
         let finalURL = try fileSystemService.moveToStorage(from: tempURL, filename: filename)
         
-        // Get relative path for DB
-        guard let relativePath = fileSystemService.relativePath(for: finalURL) else {
+        // Verify storage path is resolvable
+        guard fileSystemService.relativePath(for: finalURL) != nil else {
             throw SyncError.storagePathResolutionFailed
         }
         
@@ -305,7 +302,7 @@ final class RecordingSyncService {
             let filename = url.lastPathComponent
             
             // Check if file with this name already exists
-            if let existing = try await repository.fetchByFilename(filename) {
+            if try await repository.fetchByFilename(filename) != nil {
                 // Generate a unique name
                 let uniqueFilename = try fileSystemService.generateBackupFilename(for: filename)
                 let recording = try await importSingleFile(from: url, as: uniqueFilename)

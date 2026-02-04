@@ -43,8 +43,8 @@ final class DeviceConnectionService {
     /// Storage info (refreshed on demand)
     private(set) var storageInfo: DeviceStorageInfo?
 
-    /// Battery polling timer
-    private var batteryTimer: Timer?
+    /// Battery polling task
+    private var batteryPollingTask: Task<Void, Never>?
 
     // MARK: - Connection State
 
@@ -63,7 +63,7 @@ final class DeviceConnectionService {
 
     deinit {
         AppLogger.usb.warning("DeviceConnectionService being deallocated - device will disconnect!")
-        batteryTimer?.invalidate()
+        batteryPollingTask?.cancel()
         jensen?.disconnect()
     }
 
@@ -234,37 +234,37 @@ final class DeviceConnectionService {
     private func startBatteryPolling() {
         stopBatteryPolling()
 
-        // Poll immediately
+        // Poll immediately, then every 30 seconds
         pollBattery()
 
-        // Then every 30 seconds
-        batteryTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.pollBattery()
+        batteryPollingTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                guard !Task.isCancelled else { break }
+                pollBattery()
             }
         }
     }
 
     @MainActor
     private func stopBatteryPolling() {
-        batteryTimer?.invalidate()
-        batteryTimer = nil
+        batteryPollingTask?.cancel()
+        batteryPollingTask = nil
     }
 
     @MainActor
     private func pollBattery() {
         guard let device = jensen else { return }
 
-        Task.detached { [weak self] in
+        Task {
             do {
-                let status = try device.system.getBatteryStatus()
-                await MainActor.run {
-                    guard let self else { return }
-                    self.batteryInfo = DeviceBatteryInfo(
-                        percentage: status.percentage,
-                        state: self.mapBatteryState(status.status)
-                    )
-                }
+                let status = try await Task.detached {
+                    try device.system.getBatteryStatus()
+                }.value
+                self.batteryInfo = DeviceBatteryInfo(
+                    percentage: status.percentage,
+                    state: self.mapBatteryState(status.status)
+                )
             } catch {
                 AppLogger.usb.error("Battery poll failed: \(error.localizedDescription)")
             }

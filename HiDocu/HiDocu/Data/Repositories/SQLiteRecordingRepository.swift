@@ -35,7 +35,7 @@ final class SQLiteRecordingRepository: RecordingRepository, @unchecked Sendable 
     
     /// Convert Recording DTO to domain with absolute path resolution
     private func toDomainWithAbsolutePath(_ dto: RecordingDTO) -> Recording {
-        var recording = dto.toDomain()
+        let recording = dto.toDomain()
         // Replace stored relative path with resolved absolute path
         return Recording(
             id: recording.id,
