@@ -22,6 +22,9 @@ final class DeviceConnectionService {
 
     /// The underlying Jensen instance (kept alive)
     private var jensen: Jensen?
+    
+    /// USB Monitor for hot-plug detection
+    private var usbMonitor: USBMonitor?
 
     /// Whether a device is currently connected
     var isConnected: Bool {
@@ -59,12 +62,43 @@ final class DeviceConnectionService {
 
     init() {
         AppLogger.usb.info("DeviceConnectionService initialized")
+        setupUSBMonitor()
     }
 
     deinit {
         AppLogger.usb.warning("DeviceConnectionService being deallocated - device will disconnect!")
+        usbMonitor?.stop()
         batteryPollingTask?.cancel()
         jensen?.disconnect()
+    }
+
+    private func setupUSBMonitor() {
+        let monitor = USBMonitor()
+        
+        monitor.deviceDidConnect = { [weak self] id in
+            AppLogger.usb.info("Monitor reported device connected (ID: \(id))")
+            Task { @MainActor in
+                guard let self = self else { return }
+                if self.isConnected {
+                     AppLogger.usb.info("Device already connected, ignoring new connection event")
+                     return
+                }
+                
+                AppLogger.usb.info("Initiating connection from monitor event...")
+                _ = try? await self.connect()
+            }
+        }
+        
+        monitor.deviceDidDisconnect = { [weak self] id in
+            AppLogger.usb.info("Monitor reported device disconnected (ID: \(id))")
+            Task { @MainActor in
+                self?.disconnect()
+            }
+        }
+        
+        AppLogger.usb.info("Starting USBMonitor...")
+        monitor.start()
+        self.usbMonitor = monitor
     }
 
     // MARK: - Connection Methods
