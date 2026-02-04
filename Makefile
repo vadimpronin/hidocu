@@ -83,3 +83,7 @@ help:
 	@echo "  test     - Run all tests in Mock Mode (Default)"
 	@echo "  test-device - Run all tests on real device (Safe / Read-Only)"
 	@echo "  help     - Show this help"
+
+log:
+	@echo "Reading logs..."
+	@log stream --predicate 'subsystem == "com.hidocu.jensen" OR subsystem == "com.hidocu.app"' --level debug
