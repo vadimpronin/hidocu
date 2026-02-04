@@ -132,11 +132,67 @@ final class DatabaseTests: XCTestCase {
         try db.read { database in
             let indexes = try database.indexes(on: "recordings")
             let indexNames = indexes.map { $0.name }
-            
+
             XCTAssertTrue(indexNames.contains("idx_recordings_filename"), "filename index should exist")
             XCTAssertTrue(indexNames.contains("idx_recordings_title"), "title index should exist")
             XCTAssertTrue(indexNames.contains("idx_recordings_created_at"), "created_at index should exist")
             XCTAssertTrue(indexNames.contains("idx_recordings_status"), "status index should exist")
         }
+    }
+
+    // MARK: - Transcription Schema Tests
+
+    func testTranscriptionsTitleColumnExists() throws {
+        try db.read { database in
+            let columns = try database.columns(in: "transcriptions")
+            let columnNames = columns.map { $0.name }
+            XCTAssertTrue(columnNames.contains("title"), "title column should exist in transcriptions")
+        }
+    }
+
+    func testTranscriptionsIsPrimaryColumnExists() throws {
+        try db.read { database in
+            let columns = try database.columns(in: "transcriptions")
+            let columnNames = columns.map { $0.name }
+            XCTAssertTrue(columnNames.contains("is_primary"), "is_primary column should exist in transcriptions")
+        }
+    }
+
+    func testTranscriptionsRecordingIdIndexExists() throws {
+        try db.read { database in
+            let indexes = try database.indexes(on: "transcriptions")
+            let indexNames = indexes.map { $0.name }
+            XCTAssertTrue(indexNames.contains("idx_transcriptions_recording_id"), "recording_id index should exist on transcriptions")
+        }
+    }
+
+    func testMultipleTranscriptionsPerRecording() throws {
+        // Insert a recording
+        try db.write { database in
+            try database.execute(
+                sql: "INSERT INTO recordings (filename, filepath, status) VALUES (?, ?, ?)",
+                arguments: ["test.hda", "/path/test.hda", "new"]
+            )
+        }
+
+        let recordingId = try db.read { database in
+            try Int64.fetchOne(database, sql: "SELECT id FROM recordings LIMIT 1")!
+        }
+
+        // Insert multiple transcriptions for the same recording (should not violate UNIQUE)
+        try db.write { database in
+            for i in 1...3 {
+                try database.execute(
+                    sql: "INSERT INTO transcriptions (recording_id, full_text, title, is_primary) VALUES (?, ?, ?, ?)",
+                    arguments: [recordingId, "Text \(i)", "Variant \(i)", i == 1 ? 1 : 0]
+                )
+            }
+        }
+
+        let count = try db.read { database in
+            try Int.fetchOne(database, sql: "SELECT COUNT(*) FROM transcriptions WHERE recording_id = ?", arguments: [recordingId])
+        }
+
+        XCTAssertEqual(count, 3, "Should allow multiple transcriptions per recording")
     }
 }

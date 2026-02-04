@@ -45,6 +45,10 @@
 		F3000062F3000062 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000052F3000052 /* SidebarView.swift */; };
 		F3000063F3000063 /* RecordingsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000053F3000053 /* RecordingsListView.swift */; };
 		F3000064F3000064 /* RecordingRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000054F3000054 /* RecordingRowView.swift */; };
+		F5000001F5000001 /* SQLiteTranscriptionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5000011F5000011 /* SQLiteTranscriptionRepository.swift */; };
+		F5000002F5000002 /* TranscriptionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5000012F5000012 /* TranscriptionViewModel.swift */; };
+		F5000003F5000003 /* TranscriptionSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5000013F5000013 /* TranscriptionSectionView.swift */; };
+		F5A00001F5A00001 /* TranscriptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A00011F5A00011 /* TranscriptionTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -97,6 +101,10 @@
 		F3000052F3000052 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
 		F3000053F3000053 /* RecordingsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingsListView.swift; sourceTree = "<group>"; };
 		F3000054F3000054 /* RecordingRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingRowView.swift; sourceTree = "<group>"; };
+		F5000011F5000011 /* SQLiteTranscriptionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteTranscriptionRepository.swift; sourceTree = "<group>"; };
+		F5000012F5000012 /* TranscriptionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionViewModel.swift; sourceTree = "<group>"; };
+		F5000013F5000013 /* TranscriptionSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionSectionView.swift; sourceTree = "<group>"; };
+		F5A00011F5A00011 /* TranscriptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -262,6 +270,7 @@
 			isa = PBXGroup;
 			children = (
 				F0000032F0000032 /* SQLiteRecordingRepository.swift */,
+				F5000011F5000011 /* SQLiteTranscriptionRepository.swift */,
 			);
 			path = Repositories;
 			sourceTree = "<group>";
@@ -292,6 +301,7 @@
 				79432DA08D5943A38BE62137 /* RecordingDetailViewModel.swift */,
 				F3000050F3000050 /* NavigationViewModel.swift */,
 				F3000051F3000051 /* RecordingsListViewModel.swift */,
+				F5000012F5000012 /* TranscriptionViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -311,6 +321,7 @@
 				F0A00011F0A00011 /* HiDocuTests.swift */,
 				F0A00012F0A00012 /* DatabaseTests.swift */,
 				F0A00013F0A00013 /* SyncLogicTests.swift */,
+				F5A00011F5A00011 /* TranscriptionTests.swift */,
 			);
 			path = HiDocuTests;
 			sourceTree = "<group>";
@@ -329,6 +340,7 @@
 				9D94AC78A25E4E2BB61D52CE /* RecordingDetailView.swift */,
 				F3000053F3000053 /* RecordingsListView.swift */,
 				F3000054F3000054 /* RecordingRowView.swift */,
+				F5000013F5000013 /* TranscriptionSectionView.swift */,
 			);
 			path = Library;
 			sourceTree = "<group>";
@@ -494,6 +506,9 @@
 				F3000062F3000062 /* SidebarView.swift in Sources */,
 				F3000063F3000063 /* RecordingsListView.swift in Sources */,
 				F3000064F3000064 /* RecordingRowView.swift in Sources */,
+				F5000001F5000001 /* SQLiteTranscriptionRepository.swift in Sources */,
+				F5000002F5000002 /* TranscriptionViewModel.swift in Sources */,
+				F5000003F5000003 /* TranscriptionSectionView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -501,15 +516,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0119A84E4F2840779DA2E2B3 /* TimeInterval+Extensions.swift in Sources */,
-				BC4EA7F4581C465AA4D4DD27 /* AudioPlayerService.swift in Sources */,
-				5144798C75A74F938E8BE58F /* WaveformAnalyzer.swift in Sources */,
-				C74E3B38C1704D5DB058DD1B /* WaveformView.swift in Sources */,
-				E30FDC8F82064C09BC26710D /* RecordingDetailViewModel.swift in Sources */,
-				0A00F6148A494D6993BC603C /* RecordingDetailView.swift in Sources */,
 				F0A00001F0A00001 /* HiDocuTests.swift in Sources */,
 				F0A00002F0A00002 /* DatabaseTests.swift in Sources */,
 				F0A00003F0A00003 /* SyncLogicTests.swift in Sources */,
+				F5A00001F5A00001 /* TranscriptionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

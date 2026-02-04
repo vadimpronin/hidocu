@@ -17,10 +17,12 @@ struct Transcription: Identifiable, Sendable, Equatable {
     var modelUsed: String?
     var transcribedAt: Date?
     var confidenceScore: Double?
-    
+    var title: String?
+    var isPrimary: Bool
+
     /// Segments that make up this transcription
     var segments: [Segment]
-    
+
     init(
         id: Int64 = 0,
         recordingId: Int64,
@@ -29,6 +31,8 @@ struct Transcription: Identifiable, Sendable, Equatable {
         modelUsed: String? = nil,
         transcribedAt: Date? = nil,
         confidenceScore: Double? = nil,
+        title: String? = nil,
+        isPrimary: Bool = false,
         segments: [Segment] = []
     ) {
         self.id = id
@@ -38,6 +42,8 @@ struct Transcription: Identifiable, Sendable, Equatable {
         self.modelUsed = modelUsed
         self.transcribedAt = transcribedAt
         self.confidenceScore = confidenceScore
+        self.title = title
+        self.isPrimary = isPrimary
         self.segments = segments
     }
 }

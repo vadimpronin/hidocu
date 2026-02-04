@@ -133,17 +133,26 @@ final class DatabaseManager: Sendable {
                 CREATE INDEX idx_recordings_status ON recordings(status)
                 """)
             
-            // transcriptions table (1:1 with recordings)
+            // transcriptions table (1:N with recordings, up to 5 variants)
             try db.execute(sql: """
                 CREATE TABLE transcriptions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    recording_id INTEGER NOT NULL UNIQUE REFERENCES recordings(id) ON DELETE CASCADE,
+                    recording_id INTEGER NOT NULL REFERENCES recordings(id) ON DELETE CASCADE,
                     full_text TEXT,
                     language TEXT,
                     model_used TEXT,
                     transcribed_at DATETIME,
-                    confidence_score REAL
+                    confidence_score REAL,
+                    title TEXT,
+                    is_primary INTEGER NOT NULL DEFAULT 0
                 )
+                """)
+            try db.execute(sql: """
+                CREATE INDEX idx_transcriptions_recording_id ON transcriptions(recording_id)
+                """)
+            try db.execute(sql: """
+                CREATE UNIQUE INDEX idx_transcriptions_single_primary
+                    ON transcriptions(recording_id) WHERE is_primary = 1
                 """)
             
             // segments table (1:N with transcriptions) - for future use

@@ -19,6 +19,7 @@ struct RecordingDetailView: View {
     // MARK: - Properties
 
     @State private var viewModel: RecordingDetailViewModel
+    @State private var transcriptionViewModel: TranscriptionViewModel
 
     // MARK: - Initialization
 
@@ -31,6 +32,13 @@ struct RecordingDetailView: View {
             repository: container.recordingRepository
         )
         _viewModel = State(initialValue: vm)
+
+        let tvm = TranscriptionViewModel(
+            recordingId: recording.id,
+            recordingTitle: recording.displayTitle,
+            repository: container.transcriptionRepository
+        )
+        _transcriptionViewModel = State(initialValue: tvm)
     }
 
     // MARK: - Body
@@ -47,6 +55,9 @@ struct RecordingDetailView: View {
                     .background(Color(nsColor: .controlBackgroundColor))
                     .cornerRadius(12)
 
+                // Transcription Section
+                TranscriptionSectionView(viewModel: transcriptionViewModel)
+
                 // Metadata Section
                 metadataSection
 
@@ -60,6 +71,7 @@ struct RecordingDetailView: View {
         }
         .onDisappear {
             Task {
+                await transcriptionViewModel.saveCurrentText()
                 await viewModel.onDisappear()
             }
         }

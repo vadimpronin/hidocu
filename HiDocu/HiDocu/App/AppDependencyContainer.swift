@@ -42,6 +42,9 @@ final class AppDependencyContainer {
     /// Recording repository for data access
     let recordingRepository: SQLiteRecordingRepository
 
+    /// Transcription repository for data access
+    let transcriptionRepository: SQLiteTranscriptionRepository
+
     // MARK: - Sync Services
 
     /// Recording sync service - handles device-to-local synchronization
@@ -76,6 +79,10 @@ final class AppDependencyContainer {
         self.recordingRepository = SQLiteRecordingRepository(
             databaseManager: databaseManager,
             fileSystemService: fileSystemService
+        )
+
+        self.transcriptionRepository = SQLiteTranscriptionRepository(
+            databaseManager: databaseManager
         )
 
         // Initialize audio player service (long-lived singleton)
