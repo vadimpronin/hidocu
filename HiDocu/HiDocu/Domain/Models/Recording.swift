@@ -8,14 +8,14 @@
 import Foundation
 
 /// Recording mode as determined by the HiDock device.
-enum RecordingMode: String, Sendable, CaseIterable {
+enum RecordingMode: String, Sendable, CaseIterable, Hashable {
     case call       // Call recording mode
     case room       // Room/ambient recording
     case whisper    // Whisper/voice memo mode
 }
 
 /// Status of a recording in the HiDocu workflow.
-enum RecordingStatus: String, Sendable, CaseIterable {
+enum RecordingStatus: String, Sendable, CaseIterable, Hashable {
     case new            // Exists on device, not yet downloaded
     case downloaded     // Downloaded to local storage
     case transcribed    // Has been transcribed
@@ -23,7 +23,7 @@ enum RecordingStatus: String, Sendable, CaseIterable {
 
 /// Domain model for an audio recording.
 /// Maps to the `recordings` database table.
-struct Recording: Identifiable, Sendable, Equatable {
+struct Recording: Identifiable, Sendable, Equatable, Hashable {
     let id: Int64
     let filename: String
     let filepath: String

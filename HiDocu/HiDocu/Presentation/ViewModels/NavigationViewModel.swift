@@ -55,4 +55,5 @@ enum SidebarItem: Hashable {
 final class NavigationViewModel {
     var selectedSidebarItem: SidebarItem? = .allRecordings
     var selectedRecordingId: Int64?
+    var selectedRecording: Recording?
 }

@@ -23,12 +23,17 @@ struct ContentView: View {
                 )
             }
         } detail: {
-            if let recordingsVM {
-                RecordingsListView(
-                    viewModel: recordingsVM,
-                    selectedRecordingId: $navigationVM.selectedRecordingId
-                )
-                .navigationTitle(navigationVM.selectedSidebarItem?.title ?? "Recordings")
+            if let recordingsVM, let container {
+                NavigationStack {
+                    RecordingsListView(
+                        viewModel: recordingsVM,
+                        selectedRecordingId: $navigationVM.selectedRecordingId
+                    )
+                    .navigationTitle(navigationVM.selectedSidebarItem?.title ?? "Recordings")
+                    .navigationDestination(item: $navigationVM.selectedRecording) { recording in
+                        RecordingDetailView(recording: recording, container: container)
+                    }
+                }
             } else {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -45,6 +50,24 @@ struct ContentView: View {
         }
         .onChange(of: navigationVM.selectedSidebarItem) { _, newValue in
             recordingsVM?.setFilter(newValue?.statusFilter)
+        }
+        .onChange(of: navigationVM.selectedRecordingId) { _, newId in
+            guard let newId, let container else {
+                navigationVM.selectedRecording = nil
+                return
+            }
+
+            // Fetch the recording and set it for navigation
+            Task {
+                do {
+                    let recording = try await container.recordingRepository.fetchById(newId)
+                    await MainActor.run {
+                        navigationVM.selectedRecording = recording
+                    }
+                } catch {
+                    AppLogger.ui.error("Failed to fetch recording: \(error.localizedDescription)")
+                }
+            }
         }
     }
 }

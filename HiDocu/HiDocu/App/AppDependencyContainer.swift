@@ -30,14 +30,20 @@ final class AppDependencyContainer {
     
     /// Audio compatibility service - handles .hda format and validation
     let audioService: AudioCompatibilityService
-    
+
+    /// Waveform analyzer - extracts visualization data from audio files
+    let waveformAnalyzer: WaveformAnalyzer
+
+    /// Audio player service - manages playback (MUST stay alive)
+    let audioPlayerService: AudioPlayerService
+
     // MARK: - Repositories
-    
+
     /// Recording repository for data access
     let recordingRepository: SQLiteRecordingRepository
-    
+
     // MARK: - Sync Services
-    
+
     /// Recording sync service - handles device-to-local synchronization
     let syncService: RecordingSyncService
     
@@ -62,13 +68,23 @@ final class AppDependencyContainer {
         
         // Initialize audio compatibility service
         self.audioService = AudioCompatibilityService()
-        
+
+        // Initialize waveform analyzer
+        self.waveformAnalyzer = WaveformAnalyzer(fileSystemService: fileSystemService)
+
         // Initialize repositories (with FileSystemService for path mapping)
         self.recordingRepository = SQLiteRecordingRepository(
             databaseManager: databaseManager,
             fileSystemService: fileSystemService
         )
-        
+
+        // Initialize audio player service (long-lived singleton)
+        self.audioPlayerService = AudioPlayerService(
+            audioService: audioService,
+            fileSystemService: fileSystemService,
+            repository: recordingRepository
+        )
+
         // Initialize sync service
         self.syncService = RecordingSyncService(
             deviceService: deviceService,
@@ -76,7 +92,7 @@ final class AppDependencyContainer {
             audioService: audioService,
             repository: recordingRepository
         )
-        
+
         AppLogger.general.info("AppDependencyContainer initialized successfully")
     }
 }

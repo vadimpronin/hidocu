@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0119A84E4F2840779DA2E2B3 /* TimeInterval+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86F8B131B8884602A9CF022F /* TimeInterval+Extensions.swift */; };
+		BC4EA7F4581C465AA4D4DD27 /* AudioPlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEAA5B6EF8BD448A951ED65A /* AudioPlayerService.swift */; };
+		5144798C75A74F938E8BE58F /* WaveformAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A89E47CB68BC4872B206B230 /* WaveformAnalyzer.swift */; };
+		C74E3B38C1704D5DB058DD1B /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37EBA1836F0C4065A5595AFC /* WaveformView.swift */; };
+		E30FDC8F82064C09BC26710D /* RecordingDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79432DA08D5943A38BE62137 /* RecordingDetailViewModel.swift */; };
+		0A00F6148A494D6993BC603C /* RecordingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D94AC78A25E4E2BB61D52CE /* RecordingDetailView.swift */; };
 		F0000001F0000001 /* HiDocuApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000011F0000011 /* HiDocuApp.swift */; };
 		F0000002F0000002 /* AppDependencyContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000012F0000012 /* AppDependencyContainer.swift */; };
 		F0000003F0000003 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000013F0000013 /* AppLogger.swift */; };
@@ -52,6 +58,12 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		86F8B131B8884602A9CF022F /* TimeInterval+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimeInterval+Extensions.swift"; sourceTree = "<group>"; };
+		FEAA5B6EF8BD448A951ED65A /* AudioPlayerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AudioPlayerService.swift"; sourceTree = "<group>"; };
+		A89E47CB68BC4872B206B230 /* WaveformAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WaveformAnalyzer.swift"; sourceTree = "<group>"; };
+		37EBA1836F0C4065A5595AFC /* WaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformView.swift; sourceTree = "<group>"; };
+		79432DA08D5943A38BE62137 /* RecordingDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingDetailViewModel.swift"; sourceTree = "<group>"; };
+		9D94AC78A25E4E2BB61D52CE /* RecordingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingDetailView.swift"; sourceTree = "<group>"; };
 		F0000000F0000000 /* HiDocu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HiDocu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F0000011F0000011 /* HiDocuApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiDocuApp.swift; sourceTree = "<group>"; };
 		F0000012F0000012 /* AppDependencyContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencyContainer.swift; sourceTree = "<group>"; };
@@ -152,6 +164,7 @@
 		F2000007F2000007 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
+				86F8B131B8884602A9CF022F /* TimeInterval+Extensions.swift */,
 				F0000014F0000014 /* Date+Extensions.swift */,
 				F0000015F0000015 /* Int+Extensions.swift */,
 			);
@@ -235,6 +248,8 @@
 		F200000CF200000C /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				FEAA5B6EF8BD448A951ED65A /* AudioPlayerService.swift */,
+				A89E47CB68BC4872B206B230 /* WaveformAnalyzer.swift */,
 				F0000030F0000030 /* DeviceConnectionService.swift */,
 				F0000031F0000031 /* FileSystemService.swift */,
 				F0000034F0000034 /* AudioCompatibilityService.swift */,
@@ -266,6 +281,7 @@
 				F0000033F0000033 /* ContentView.swift */,
 				F3000070F3000070 /* Sidebar */,
 				F3000071F3000071 /* Library */,
+				D8402727206E439A8869D212 /* Components */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -273,6 +289,7 @@
 		F2000011F2000011 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
+				79432DA08D5943A38BE62137 /* RecordingDetailViewModel.swift */,
 				F3000050F3000050 /* NavigationViewModel.swift */,
 				F3000051F3000051 /* RecordingsListViewModel.swift */,
 			);
@@ -309,10 +326,19 @@
 		F3000071F3000071 /* Library */ = {
 			isa = PBXGroup;
 			children = (
+				9D94AC78A25E4E2BB61D52CE /* RecordingDetailView.swift */,
 				F3000053F3000053 /* RecordingsListView.swift */,
 				F3000054F3000054 /* RecordingRowView.swift */,
 			);
 			path = Library;
+			sourceTree = "<group>";
+		};
+		D8402727206E439A8869D212 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				37EBA1836F0C4065A5595AFC /* WaveformView.swift */,
+			);
+			path = Components;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -436,6 +462,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0119A84E4F2840779DA2E2B3 /* TimeInterval+Extensions.swift in Sources */,
+				BC4EA7F4581C465AA4D4DD27 /* AudioPlayerService.swift in Sources */,
+				5144798C75A74F938E8BE58F /* WaveformAnalyzer.swift in Sources */,
+				C74E3B38C1704D5DB058DD1B /* WaveformView.swift in Sources */,
+				E30FDC8F82064C09BC26710D /* RecordingDetailViewModel.swift in Sources */,
+				0A00F6148A494D6993BC603C /* RecordingDetailView.swift in Sources */,
 				F0000001F0000001 /* HiDocuApp.swift in Sources */,
 				F0000002F0000002 /* AppDependencyContainer.swift in Sources */,
 				F0000003F0000003 /* AppLogger.swift in Sources */,
@@ -469,6 +501,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0119A84E4F2840779DA2E2B3 /* TimeInterval+Extensions.swift in Sources */,
+				BC4EA7F4581C465AA4D4DD27 /* AudioPlayerService.swift in Sources */,
+				5144798C75A74F938E8BE58F /* WaveformAnalyzer.swift in Sources */,
+				C74E3B38C1704D5DB058DD1B /* WaveformView.swift in Sources */,
+				E30FDC8F82064C09BC26710D /* RecordingDetailViewModel.swift in Sources */,
+				0A00F6148A494D6993BC603C /* RecordingDetailView.swift in Sources */,
 				F0A00001F0A00001 /* HiDocuTests.swift in Sources */,
 				F0A00002F0A00002 /* DatabaseTests.swift in Sources */,
 				F0A00003F0A00003 /* SyncLogicTests.swift in Sources */,
