@@ -2,16 +2,33 @@
 //  ContentView.swift
 //  HiDocu
 //
-//  Main content view wiring sidebar navigation and recordings list.
+//  Root view that shows onboarding on first launch, then main content.
 //
 
 import SwiftUI
 
 struct ContentView: View {
     @Environment(\.container) private var container
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+
+    var body: some View {
+        if hasCompletedOnboarding {
+            MainSplitView()
+        } else {
+            OnboardingView()
+        }
+    }
+}
+
+// MARK: - Main Split View
+
+/// The primary app interface with sidebar and detail navigation.
+struct MainSplitView: View {
+    @Environment(\.container) private var container
 
     @State private var navigationVM = NavigationViewModel()
     @State private var recordingsVM: RecordingsListViewModel?
+    @State private var syncError: String?
 
     var body: some View {
         NavigationSplitView {
@@ -27,7 +44,8 @@ struct ContentView: View {
                 NavigationStack {
                     RecordingsListView(
                         viewModel: recordingsVM,
-                        selectedRecordingId: $navigationVM.selectedRecordingId
+                        selectedRecordingId: $navigationVM.selectedRecordingId,
+                        syncService: container.syncService
                     )
                     .navigationTitle(navigationVM.selectedSidebarItem?.title ?? "Recordings")
                     .navigationDestination(item: $navigationVM.selectedRecording) { recording in
@@ -39,6 +57,7 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        .errorBanner($syncError)
         .onAppear {
             if recordingsVM == nil, let container {
                 let vm = RecordingsListViewModel(
@@ -57,7 +76,6 @@ struct ContentView: View {
                 return
             }
 
-            // Fetch the recording and set it for navigation
             Task {
                 do {
                     let recording = try await container.recordingRepository.fetchById(newId)
@@ -67,6 +85,11 @@ struct ContentView: View {
                 } catch {
                     AppLogger.ui.error("Failed to fetch recording: \(error.localizedDescription)")
                 }
+            }
+        }
+        .onChange(of: container?.syncService.errorMessage) { _, newError in
+            if let newError {
+                syncError = newError
             }
         }
     }

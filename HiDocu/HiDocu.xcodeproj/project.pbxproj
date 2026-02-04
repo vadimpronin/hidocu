@@ -49,6 +49,9 @@
 		F5000002F5000002 /* TranscriptionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5000012F5000012 /* TranscriptionViewModel.swift */; };
 		F5000003F5000003 /* TranscriptionSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5000013F5000013 /* TranscriptionSectionView.swift */; };
 		F5A00001F5A00001 /* TranscriptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A00011F5A00011 /* TranscriptionTests.swift */; };
+		F8000020F8000020 /* ErrorBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8000010F8000010 /* ErrorBannerView.swift */; };
+		F8000021F8000021 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8000011F8000011 /* SettingsView.swift */; };
+		F8000022F8000022 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8000012F8000012 /* OnboardingView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -105,6 +108,9 @@
 		F5000012F5000012 /* TranscriptionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionViewModel.swift; sourceTree = "<group>"; };
 		F5000013F5000013 /* TranscriptionSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionSectionView.swift; sourceTree = "<group>"; };
 		F5A00011F5A00011 /* TranscriptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionTests.swift; sourceTree = "<group>"; };
+		F8000010F8000010 /* ErrorBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBannerView.swift; sourceTree = "<group>"; };
+		F8000011F8000011 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		F8000012F8000012 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -291,6 +297,8 @@
 				F3000070F3000070 /* Sidebar */,
 				F3000071F3000071 /* Library */,
 				D8402727206E439A8869D212 /* Components */,
+				F8000030F8000030 /* Settings */,
+				F8000031F8000031 /* Onboarding */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -349,8 +357,25 @@
 			isa = PBXGroup;
 			children = (
 				37EBA1836F0C4065A5595AFC /* WaveformView.swift */,
+				F8000010F8000010 /* ErrorBannerView.swift */,
 			);
 			path = Components;
+			sourceTree = "<group>";
+		};
+		F8000030F8000030 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				F8000011F8000011 /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		F8000031F8000031 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				F8000012F8000012 /* OnboardingView.swift */,
+			);
+			path = Onboarding;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -509,6 +534,9 @@
 				F5000001F5000001 /* SQLiteTranscriptionRepository.swift in Sources */,
 				F5000002F5000002 /* TranscriptionViewModel.swift in Sources */,
 				F5000003F5000003 /* TranscriptionSectionView.swift in Sources */,
+				F8000020F8000020 /* ErrorBannerView.swift in Sources */,
+				F8000021F8000021 /* SettingsView.swift in Sources */,
+				F8000022F8000022 /* OnboardingView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
