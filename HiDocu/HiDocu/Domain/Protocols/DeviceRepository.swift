@@ -39,6 +39,15 @@ enum DeviceModel: String, Sendable, CaseIterable {
         case .unknown:      return "externaldrive.fill"
         }
     }
+
+    /// Custom image asset name (from Assets.xcassets/Devices), or nil to use SF Symbol
+    var imageName: String? {
+        switch self {
+        case .p1:      return "Devices/P1"
+        case .p1Mini:  return "Devices/P1Mini"
+        default:       return nil
+        }
+    }
 }
 
 // MARK: - Battery & Storage

@@ -67,7 +67,7 @@ struct SidebarView: View {
             Label {
                 Text(modelName)
             } icon: {
-                Image(systemName: "waveform")
+                SidebarDeviceIcon(model: deviceService.connectionInfo?.model ?? deviceService.detectedModel)
             }
             .tag(SidebarItem.device)
             .contextMenu {
@@ -89,8 +89,7 @@ struct SidebarView: View {
                     Text(modelName)
                         .foregroundStyle(.secondary)
                 } icon: {
-                    Image(systemName: "waveform.slash")
-                        .foregroundStyle(.red)
+                    SidebarDeviceIcon(model: deviceService.detectedModel, failed: true)
                 }
             }
             .tag(SidebarItem.device)
@@ -141,5 +140,32 @@ struct BatteryIndicatorView: View {
         if battery.percentage < 15 { return .red }
         if battery.percentage < 30 { return .orange }
         return .green
+    }
+}
+
+// MARK: - Sidebar Device Icon
+
+/// Shows device-specific icon in sidebar, with optional failed state styling.
+private struct SidebarDeviceIcon: View {
+    let model: DeviceModel?
+    var failed: Bool = false
+
+    var body: some View {
+        let icon = Group {
+            if let imageName = model?.imageName {
+                Image(imageName)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+            } else {
+                Image(systemName: model?.sfSymbolName ?? "externaldrive")
+            }
+        }
+        .frame(width: 16, height: 16)
+
+        if failed {
+            icon.foregroundStyle(.red)
+        } else {
+            icon // Inherits accent color like other sidebar icons
+        }
     }
 }

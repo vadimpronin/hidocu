@@ -161,12 +161,13 @@ private struct DeviceHeaderSection: View {
     var importService: RecordingImportService
     var recordingsBytes: Int64
 
+    private var model: DeviceModel {
+        deviceService.connectionInfo?.model ?? .unknown
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
-            Image(systemName: deviceService.connectionInfo?.model.sfSymbolName ?? "externaldrive.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-                .frame(width: 64, height: 64)
+            DeviceIcon(model: model)
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .center, spacing: 8) {
@@ -233,6 +234,30 @@ private struct DeviceHeaderSection: View {
 
             Spacer()
         }
+    }
+}
+
+// MARK: - Device Icon
+
+/// Shows custom device image for P1/P1 Mini, or SF Symbol for other devices.
+/// Custom PNG icons use template rendering to adapt to light/dark mode like SF Symbols.
+private struct DeviceIcon: View {
+    let model: DeviceModel
+
+    var body: some View {
+        Group {
+            if let imageName = model.imageName {
+                Image(imageName)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+            } else {
+                Image(systemName: model.sfSymbolName)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+            }
+        }
+        .frame(width: 64, height: 64)
+        .foregroundStyle(.secondary)
     }
 }
 
