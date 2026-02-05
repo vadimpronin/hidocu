@@ -33,8 +33,9 @@ enum DeviceModel: String, Sendable, CaseIterable {
 
     var sfSymbolName: String {
         switch self {
-        case .p1, .p1Mini: return "rectangle.fill.on.rectangle.fill"
-        case .h1, .h1e:    return "dock.rectangle"
+        case .p1:           return "appletvremote.gen4"
+        case .p1Mini:       return "appletvremote.gen4"
+        case .h1, .h1e:     return "dock.rectangle"
         case .unknown:      return "externaldrive.fill"
         }
     }

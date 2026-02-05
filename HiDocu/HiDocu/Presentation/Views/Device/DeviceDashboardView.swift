@@ -39,17 +39,7 @@ struct DeviceDashboardView: View {
                     .padding(.vertical, 12)
             }
         }
-        .navigationTitle(deviceService.connectionInfo?.model.displayName ?? "Device")
-        .toolbar {
-            ToolbarItem(placement: .secondaryAction) {
-                Button {
-                    Task { @MainActor in await deviceService.disconnect() }
-                } label: {
-                    Label("Eject", systemImage: "eject.fill")
-                }
-                .help("Safely disconnect device")
-            }
-        }
+        .navigationTitle("Connected device")
         .task {
             await viewModel.loadFiles()
         }
@@ -179,9 +169,22 @@ private struct DeviceHeaderSection: View {
                 .frame(width: 64, height: 64)
 
             VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .center, spacing: 8) {
                 Text(deviceService.connectionInfo?.model.displayName ?? "HiDock")
                     .font(.title2)
                     .fontWeight(.semibold)
+
+                    Button {
+                        Task {
+                            await deviceService.disconnect()
+                        }
+                    } label: {
+                        Image(systemName: "eject.fill")
+                        .fontWeight(.medium) // Matches the title weight slightly better
+                    }
+                    .buttonStyle(.borderless) // Keeps it looking like a clean icon
+                    .help("Safely disconnect device")
+                }
 
                 // Metadata grid
                 Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 4) {
@@ -207,8 +210,8 @@ private struct DeviceHeaderSection: View {
                        deviceService.connectionInfo?.supportsBattery == true {
                         GridRow {
                             Text("Battery:")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                             BatteryIndicatorView(battery: battery)
                         }
                     }
