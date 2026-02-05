@@ -112,13 +112,27 @@ struct MainSplitView: View {
     private func detailContent(container: AppDependencyContainer) -> some View {
         switch navigationVM.selectedSidebarItem {
         case .device:
-            if container.deviceService.isConnected, let deviceDashboardVM {
-                DeviceDashboardView(
-                    deviceService: container.deviceService,
-                    importService: container.importService,
-                    viewModel: deviceDashboardVM
+            switch container.deviceService.connectionState {
+            case .connected:
+                if let deviceDashboardVM {
+                    DeviceDashboardView(
+                        deviceService: container.deviceService,
+                        importService: container.importService,
+                        viewModel: deviceDashboardVM
+                    )
+                } else {
+                    ProgressView("Loading...")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            case .connecting(let attempt, let maxAttempts):
+                DeviceConnectingView(
+                    attempt: attempt,
+                    maxAttempts: maxAttempts,
+                    modelName: container.deviceService.detectedModel?.displayName
                 )
-            } else {
+            case .connectionFailed:
+                DeviceConnectionFailedView(deviceService: container.deviceService)
+            case .disconnected:
                 DeviceDisconnectedView()
             }
 

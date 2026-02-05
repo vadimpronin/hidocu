@@ -447,3 +447,67 @@ struct DeviceDisconnectedView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
+
+// MARK: - Device Connecting Placeholder
+
+struct DeviceConnectingView: View {
+    let attempt: Int
+    let maxAttempts: Int
+    var modelName: String?
+
+    var body: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .scaleEffect(1.5)
+
+            Text("Connecting to \(modelName ?? "HiDock")")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Text("Attempt \(attempt) of \(maxAttempts)...")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - Device Connection Failed Placeholder
+
+struct DeviceConnectionFailedView: View {
+    var deviceService: DeviceConnectionService
+
+    private var errorMessage: String {
+        deviceService.lastError ?? "Unable to communicate with device"
+    }
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(.orange)
+
+            Text("Connection Error")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Text(errorMessage)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 350)
+
+            Button {
+                Task { @MainActor in
+                    await deviceService.manualRetry()
+                }
+            } label: {
+                Label("Retry Connection", systemImage: "arrow.clockwise")
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .padding(.top, 8)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
