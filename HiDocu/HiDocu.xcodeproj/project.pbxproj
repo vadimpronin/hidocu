@@ -36,6 +36,7 @@
 		'F0000023F0000023' = {isa = PBXBuildFile; fileRef = F0000033F0000033; };
 		'F0000024F0000024' = {isa = PBXBuildFile; fileRef = F0000034F0000034; };
 		'F0000025F0000025' = {isa = PBXBuildFile; fileRef = F0000035F0000035; };
+		'F0000026F0000026' = {isa = PBXBuildFile; fileRef = F0000036F0000036; };
 		'F0000050F0000050' = {isa = PBXBuildFile; productRef = F0000051F0000051; };
 		'F0000052F0000052' = {isa = PBXBuildFile; productRef = F0000053F0000053; };
 		'F0A00001F0A00001' = {isa = PBXBuildFile; fileRef = F0A00011F0A00011; };
@@ -96,6 +97,7 @@
 		'F0000033F0000033' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		'F0000034F0000034' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCompatibilityService.swift; sourceTree = "<group>"; };
 		'F0000035F0000035' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSyncService.swift; sourceTree = "<group>"; };
+		'F0000036F0000036' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JensenActor.swift; sourceTree = "<group>"; };
 		'F0000040F0000040' = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HiDocu.entitlements; sourceTree = "<group>"; };
 		'F0000041F0000041' = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		'F0A00000F0A00000' = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HiDocuTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -275,6 +277,7 @@
 				F0000031F0000031,
 				F0000034F0000034,
 				F0000035F0000035,
+				F0000036F0000036,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -524,6 +527,7 @@
 				F0000023F0000023,
 				F0000024F0000024,
 				F0000025F0000025,
+				F0000026F0000026,
 				F3000060F3000060,
 				F3000061F3000061,
 				F3000062F3000062,

@@ -13,6 +13,10 @@ import JensenUSB
 /// Manages connection to HiDock USB devices.
 /// This is a long-lived singleton that wraps JensenUSB.
 ///
+/// All USB operations are serialized through `JensenActor` to prevent race conditions
+/// where concurrent commands (e.g., battery polling during a download) would corrupt
+/// the USB data stream.
+///
 /// - Important: Do not allow this to be deallocated while the app is running,
 ///   as the Jensen instance maintains a keep-alive timer.
 @Observable
@@ -20,15 +24,17 @@ final class DeviceConnectionService {
 
     // MARK: - Properties
 
-    /// The underlying Jensen instance (kept alive)
-    private var jensen: Jensen?
-    
+    /// The serializing wrapper around Jensen (thread-safe)
+    private let driver = JensenActor()
+
     /// USB Monitor for hot-plug detection
     private var usbMonitor: USBMonitor?
 
     /// Whether a device is currently connected
     var isConnected: Bool {
-        jensen?.isConnected ?? false
+        // Use a cached value that gets updated by connect/disconnect
+        if case .connected = connectionState { return true }
+        return false
     }
 
     /// Connection info for the current device
@@ -69,12 +75,12 @@ final class DeviceConnectionService {
         AppLogger.usb.warning("DeviceConnectionService being deallocated - device will disconnect!")
         usbMonitor?.stop()
         batteryPollingTask?.cancel()
-        jensen?.disconnect()
+        // Note: The actor will disconnect when it's deallocated
     }
 
     private func setupUSBMonitor() {
         let monitor = USBMonitor()
-        
+
         monitor.deviceDidConnect = { [weak self] id in
             AppLogger.usb.info("Monitor reported device connected (ID: \(id))")
             Task { @MainActor in
@@ -83,19 +89,19 @@ final class DeviceConnectionService {
                      AppLogger.usb.info("Device already connected, ignoring new connection event")
                      return
                 }
-                
+
                 AppLogger.usb.info("Initiating connection from monitor event...")
                 _ = try? await self.connect()
             }
         }
-        
+
         monitor.deviceDidDisconnect = { [weak self] id in
             AppLogger.usb.info("Monitor reported device disconnected (ID: \(id))")
             Task { @MainActor in
-                self?.disconnect()
+                await self?.disconnect()
             }
         }
-        
+
         AppLogger.usb.info("Starting USBMonitor...")
         monitor.start()
         self.usbMonitor = monitor
@@ -118,26 +124,13 @@ final class DeviceConnectionService {
         AppLogger.usb.info("Attempting to connect to device...")
 
         do {
-            // Create Jensen on MainActor - its Timer.scheduledTimer requires an active RunLoop.
-            // RunLoop.main is always available on the main thread.
-            // Note: connect() is typically fast (IOKit device open), so this won't block UI significantly.
-            let device = Jensen()
-            try device.connect()
+            // Connect through the actor - must be on MainActor for Timer support
+            let info = try await driver.connect()
 
-            let model = mapModel(device.model)
-            let info = DeviceConnectionInfo(
-                serialNumber: device.serialNumber ?? "unknown",
-                model: model,
-                firmwareVersion: device.versionCode ?? "unknown",
-                firmwareNumber: device.versionNumber ?? 0
-            )
-
-            // Store reference to keep alive
-            self.jensen = device
             self.connectionInfo = info
             self.connectionState = .connected
 
-            AppLogger.usb.info("Connected to \(model.displayName) (SN: \(info.serialNumber))")
+            AppLogger.usb.info("Connected to \(info.model.displayName) (SN: \(info.serialNumber))")
 
             // Start battery polling for P1 devices
             if info.supportsBattery {
@@ -160,15 +153,14 @@ final class DeviceConnectionService {
 
     /// Disconnect from the current device.
     @MainActor
-    func disconnect() {
-        guard let device = jensen else { return }
+    func disconnect() async {
+        guard case .connected = connectionState else { return }
 
         AppLogger.usb.info("Disconnecting from device...")
 
         stopBatteryPolling()
 
-        device.disconnect()
-        jensen = nil
+        await driver.disconnect()
         connectionInfo = nil
         connectionState = .disconnected
         batteryInfo = nil
@@ -181,71 +173,38 @@ final class DeviceConnectionService {
 
     /// List files on the connected device.
     func listFiles() async throws -> [DeviceFileInfo] {
-        guard let device = jensen else {
-            throw DeviceServiceError.notConnected
-        }
-
-        return try await Task.detached {
-            let files = try device.file.list()
-
-            return files.map { file in
-                DeviceFileInfo(
-                    filename: file.name,
-                    size: Int(file.length),
-                    durationSeconds: Int(file.duration),
-                    createdAt: file.date,
-                    mode: RecordingMode(rawValue: file.mode)
-                )
-            }
-        }.value
+        return try await driver.listFiles()
     }
 
     /// Download a file from the device directly to disk.
     ///
     /// Uses streaming I/O — data is written to disk as it arrives from USB,
     /// keeping memory usage low and progress updates continuous.
+    ///
+    /// - Important: While this method is running, other actor operations (like battery polling)
+    ///   will wait. This prevents race conditions that would corrupt the download.
     func downloadFile(
         filename: String,
         expectedSize: Int,
         toPath: URL,
         progress: @escaping (Int64, Int64) -> Void
     ) async throws {
-        guard let device = jensen else {
-            throw DeviceServiceError.notConnected
-        }
-
-        try await Task.detached {
-            try device.file.downloadToFile(
-                filename: filename,
-                expectedSize: UInt32(expectedSize),
-                toURL: toPath,
-                progressHandler: { current, total in
-                    progress(Int64(current), Int64(total))
-                }
-            )
-        }.value
+        try await driver.downloadFile(
+            filename: filename,
+            expectedSize: expectedSize,
+            toPath: toPath,
+            progress: progress
+        )
     }
 
     /// Delete a file from the device.
     func deleteFile(filename: String) async throws {
-        guard let device = jensen else {
-            throw DeviceServiceError.notConnected
-        }
-
-        try device.file.delete(name: filename)
+        try await driver.deleteFile(filename: filename)
     }
 
     /// Get device storage info.
     func getStorageInfo() async throws -> (total: Int64, free: Int64) {
-        guard let device = jensen else {
-            throw DeviceServiceError.notConnected
-        }
-
-        let cardInfo = try device.system.getCardInfo()
-        let total = Int64(cardInfo.capacity)
-        let used = Int64(cardInfo.used)
-        let free = total - used
-        return (total: total, free: free)
+        return try await driver.getStorageInfo()
     }
 
     /// Refresh storage info and update the published property.
@@ -284,43 +243,26 @@ final class DeviceConnectionService {
         batteryPollingTask = nil
     }
 
+    /// Poll battery status from the device.
+    ///
+    /// - Important: This call goes through `JensenActor`, so if a download is in progress,
+    ///   this will wait until the download completes. This is intentional — it prevents
+    ///   the battery command from corrupting an ongoing file transfer.
     @MainActor
     private func pollBattery() {
-        guard let device = jensen else { return }
-
         Task {
             do {
-                let status = try await Task.detached {
-                    try device.system.getBatteryStatus()
-                }.value
-                self.batteryInfo = DeviceBatteryInfo(
-                    percentage: status.percentage,
-                    state: self.mapBatteryState(status.status)
-                )
+                let status = try await driver.getBatteryStatus()
+                self.batteryInfo = status
             } catch {
-                AppLogger.usb.error("Battery poll failed: \(error.localizedDescription)")
+                // Don't spam logs if device just doesn't support battery
+                if case DeviceServiceError.notConnected = error {
+                    // Device disconnected, stop polling
+                    stopBatteryPolling()
+                } else {
+                    AppLogger.usb.error("Battery poll failed: \(error.localizedDescription)")
+                }
             }
-        }
-    }
-
-    // MARK: - Helpers
-
-    private func mapModel(_ jensenModel: HiDockModel) -> DeviceModel {
-        switch jensenModel {
-        case .h1:      return .h1
-        case .h1e:     return .h1e
-        case .p1:      return .p1
-        case .p1Mini:  return .p1Mini
-        case .unknown: return .unknown
-        }
-    }
-
-    private func mapBatteryState(_ status: String) -> BatteryState {
-        switch status {
-        case "charging":    return .charging
-        case "idle":        return .discharging
-        case "full":        return .full
-        default:            return .unknown
         }
     }
 }

@@ -43,7 +43,7 @@ struct DeviceDashboardView: View {
         .toolbar {
             ToolbarItem(placement: .secondaryAction) {
                 Button {
-                    Task { @MainActor in deviceService.disconnect() }
+                    Task { @MainActor in await deviceService.disconnect() }
                 } label: {
                     Label("Eject", systemImage: "eject.fill")
                 }

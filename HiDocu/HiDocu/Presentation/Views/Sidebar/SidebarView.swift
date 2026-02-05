@@ -77,7 +77,7 @@ struct SidebarView: View {
                 Divider()
 
                 Button("Eject \(deviceService.connectionInfo?.model.displayName ?? "Device")") {
-                    Task { @MainActor in deviceService.disconnect() }
+                    Task { @MainActor in await deviceService.disconnect() }
                 }
             }
         default:
