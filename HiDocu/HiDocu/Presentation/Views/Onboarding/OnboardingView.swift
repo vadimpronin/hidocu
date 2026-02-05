@@ -191,14 +191,14 @@ struct OnboardingView: View {
                 .font(.largeTitle)
                 .fontWeight(.bold)
 
-            Text("Connect your HiDock device via USB to start syncing recordings,\nor drag audio files into the app to import them.")
+            Text("Connect your HiDock device via USB to start importing recordings,\nor drag audio files into the app.")
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 380)
 
             VStack(alignment: .leading, spacing: 8) {
-                featureRow(icon: "cable.connector", text: "Plug in HiDock and click Sync")
+                featureRow(icon: "cable.connector", text: "Plug in HiDock and click Import")
                 featureRow(icon: "square.and.arrow.down", text: "Drag & drop audio files to import")
                 featureRow(icon: "text.bubble", text: "Add transcriptions manually or via AI")
                 featureRow(icon: "gear", text: "Configure API keys in Settings later")

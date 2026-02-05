@@ -36,13 +36,13 @@
 		F0000022F0000022 /* SQLiteRecordingRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000032F0000032 /* SQLiteRecordingRepository.swift */; };
 		F0000023F0000023 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000033F0000033 /* ContentView.swift */; };
 		F0000024F0000024 /* AudioCompatibilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000034F0000034 /* AudioCompatibilityService.swift */; };
-		F0000025F0000025 /* RecordingSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000035F0000035 /* RecordingSyncService.swift */; };
+		F0000025F0000025 /* RecordingImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000035F0000035 /* RecordingImportService.swift */; };
 		F0000026F0000026 /* JensenActor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000036F0000036 /* JensenActor.swift */; };
 		F0000050F0000050 /* JensenUSB in Frameworks */ = {isa = PBXBuildFile; productRef = F0000051F0000051 /* JensenUSB */; };
 		F0000052F0000052 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = F0000053F0000053 /* GRDB */; };
 		F0A00001F0A00001 /* HiDocuTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A00011F0A00011 /* HiDocuTests.swift */; };
 		F0A00002F0A00002 /* DatabaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A00012F0A00012 /* DatabaseTests.swift */; };
-		F0A00003F0A00003 /* SyncLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A00013F0A00013 /* SyncLogicTests.swift */; };
+		F0A00003F0A00003 /* ImportLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A00013F0A00013 /* ImportLogicTests.swift */; };
 		F0A00052F0A00052 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = F0A00053F0A00053 /* GRDB */; };
 		F3000060F3000060 /* NavigationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000050F3000050 /* NavigationViewModel.swift */; };
 		F3000061F3000061 /* RecordingsListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000051F3000051 /* RecordingsListViewModel.swift */; };
@@ -98,14 +98,14 @@
 		F0000032F0000032 /* SQLiteRecordingRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteRecordingRepository.swift; sourceTree = "<group>"; };
 		F0000033F0000033 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		F0000034F0000034 /* AudioCompatibilityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCompatibilityService.swift; sourceTree = "<group>"; };
-		F0000035F0000035 /* RecordingSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSyncService.swift; sourceTree = "<group>"; };
+		F0000035F0000035 /* RecordingImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingImportService.swift; sourceTree = "<group>"; };
 		F0000036F0000036 /* JensenActor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JensenActor.swift; sourceTree = "<group>"; };
 		F0000040F0000040 /* HiDocu.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HiDocu.entitlements; sourceTree = "<group>"; };
 		F0000041F0000041 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F0A00000F0A00000 /* HiDocuTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HiDocuTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F0A00011F0A00011 /* HiDocuTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiDocuTests.swift; sourceTree = "<group>"; };
 		F0A00012F0A00012 /* DatabaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseTests.swift; sourceTree = "<group>"; };
-		F0A00013F0A00013 /* SyncLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncLogicTests.swift; sourceTree = "<group>"; };
+		F0A00013F0A00013 /* ImportLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportLogicTests.swift; sourceTree = "<group>"; };
 		F3000050F3000050 /* NavigationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationViewModel.swift; sourceTree = "<group>"; };
 		F3000051F3000051 /* RecordingsListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingsListViewModel.swift; sourceTree = "<group>"; };
 		F3000052F3000052 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
@@ -285,7 +285,7 @@
 				F0000030F0000030 /* DeviceConnectionService.swift */,
 				F0000031F0000031 /* FileSystemService.swift */,
 				F0000034F0000034 /* AudioCompatibilityService.swift */,
-				F0000035F0000035 /* RecordingSyncService.swift */,
+				F0000035F0000035 /* RecordingImportService.swift */,
 				F0000036F0000036 /* JensenActor.swift */,
 			);
 			path = Services;
@@ -357,7 +357,7 @@
 			children = (
 				F0A00011F0A00011 /* HiDocuTests.swift */,
 				F0A00012F0A00012 /* DatabaseTests.swift */,
-				F0A00013F0A00013 /* SyncLogicTests.swift */,
+				F0A00013F0A00013 /* ImportLogicTests.swift */,
 				F5A00011F5A00011 /* TranscriptionTests.swift */,
 			);
 			path = HiDocuTests;
@@ -549,7 +549,7 @@
 				F0000022F0000022 /* SQLiteRecordingRepository.swift in Sources */,
 				F0000023F0000023 /* ContentView.swift in Sources */,
 				F0000024F0000024 /* AudioCompatibilityService.swift in Sources */,
-				F0000025F0000025 /* RecordingSyncService.swift in Sources */,
+				F0000025F0000025 /* RecordingImportService.swift in Sources */,
 				F0000026F0000026 /* JensenActor.swift in Sources */,
 				F3000060F3000060 /* NavigationViewModel.swift in Sources */,
 				F3000061F3000061 /* RecordingsListViewModel.swift in Sources */,
@@ -573,7 +573,7 @@
 			files = (
 				F0A00001F0A00001 /* HiDocuTests.swift in Sources */,
 				F0A00002F0A00002 /* DatabaseTests.swift in Sources */,
-				F0A00003F0A00003 /* SyncLogicTests.swift in Sources */,
+				F0A00003F0A00003 /* ImportLogicTests.swift in Sources */,
 				F5A00001F5A00001 /* TranscriptionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

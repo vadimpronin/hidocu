@@ -3,22 +3,22 @@
 //  HiDocu
 //
 //  Finder-style device dashboard shown when the device is selected in the sidebar.
-//  Composed of three sections: device header, file browser table, and sync footer.
+//  Composed of three sections: device header, file browser table, and import footer.
 //
 
 import SwiftUI
 
 struct DeviceDashboardView: View {
     var deviceService: DeviceConnectionService
-    var syncService: RecordingSyncService
+    var importService: RecordingImportService
     @State var viewModel: DeviceDashboardViewModel
 
     var body: some View {
         VStack(spacing: 0) {
-            // Device Header with inline Sync button
+            // Device Header with inline Import button
             DeviceHeaderSection(
                 deviceService: deviceService,
-                syncService: syncService,
+                importService: importService,
                 recordingsBytes: recordingsBytes
             )
             .padding(.horizontal, 20)
@@ -31,10 +31,10 @@ struct DeviceDashboardView: View {
             fileBrowser
                 .frame(maxHeight: .infinity)
 
-            // Sync Footer (progress only)
-            if syncService.isSyncing {
+            // Import Footer (progress only)
+            if importService.isImporting {
                 Divider()
-                SyncProgressFooter(syncService: syncService)
+                ImportProgressFooter(importService: importService)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 12)
             }
@@ -53,8 +53,8 @@ struct DeviceDashboardView: View {
         .task {
             await viewModel.loadFiles()
         }
-        .onChange(of: syncService.isSyncing) { wasSyncing, isSyncing in
-            if wasSyncing && !isSyncing {
+        .onChange(of: importService.isImporting) { wasImporting, isImporting in
+            if wasImporting && !isImporting {
                 Task { await viewModel.loadFiles() }
             }
         }
@@ -115,8 +115,8 @@ struct DeviceDashboardView: View {
                 }
                 .width(min: 60, ideal: 80)
 
-                TableColumn("", sortUsing: KeyPathComparator(\DeviceFileRow.isSynced, comparator: BoolComparator())) { row in
-                    SyncStatusIcon(isSynced: row.isSynced)
+                TableColumn("", sortUsing: KeyPathComparator(\DeviceFileRow.isImported, comparator: BoolComparator())) { row in
+                    ImportStatusIcon(isImported: row.isImported)
                 }
                 .width(28)
             }
@@ -124,9 +124,9 @@ struct DeviceDashboardView: View {
                 if !selectedIds.isEmpty {
                     Button("Import Selected") {
                         let files = viewModel.deviceFiles(for: selectedIds)
-                        syncService.syncFiles(files)
+                        importService.importDeviceFiles(files)
                     }
-                    .disabled(syncService.isSyncing)
+                    .disabled(importService.isImporting)
 
                     Divider()
 
@@ -168,7 +168,7 @@ struct DeviceDashboardView: View {
 
 private struct DeviceHeaderSection: View {
     var deviceService: DeviceConnectionService
-    var syncService: RecordingSyncService
+    var importService: RecordingImportService
     var recordingsBytes: Int64
 
     var body: some View {
@@ -214,7 +214,7 @@ private struct DeviceHeaderSection: View {
                     }
                 }
 
-                // Storage bar with inline Sync button
+                // Storage bar with inline Import button
                 if let storage = deviceService.storageInfo {
                     HStack(alignment: .top, spacing: 12) {
                         FinderStorageBar(
@@ -222,7 +222,7 @@ private struct DeviceHeaderSection: View {
                             recordingsBytes: recordingsBytes
                         )
 
-                        SyncButton(syncService: syncService)
+                        ImportButton(importService: importService)
                     }
                     .padding(.top, 4)
                 }
@@ -310,14 +310,14 @@ struct BoolComparator: SortComparator {
     }
 }
 
-// MARK: - Sync Status Icon
+// MARK: - Import Status Icon
 
-struct SyncStatusIcon: View {
-    let isSynced: Bool
+struct ImportStatusIcon: View {
+    let isImported: Bool
 
     var body: some View {
         Group {
-            if isSynced {
+            if isImported {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.green)
             } else {
@@ -326,41 +326,41 @@ struct SyncStatusIcon: View {
             }
         }
         .font(.system(size: 13))
-        .help(isSynced ? "Downloaded to library" : "On device \u{2014} not yet downloaded")
+        .help(isImported ? "Downloaded to library" : "On device \u{2014} not yet downloaded")
     }
 }
 
-// MARK: - Sync Progress Footer
+// MARK: - Import Progress Footer
 
-struct SyncProgressFooter: View {
-    var syncService: RecordingSyncService
+struct ImportProgressFooter: View {
+    var importService: RecordingImportService
 
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                if syncService.syncState == .stopping {
+                if importService.importState == .stopping {
                     Text("Stopping after current file…")
                         .font(.callout)
                         .foregroundStyle(.secondary)
-                } else if let file = syncService.currentFile {
-                    Text("Syncing \"\(file)\"")
+                } else if let file = importService.currentFile {
+                    Text("Importing \"\(file)\"")
                         .font(.callout)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
 
-                ProgressView(value: syncService.progress)
+                ProgressView(value: importService.progress)
                     .progressViewStyle(.linear)
             }
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text(syncService.formattedBytesProgress)
+                Text(importService.formattedBytesProgress)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
 
-                if syncService.bytesPerSecond > 0 {
-                    Text(syncService.formattedTelemetry)
+                if importService.bytesPerSecond > 0 {
+                    Text(importService.formattedTelemetry)
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .monospacedDigit()
@@ -371,26 +371,26 @@ struct SyncProgressFooter: View {
     }
 }
 
-// MARK: - Sync Button
+// MARK: - Import Button
 
-private struct SyncButton: View {
-    var syncService: RecordingSyncService
+private struct ImportButton: View {
+    var importService: RecordingImportService
 
     private var showsSpinner: Bool {
-        syncService.syncState == .preparing || syncService.syncState == .stopping
+        importService.importState == .preparing || importService.importState == .stopping
     }
 
     private var label: String {
-        switch syncService.syncState {
-        case .idle: "Sync"
+        switch importService.importState {
+        case .idle: "Import"
         case .preparing: "Preparing…"
-        case .syncing: "Stop"
+        case .importing: "Stop"
         case .stopping: "Stopping…"
         }
     }
 
     var body: some View {
-        if syncService.syncState == .idle {
+        if importService.importState == .idle {
             button.buttonStyle(.borderedProminent)
         } else {
             button.buttonStyle(.bordered)
@@ -399,11 +399,11 @@ private struct SyncButton: View {
 
     private var button: some View {
         Button {
-            switch syncService.syncState {
+            switch importService.importState {
             case .idle:
-                syncService.syncFromDevice()
-            case .preparing, .syncing:
-                syncService.cancelSync()
+                importService.importFromDevice()
+            case .preparing, .importing:
+                importService.cancelImport()
             case .stopping:
                 break
             }
@@ -418,7 +418,7 @@ private struct SyncButton: View {
             .frame(minWidth: 100)
         }
         .controlSize(.regular)
-        .disabled(syncService.syncState == .stopping)
+        .disabled(importService.importState == .stopping)
     }
 }
 

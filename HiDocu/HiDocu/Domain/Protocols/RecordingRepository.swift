@@ -51,10 +51,10 @@ protocol RecordingRepository: Sendable {
         ascending: Bool
     ) -> AsyncThrowingStream<[Recording], Error>
 
-    // MARK: - Sync Operations
-    
+    // MARK: - Import Operations
+
     /// Check if a recording exists with matching filename AND size.
-    /// Used during sync to skip already-downloaded files.
+    /// Used during import to skip already-downloaded files.
     ///
     /// - Parameters:
     ///   - filename: The filename to check

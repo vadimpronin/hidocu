@@ -1,14 +1,14 @@
 //
-//  RecordingSyncService.swift
+//  RecordingImportService.swift
 //  HiDocu
 //
-//  Core synchronization engine for downloading recordings from HiDock devices.
+//  Core import engine for downloading recordings from HiDock devices.
 //  Handles conflict resolution, progress tracking, and file validation.
 //
 
 import Foundation
 
-/// Narrow protocol covering only what the sync service needs from a device.
+/// Narrow protocol covering only what the import service needs from a device.
 /// `DeviceConnectionService` is `@Observable` (not `Sendable`), so it cannot
 /// conform to `DeviceRepository`. This protocol avoids that constraint.
 protocol DeviceFileProvider {
@@ -17,8 +17,8 @@ protocol DeviceFileProvider {
     func downloadFile(filename: String, expectedSize: Int, toPath: URL, progress: @escaping @Sendable (Int64, Int64) -> Void) async throws
 }
 
-/// Statistics from a sync operation
-struct SyncStats: Sendable {
+/// Statistics from an import operation
+struct ImportStats: Sendable {
     let total: Int
     let downloaded: Int
     let skipped: Int
@@ -29,21 +29,21 @@ struct SyncStats: Sendable {
     }
 }
 
-/// Sync operation state machine
-enum SyncState: Equatable, Sendable {
-    /// Ready to sync
+/// Import operation state machine
+enum ImportState: Equatable, Sendable {
+    /// Ready to import
     case idle
-    /// Sync requested, listing files from device
+    /// Import requested, listing files from device
     case preparing
     /// Actively downloading files
-    case syncing
+    case importing
     /// Stop requested, waiting for current file to finish
     case stopping
 }
 
-/// Observable service for synchronizing recordings from HiDock device to local storage.
+/// Observable service for importing recordings from HiDock device to local storage.
 ///
-/// The sync algorithm handles:
+/// The import algorithm handles:
 /// 1. Skip files that already exist with matching size
 /// 2. Conflict resolution for same filename but different content
 /// 3. Download to temp, validate, then move to storage
@@ -52,35 +52,35 @@ enum SyncState: Equatable, Sendable {
 /// - Important: The UNIQUE constraint on `filename` in the database dictates that
 ///   conflict resolution (rename existing file) must happen BEFORE inserting new file.
 @Observable
-final class RecordingSyncService {
-    
+final class RecordingImportService {
+
     // MARK: - Observable State (for UI)
 
-    private(set) var syncState: SyncState = .idle
+    private(set) var importState: ImportState = .idle
     private(set) var currentFile: String?
     private(set) var errorMessage: String?
-    private(set) var syncStats: SyncStats?
+    private(set) var importStats: ImportStats?
 
-    /// Convenience property for UI bindings that just need to know if sync is active.
-    var isSyncing: Bool {
-        syncState != .idle
+    /// Convenience property for UI bindings that just need to know if import is active.
+    var isImporting: Bool {
+        importState != .idle
     }
 
     // Byte-level progress tracking
     private(set) var totalBytesExpected: Int64 = 0
-    private(set) var totalBytesSynced: Int64 = 0
+    private(set) var totalBytesImported: Int64 = 0
     private(set) var bytesPerSecond: Double = 0
     private(set) var estimatedSecondsRemaining: TimeInterval = 0
 
     var progress: Double {
         guard totalBytesExpected > 0 else { return 0 }
-        return min(Double(totalBytesSynced) / Double(totalBytesExpected), 1.0)
+        return min(Double(totalBytesImported) / Double(totalBytesExpected), 1.0)
     }
 
     var formattedBytesProgress: String {
-        let synced = ByteCountFormatter.string(fromByteCount: totalBytesSynced, countStyle: .file)
+        let imported = ByteCountFormatter.string(fromByteCount: totalBytesImported, countStyle: .file)
         let total = ByteCountFormatter.string(fromByteCount: totalBytesExpected, countStyle: .file)
-        return "\(synced) of \(total)"
+        return "\(imported) of \(total)"
     }
 
     var formattedSpeed: String {
@@ -115,16 +115,16 @@ final class RecordingSyncService {
     // MARK: - Private Progress Tracking
 
     private var completedBytes: Int64 = 0
-    private var syncStartTime: Date = .distantPast
+    private var importStartTime: Date = .distantPast
     private var lastStatsUpdateTime: Date = .distantPast
     /// Sliding window samples for speed calculation (last ~3 seconds)
     private var speedSamples: [(time: Date, bytes: Int64)] = []
 
-    /// Task handle for the current sync operation, used for cancellation.
-    private var syncTask: Task<Void, Never>?
+    /// Task handle for the current import operation, used for cancellation.
+    private var importTask: Task<Void, Never>?
 
     // MARK: - Dependencies
-    
+
     private let deviceService: any DeviceFileProvider
     private let fileSystemService: FileSystemService
     private let audioService: AudioCompatibilityService
@@ -142,82 +142,82 @@ final class RecordingSyncService {
         self.fileSystemService = fileSystemService
         self.audioService = audioService
         self.repository = repository
-        
-        AppLogger.fileSystem.info("RecordingSyncService initialized")
-    }
-    
-    // MARK: - Sync from Device
 
-    /// Synchronize all recordings from the connected HiDock device.
-    func syncFromDevice() {
-        guard !isSyncing else {
-            AppLogger.fileSystem.warning("Sync already in progress")
+        AppLogger.fileSystem.info("RecordingImportService initialized")
+    }
+
+    // MARK: - Import from Device
+
+    /// Import all recordings from the connected HiDock device.
+    func importFromDevice() {
+        guard !isImporting else {
+            AppLogger.fileSystem.warning("Import already in progress")
             return
         }
 
-        syncState = .preparing
+        importState = .preparing
 
-        syncTask = Task {
+        importTask = Task {
             do {
                 let deviceFiles = try await deviceService.listFiles()
-                await performSync(files: deviceFiles)
+                await performImport(files: deviceFiles)
             } catch is CancellationError {
-                AppLogger.fileSystem.info("Sync preparation cancelled")
-                await MainActor.run { syncState = .idle }
+                AppLogger.fileSystem.info("Import preparation cancelled")
+                await MainActor.run { importState = .idle }
             } catch {
                 AppLogger.fileSystem.error("Failed to list device files: \(error.localizedDescription)")
                 await MainActor.run {
                     errorMessage = error.localizedDescription
-                    syncState = .idle
+                    importState = .idle
                 }
             }
-            syncTask = nil
+            importTask = nil
         }
     }
 
-    /// Synchronize specific files from the connected HiDock device.
-    func syncFiles(_ files: [DeviceFileInfo]) {
-        guard !isSyncing else {
-            AppLogger.fileSystem.warning("[sync] Sync already in progress — ignoring syncFiles call")
+    /// Import specific files from the connected HiDock device.
+    func importDeviceFiles(_ files: [DeviceFileInfo]) {
+        guard !isImporting else {
+            AppLogger.fileSystem.warning("[import] Import already in progress — ignoring importDeviceFiles call")
             return
         }
         let names = files.map(\.filename).joined(separator: ", ")
-        AppLogger.fileSystem.info("[sync] syncFiles called with \(files.count) file(s): \(names)")
+        AppLogger.fileSystem.info("[import] importDeviceFiles called with \(files.count) file(s): \(names)")
 
         // No preparation phase needed - files are already provided
-        syncTask = Task {
-            await performSync(files: files)
-            syncTask = nil
+        importTask = Task {
+            await performImport(files: files)
+            importTask = nil
         }
     }
 
-    /// Cancel the currently running sync operation.
-    func cancelSync() {
-        guard isSyncing, let task = syncTask else {
-            AppLogger.fileSystem.info("[sync] cancelSync called but no sync in progress")
+    /// Cancel the currently running import operation.
+    func cancelImport() {
+        guard isImporting, let task = importTask else {
+            AppLogger.fileSystem.info("[import] cancelImport called but no import in progress")
             return
         }
-        AppLogger.fileSystem.info("[sync] Cancelling sync...")
-        syncState = .stopping
+        AppLogger.fileSystem.info("[import] Cancelling import...")
+        importState = .stopping
         task.cancel()
     }
 
-    /// Shared sync pipeline for a given list of device files.
-    private func performSync(files deviceFiles: [DeviceFileInfo]) async {
+    /// Shared import pipeline for a given list of device files.
+    private func performImport(files deviceFiles: [DeviceFileInfo]) async {
         completedBytes = 0
-        syncStartTime = Date()
+        importStartTime = Date()
         lastStatsUpdateTime = .distantPast
         speedSamples = []
 
         await MainActor.run {
-            syncState = .syncing
+            importState = .importing
             totalBytesExpected = 0
-            totalBytesSynced = 0
+            totalBytesImported = 0
             bytesPerSecond = 0
             estimatedSecondsRemaining = 0
             currentFile = nil
             errorMessage = nil
-            syncStats = nil
+            importStats = nil
         }
 
         var downloaded = 0
@@ -235,7 +235,7 @@ final class RecordingSyncService {
                 totalBytesExpected = totalBytes
             }
 
-            AppLogger.fileSystem.info("Starting sync: \(total) files, \(totalBytes) bytes")
+            AppLogger.fileSystem.info("Starting import: \(total) files, \(totalBytes) bytes")
 
             for fileInfo in deviceFiles {
                 try Task.checkCancellation()
@@ -253,71 +253,71 @@ final class RecordingSyncService {
                         skipped += 1
                     }
                 } catch {
-                    AppLogger.fileSystem.error("Failed to sync \(fileInfo.filename): \(error.localizedDescription)")
+                    AppLogger.fileSystem.error("Failed to import \(fileInfo.filename): \(error.localizedDescription)")
                     failed += 1
                     failedErrors.append("\(fileInfo.filename): \(error.localizedDescription)")
                 }
 
                 completedBytes += Int64(fileInfo.size)
                 await MainActor.run {
-                    totalBytesSynced = completedBytes
+                    totalBytesImported = completedBytes
                 }
             }
 
-            let stats = SyncStats(total: total, downloaded: downloaded, skipped: skipped, failed: failed)
+            let stats = ImportStats(total: total, downloaded: downloaded, skipped: skipped, failed: failed)
             let errorText = failed > 0 ? failedErrors.joined(separator: "\n") : nil
             await MainActor.run {
-                syncStats = stats
-                totalBytesSynced = totalBytesExpected
+                importStats = stats
+                totalBytesImported = totalBytesExpected
                 currentFile = nil
                 bytesPerSecond = 0
                 estimatedSecondsRemaining = 0
                 errorMessage = errorText
             }
 
-            AppLogger.fileSystem.info("Sync complete: \(stats.description)")
+            AppLogger.fileSystem.info("Import complete: \(stats.description)")
 
         } catch is CancellationError {
-            AppLogger.fileSystem.info("Sync cancelled by user")
+            AppLogger.fileSystem.info("Import cancelled by user")
             await MainActor.run {
-                errorMessage = "Sync cancelled"
+                errorMessage = "Import cancelled"
             }
         } catch {
-            AppLogger.fileSystem.error("Sync failed: \(error.localizedDescription)")
+            AppLogger.fileSystem.error("Import failed: \(error.localizedDescription)")
             await MainActor.run {
                 errorMessage = error.localizedDescription
             }
         }
 
         await MainActor.run {
-            syncState = .idle
+            importState = .idle
         }
     }
 
     // MARK: - File Processing
-    
+
     private enum ProcessResult {
         case downloaded
         case skipped
     }
-    
+
     /// Process a single file from the device.
     private func processFile(_ fileInfo: DeviceFileInfo) async throws -> ProcessResult {
         let filename = fileInfo.filename
         let expectedSize = fileInfo.size
 
-        AppLogger.fileSystem.info("[sync] Processing \(filename) (\(expectedSize) bytes)")
+        AppLogger.fileSystem.info("[import] Processing \(filename) (\(expectedSize) bytes)")
 
         // Step A: Check if file already exists in database
         if let existing = try await repository.fetchByFilename(filename) {
             // Step B: Exact match - skip if size matches
             if existing.fileSizeBytes == expectedSize || existing.fileSizeBytes == nil {
-                AppLogger.fileSystem.info("[sync] Skipping \(filename) — already synced (DB size: \(existing.fileSizeBytes ?? -1))")
+                AppLogger.fileSystem.info("[import] Skipping \(filename) — already imported (DB size: \(existing.fileSizeBytes ?? -1))")
                 return .skipped
             }
 
             // Step C: Conflict - same filename, different content
-            AppLogger.fileSystem.info("[sync] Conflict: \(filename) DB size=\(existing.fileSizeBytes ?? -1) vs device size=\(expectedSize)")
+            AppLogger.fileSystem.info("[import] Conflict: \(filename) DB size=\(existing.fileSizeBytes ?? -1) vs device size=\(expectedSize)")
             try await resolveConflict(existing: existing)
         }
 
@@ -326,7 +326,7 @@ final class RecordingSyncService {
 
         return .downloaded
     }
-    
+
     /// Resolve a conflict where a file with the same name but different content exists.
     ///
     /// CRITICAL ORDER (required by UNIQUE constraint on filename):
@@ -336,29 +336,29 @@ final class RecordingSyncService {
     /// 4. Now the original filename is free for the new file
     private func resolveConflict(existing: Recording) async throws {
         AppLogger.fileSystem.info("Resolving conflict for \(existing.filename)")
-        
+
         // Generate backup name: "Recording.hda" -> "Recording_backup_1.hda"
         let backupFilename = try fileSystemService.generateBackupFilename(for: existing.filename)
-        
+
         // Physical rename
         let existingURL = URL(fileURLWithPath: existing.filepath)
         let backupURL = try fileSystemService.renameFile(at: existingURL, to: backupFilename)
-        
+
         // Get relative path for DB
         guard let backupRelativePath = fileSystemService.relativePath(for: backupURL) else {
-            throw SyncError.conflictResolutionFailed("Could not determine relative path for backup")
+            throw ImportError.conflictResolutionFailed("Could not determine relative path for backup")
         }
-        
+
         // Update DB IMMEDIATELY (to free the UNIQUE filename constraint)
         try await repository.updateFilePath(
             id: existing.id,
             newRelativePath: backupRelativePath,
             newFilename: backupFilename
         )
-        
+
         AppLogger.fileSystem.info("Conflict resolved: \(existing.filename) -> \(backupFilename)")
     }
-    
+
     /// Download a file from device, verify size, and store in local storage.
     ///
     /// Validation strategy: file size is the integrity check. AVFoundation
@@ -379,24 +379,24 @@ final class RecordingSyncService {
         }
 
         // Download to temp
-        AppLogger.fileSystem.info("[sync] Downloading \(filename) → \(tempURL.lastPathComponent)")
+        AppLogger.fileSystem.info("[import] Downloading \(filename) → \(tempURL.lastPathComponent)")
         try await deviceService.downloadFile(
             filename: filename,
             expectedSize: fileInfo.size,
             toPath: tempURL,
             progress: { bytesDownloaded, _ in
-                self.updateSyncProgress(currentFileBytes: bytesDownloaded)
+                self.updateImportProgress(currentFileBytes: bytesDownloaded)
             }
         )
 
         // Verify file size — the real integrity check
         let downloadedAttrs = try FileManager.default.attributesOfItem(atPath: tempURL.path)
         let downloadedSize = downloadedAttrs[.size] as? Int ?? 0
-        AppLogger.fileSystem.info("[sync] Download complete: \(filename), \(downloadedSize) of \(fileInfo.size) bytes")
+        AppLogger.fileSystem.info("[import] Download complete: \(filename), \(downloadedSize) of \(fileInfo.size) bytes")
 
         if downloadedSize != fileInfo.size {
-            AppLogger.fileSystem.error("[sync] Size mismatch for \(filename): got \(downloadedSize), expected \(fileInfo.size)")
-            throw SyncError.downloadIncomplete(
+            AppLogger.fileSystem.error("[import] Size mismatch for \(filename): got \(downloadedSize), expected \(fileInfo.size)")
+            throw ImportError.downloadIncomplete(
                 filename: filename,
                 expectedBytes: fileInfo.size,
                 actualBytes: downloadedSize
@@ -405,14 +405,14 @@ final class RecordingSyncService {
 
         // Move to storage (preserves original filename and extension)
         let finalURL = try fileSystemService.moveToStorage(from: tempURL, filename: filename)
-        AppLogger.fileSystem.info("[sync] Moved to storage: \(finalURL.path)")
+        AppLogger.fileSystem.info("[import] Moved to storage: \(finalURL.path)")
 
         // Verify storage path is resolvable
         guard let relativePath = fileSystemService.relativePath(for: finalURL) else {
-            AppLogger.fileSystem.error("[sync] Cannot resolve relative path for \(finalURL.path)")
-            throw SyncError.storagePathResolutionFailed
+            AppLogger.fileSystem.error("[import] Cannot resolve relative path for \(finalURL.path)")
+            throw ImportError.storagePathResolutionFailed
         }
-        AppLogger.fileSystem.debug("[sync] Relative path: \(relativePath)")
+        AppLogger.fileSystem.debug("[import] Relative path: \(relativePath)")
 
         // Create Recording model with metadata from device
         let recording = Recording(
@@ -433,13 +433,13 @@ final class RecordingSyncService {
 
         // Insert into repository
         let inserted = try await repository.insert(recording)
-        AppLogger.fileSystem.info("[sync] Stored \(filename) → DB id=\(inserted.id)")
+        AppLogger.fileSystem.info("[import] Stored \(filename) → DB id=\(inserted.id)")
     }
 
     /// Update progress state from the USB download callback. Throttled to ~4 updates/sec.
     /// Speed is computed over a 3-second sliding window so it reflects the
     /// current transfer rate rather than the diluted overall average.
-    private func updateSyncProgress(currentFileBytes: Int64) {
+    private func updateImportProgress(currentFileBytes: Int64) {
         let now = Date()
         guard now.timeIntervalSince(lastStatsUpdateTime) >= 0.25 else { return }
         lastStatsUpdateTime = now
@@ -465,14 +465,14 @@ final class RecordingSyncService {
             : 0
 
         Task { @MainActor in
-            self.totalBytesSynced = globalBytes
+            self.totalBytesImported = globalBytes
             self.bytesPerSecond = speed
             self.estimatedSecondsRemaining = remaining
         }
     }
 
     // MARK: - Manual Import
-    
+
     /// Import audio files from user-selected URLs (drag-and-drop or file picker).
     ///
     /// - Parameter urls: Array of file URLs to import
@@ -501,7 +501,7 @@ final class RecordingSyncService {
         AppLogger.fileSystem.info("[import] Imported \(imported.count) of \(urls.count) files")
         return imported
     }
-    
+
     /// Import a single file.
     private func importSingleFile(from sourceURL: URL, as filename: String) async throws -> Recording {
         AppLogger.fileSystem.info("[import] Importing \(sourceURL.lastPathComponent) as \(filename)")
@@ -526,7 +526,7 @@ final class RecordingSyncService {
         // Get duration
         let duration = try await audioService.getDuration(url: finalURL)
         AppLogger.fileSystem.info("[import] Duration: \(duration)s")
-        
+
         // Create Recording
         let recording = Recording(
             id: 0,
@@ -543,7 +543,7 @@ final class RecordingSyncService {
             status: .downloaded,
             playbackPositionSeconds: 0
         )
-        
+
         let inserted = try await repository.insert(recording)
         AppLogger.fileSystem.info("[import] Stored \(filename) → DB id=\(inserted.id)")
         return inserted
@@ -552,7 +552,7 @@ final class RecordingSyncService {
 
 // MARK: - Errors
 
-enum SyncError: LocalizedError {
+enum ImportError: LocalizedError {
     case notConnected
     case conflictResolutionFailed(String)
     case downloadFailed(String)

@@ -11,7 +11,7 @@ import UniformTypeIdentifiers
 struct RecordingsListView: View {
     var viewModel: RecordingsListViewModel
     @Binding var selectedRecordingId: Int64?
-    var syncService: RecordingSyncService?
+    var importService: RecordingImportService?
 
     @State private var isDropTargeted = false
     @State private var importError: String?
@@ -53,7 +53,7 @@ struct RecordingsListView: View {
     private static let supportedAudioExtensions = ["hda", "mp3", "m4a", "wav", "aac", "flac"]
 
     private func handleDrop(_ providers: [NSItemProvider]) {
-        guard let syncService else { return }
+        guard let importService else { return }
 
         Task {
             var urls: [URL] = []
@@ -88,7 +88,7 @@ struct RecordingsListView: View {
             }
 
             do {
-                let recordings = try await syncService.importFiles(urls)
+                let recordings = try await importService.importFiles(urls)
                 AppLogger.ui.info("Imported \(recordings.count) files via drag & drop")
             } catch {
                 AppLogger.ui.error("Import failed: \(error.localizedDescription)")
@@ -123,7 +123,7 @@ struct RecordingsListView: View {
                 .font(.title2)
                 .fontWeight(.semibold)
 
-            Text("Connect your HiDock device and sync, or drag audio files here to import.")
+            Text("Connect your HiDock device and import, or drag audio files here.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

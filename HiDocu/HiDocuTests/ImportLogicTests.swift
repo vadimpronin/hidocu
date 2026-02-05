@@ -1,9 +1,9 @@
 //
-//  SyncLogicTests.swift
+//  ImportLogicTests.swift
 //  HiDocuTests
 //
-//  Unit tests for sync logic: path resolution, repository path mapping,
-//  sync algorithm, and audio compatibility.
+//  Unit tests for import logic: path resolution, repository path mapping,
+//  import algorithm, and audio compatibility.
 //
 
 import XCTest
@@ -33,12 +33,12 @@ final class MockDeviceFileProvider: DeviceFileProvider {
     /// Must match the `size` in the corresponding `DeviceFileInfo`.
     var downloadFileSize: Int = 88244
 
-    func downloadFile(filename: String, toPath: URL, progress: @escaping (Double) -> Void) async throws {
+    func downloadFile(filename: String, expectedSize: Int, toPath: URL, progress: @escaping @Sendable (Int64, Int64) -> Void) async throws {
         if downloadShouldFail {
-            throw SyncError.downloadFailed("Mock download failure")
+            throw ImportError.downloadFailed("Mock download failure")
         }
         downloadedFiles.append((filename: filename, toPath: toPath))
-        progress(1.0)
+        progress(Int64(expectedSize), Int64(expectedSize))
         // Write a valid WAV whose on-disk size matches downloadFileSize
         let wavData = createMinimalWAV(sizeBytes: downloadFileSize)
         try wavData.write(to: toPath)
@@ -415,15 +415,15 @@ final class RepositoryPathMappingTests: XCTestCase {
     }
 }
 
-// MARK: - Category C: Sync Algorithm Logic
+// MARK: - Category C: Import Algorithm Logic
 
-final class SyncAlgorithmTests: XCTestCase {
+final class ImportAlgorithmTests: XCTestCase {
 
     var mockDevice: MockDeviceFileProvider!
     var mockRepo: MockRecordingRepository!
     var fileSystemService: FileSystemService!
     var audioService: AudioCompatibilityService!
-    var syncService: RecordingSyncService!
+    var importService: RecordingImportService!
 
     override func setUpWithError() throws {
         mockDevice = MockDeviceFileProvider()
@@ -431,10 +431,10 @@ final class SyncAlgorithmTests: XCTestCase {
         fileSystemService = FileSystemService()
         audioService = AudioCompatibilityService()
 
-        // Ensure storage directory exists for the sync service to write into
+        // Ensure storage directory exists for the import service to write into
         try fileSystemService.ensureStorageDirectoryExists()
 
-        syncService = RecordingSyncService(
+        importService = RecordingImportService(
             deviceService: mockDevice,
             fileSystemService: fileSystemService,
             audioService: audioService,
@@ -443,15 +443,15 @@ final class SyncAlgorithmTests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
-        syncService = nil
+        importService = nil
         mockDevice = nil
         mockRepo = nil
         fileSystemService = nil
         audioService = nil
     }
 
-    /// When a file exists with matching size, sync should skip (no insert).
-    func testSyncSkipsFileWithMatchingSize() async {
+    /// When a file exists with matching size, import should skip (no insert).
+    func testImportSkipsFileWithMatchingSize() async {
         let existingRecording = Recording(
             id: 1,
             filename: "Recording.hda",
@@ -465,15 +465,19 @@ final class SyncAlgorithmTests: XCTestCase {
             DeviceFileInfo(filename: "Recording.hda", size: 2048, durationSeconds: 60, createdAt: Date(), mode: .call)
         ]
 
-        await syncService.syncFromDevice()
+        importService.importFromDevice()
+        // Wait for async import to complete
+        while importService.isImporting {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
 
         XCTAssertFalse(mockRepo.callOrder.contains("insert"), "Should not insert when size matches")
         XCTAssertFalse(mockRepo.callOrder.contains("updateFilePath"), "Should not resolve conflict when size matches")
     }
 
-    /// When existing.fileSizeBytes is nil, sync should treat it as "already synced" (skip).
+    /// When existing.fileSizeBytes is nil, import should treat it as "already imported" (skip).
     /// This validates the Step 2 bug fix.
-    func testSyncSkipsFileWithNilSize() async {
+    func testImportSkipsFileWithNilSize() async {
         let existingRecording = Recording(
             id: 1,
             filename: "Recording.hda",
@@ -487,15 +491,19 @@ final class SyncAlgorithmTests: XCTestCase {
             DeviceFileInfo(filename: "Recording.hda", size: 2048, durationSeconds: 60, createdAt: Date(), mode: .call)
         ]
 
-        await syncService.syncFromDevice()
+        importService.importFromDevice()
+        // Wait for async import to complete
+        while importService.isImporting {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
 
-        XCTAssertFalse(mockRepo.callOrder.contains("insert"), "Should not insert when existing size is nil (treated as synced)")
+        XCTAssertFalse(mockRepo.callOrder.contains("insert"), "Should not insert when existing size is nil (treated as imported)")
         XCTAssertFalse(mockRepo.callOrder.contains("updateFilePath"), "Should not resolve conflict when existing size is nil")
     }
 
     /// CRITICAL: During conflict resolution, updateFilePath must appear BEFORE insert
     /// in the call order (required by UNIQUE constraint on filename).
-    func testSyncConflictResolutionOrderIsCorrect() async throws {
+    func testImportConflictResolutionOrderIsCorrect() async throws {
         guard let storageDir = fileSystemService.storageDirectory else {
             XCTFail("storageDirectory should not be nil")
             return
@@ -521,7 +529,11 @@ final class SyncAlgorithmTests: XCTestCase {
             DeviceFileInfo(filename: "Conflict.wav", size: wavSize, durationSeconds: 60, createdAt: Date(), mode: .call)
         ]
 
-        await syncService.syncFromDevice()
+        importService.importFromDevice()
+        // Wait for async import to complete
+        while importService.isImporting {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
 
         // Find positions
         let updateIdx = mockRepo.callOrder.firstIndex(of: "updateFilePath")
@@ -540,7 +552,7 @@ final class SyncAlgorithmTests: XCTestCase {
     }
 
     /// A completely new file (not in repo) should be downloaded, validated, and inserted.
-    func testSyncDownloadsNewFile() async {
+    func testImportDownloadsNewFile() async {
         let wavSize = 88244
         mockDevice.downloadFileSize = wavSize
         mockRepo.fetchByFilenameResult = nil // File does not exist
@@ -549,7 +561,11 @@ final class SyncAlgorithmTests: XCTestCase {
             DeviceFileInfo(filename: "NewFile.wav", size: wavSize, durationSeconds: 30, createdAt: Date(), mode: .room)
         ]
 
-        await syncService.syncFromDevice()
+        importService.importFromDevice()
+        // Wait for async import to complete
+        while importService.isImporting {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
 
         XCTAssertEqual(mockDevice.downloadedFiles.count, 1, "Should download the new file")
         XCTAssertEqual(mockDevice.downloadedFiles.first?.filename, "NewFile.wav")

@@ -236,7 +236,7 @@ final class SQLiteRecordingRepository: RecordingRepository, @unchecked Sendable 
         }
     }
 
-    // MARK: - Sync Operations
+    // MARK: - Import Operations
     
     func exists(filename: String, sizeBytes: Int) async throws -> Bool {
         try await db.asyncRead { database in

@@ -96,7 +96,7 @@ struct HiDocuApp: App {
 
         Task {
             do {
-                let recordings = try await container.syncService.importFiles(urls)
+                let recordings = try await container.importService.importFiles(urls)
                 AppLogger.ui.info("Imported \(recordings.count) files via menu")
             } catch {
                 AppLogger.ui.error("Import failed: \(error.localizedDescription)")

@@ -45,10 +45,10 @@ final class AppDependencyContainer {
     /// Transcription repository for data access
     let transcriptionRepository: SQLiteTranscriptionRepository
 
-    // MARK: - Sync Services
+    // MARK: - Import Services
 
-    /// Recording sync service - handles device-to-local synchronization
-    let syncService: RecordingSyncService
+    /// Recording import service - handles device-to-local import
+    let importService: RecordingImportService
     
     // MARK: - Initialization
     
@@ -92,8 +92,8 @@ final class AppDependencyContainer {
             repository: recordingRepository
         )
 
-        // Initialize sync service
-        self.syncService = RecordingSyncService(
+        // Initialize import service
+        self.importService = RecordingImportService(
             deviceService: deviceService,
             fileSystemService: fileSystemService,
             audioService: audioService,

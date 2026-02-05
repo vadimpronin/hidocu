@@ -10,7 +10,7 @@ import SwiftUI
 struct SidebarView: View {
     @Bindable var navigationVM: NavigationViewModel
     var deviceService: DeviceConnectionService
-    var syncService: RecordingSyncService
+    var importService: RecordingImportService
 
     var body: some View {
         List(selection: $navigationVM.selectedSidebarItem) {
@@ -71,10 +71,10 @@ struct SidebarView: View {
             }
             .tag(SidebarItem.device)
             .contextMenu {
-                Button("Sync All") {
-                    syncService.syncFromDevice()
+                Button("Import All") {
+                    importService.importFromDevice()
                 }
-                .disabled(syncService.isSyncing)
+                .disabled(importService.isImporting)
 
                 Divider()
 

@@ -29,7 +29,7 @@ struct MainSplitView: View {
     @State private var navigationVM = NavigationViewModel()
     @State private var recordingsVM: RecordingsListViewModel?
     @State private var deviceDashboardVM: DeviceDashboardViewModel?
-    @State private var syncError: String?
+    @State private var importError: String?
 
     var body: some View {
         NavigationSplitView {
@@ -37,7 +37,7 @@ struct MainSplitView: View {
                 SidebarView(
                     navigationVM: navigationVM,
                     deviceService: container.deviceService,
-                    syncService: container.syncService
+                    importService: container.importService
                 )
             }
         } detail: {
@@ -48,7 +48,7 @@ struct MainSplitView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .errorBanner($syncError)
+        .errorBanner($importError)
         .onAppear {
             if recordingsVM == nil, let container {
                 let vm = RecordingsListViewModel(
@@ -99,9 +99,9 @@ struct MainSplitView: View {
                 deviceDashboardVM = nil
             }
         }
-        .onChange(of: container?.syncService.errorMessage) { _, newError in
+        .onChange(of: container?.importService.errorMessage) { _, newError in
             if let newError {
-                syncError = newError
+                importError = newError
             }
         }
     }
@@ -115,7 +115,7 @@ struct MainSplitView: View {
             if container.deviceService.isConnected, let deviceDashboardVM {
                 DeviceDashboardView(
                     deviceService: container.deviceService,
-                    syncService: container.syncService,
+                    importService: container.importService,
                     viewModel: deviceDashboardVM
                 )
             } else {
@@ -128,7 +128,7 @@ struct MainSplitView: View {
                     RecordingsListView(
                         viewModel: recordingsVM,
                         selectedRecordingId: $navigationVM.selectedRecordingId,
-                        syncService: container.syncService
+                        importService: container.importService
                     )
                     .navigationTitle(navigationVM.selectedSidebarItem?.title ?? "Recordings")
                     .navigationDestination(item: $navigationVM.selectedRecording) { recording in

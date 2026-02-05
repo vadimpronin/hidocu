@@ -3,15 +3,15 @@
 //  HiDocu
 //
 //  ViewModel for the device dashboard view. Manages file listing,
-//  sync status checking, and sorting for the device file browser.
+//  import status checking, and sorting for the device file browser.
 //
 
 import Foundation
 
-/// Represents a device file with its local sync status.
+/// Represents a device file with its local import status.
 struct DeviceFileRow: Identifiable {
     let fileInfo: DeviceFileInfo
-    let isSynced: Bool
+    let isImported: Bool
 
     var id: String { fileInfo.filename }
     var filename: String { fileInfo.filename }
@@ -73,11 +73,11 @@ final class DeviceDashboardViewModel {
             var rows: [DeviceFileRow] = []
 
             for file in deviceFiles {
-                let synced = try await repository.exists(
+                let imported = try await repository.exists(
                     filename: file.filename,
                     sizeBytes: file.size
                 )
-                rows.append(DeviceFileRow(fileInfo: file, isSynced: synced))
+                rows.append(DeviceFileRow(fileInfo: file, isImported: imported))
             }
 
             files = rows
