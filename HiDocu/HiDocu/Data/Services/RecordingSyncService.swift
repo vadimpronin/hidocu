@@ -14,7 +14,7 @@ import Foundation
 protocol DeviceFileProvider {
     var connectionInfo: DeviceConnectionInfo? { get }
     func listFiles() async throws -> [DeviceFileInfo]
-    func downloadFile(filename: String, expectedSize: Int, toPath: URL, progress: @escaping (Int64, Int64) -> Void) async throws
+    func downloadFile(filename: String, expectedSize: Int, toPath: URL, progress: @escaping @Sendable (Int64, Int64) -> Void) async throws
 }
 
 /// Statistics from a sync operation
@@ -23,10 +23,22 @@ struct SyncStats: Sendable {
     let downloaded: Int
     let skipped: Int
     let failed: Int
-    
+
     var description: String {
         "Total: \(total), Downloaded: \(downloaded), Skipped: \(skipped), Failed: \(failed)"
     }
+}
+
+/// Sync operation state machine
+enum SyncState: Equatable, Sendable {
+    /// Ready to sync
+    case idle
+    /// Sync requested, listing files from device
+    case preparing
+    /// Actively downloading files
+    case syncing
+    /// Stop requested, waiting for current file to finish
+    case stopping
 }
 
 /// Observable service for synchronizing recordings from HiDock device to local storage.
@@ -44,10 +56,15 @@ final class RecordingSyncService {
     
     // MARK: - Observable State (for UI)
 
-    private(set) var isSyncing: Bool = false
+    private(set) var syncState: SyncState = .idle
     private(set) var currentFile: String?
     private(set) var errorMessage: String?
     private(set) var syncStats: SyncStats?
+
+    /// Convenience property for UI bindings that just need to know if sync is active.
+    var isSyncing: Bool {
+        syncState != .idle
+    }
 
     // Byte-level progress tracking
     private(set) var totalBytesExpected: Int64 = 0
@@ -103,6 +120,9 @@ final class RecordingSyncService {
     /// Sliding window samples for speed calculation (last ~3 seconds)
     private var speedSamples: [(time: Date, bytes: Int64)] = []
 
+    /// Task handle for the current sync operation, used for cancellation.
+    private var syncTask: Task<Void, Never>?
+
     // MARK: - Dependencies
     
     private let deviceService: any DeviceFileProvider
@@ -129,32 +149,57 @@ final class RecordingSyncService {
     // MARK: - Sync from Device
 
     /// Synchronize all recordings from the connected HiDock device.
-    func syncFromDevice() async {
+    func syncFromDevice() {
         guard !isSyncing else {
             AppLogger.fileSystem.warning("Sync already in progress")
             return
         }
 
-        do {
-            let deviceFiles = try await deviceService.listFiles()
-            await performSync(files: deviceFiles)
-        } catch {
-            AppLogger.fileSystem.error("Failed to list device files: \(error.localizedDescription)")
-            await MainActor.run {
-                errorMessage = error.localizedDescription
+        syncState = .preparing
+
+        syncTask = Task {
+            do {
+                let deviceFiles = try await deviceService.listFiles()
+                await performSync(files: deviceFiles)
+            } catch is CancellationError {
+                AppLogger.fileSystem.info("Sync preparation cancelled")
+                await MainActor.run { syncState = .idle }
+            } catch {
+                AppLogger.fileSystem.error("Failed to list device files: \(error.localizedDescription)")
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    syncState = .idle
+                }
             }
+            syncTask = nil
         }
     }
 
     /// Synchronize specific files from the connected HiDock device.
-    func syncFiles(_ files: [DeviceFileInfo]) async {
+    func syncFiles(_ files: [DeviceFileInfo]) {
         guard !isSyncing else {
             AppLogger.fileSystem.warning("[sync] Sync already in progress — ignoring syncFiles call")
             return
         }
         let names = files.map(\.filename).joined(separator: ", ")
         AppLogger.fileSystem.info("[sync] syncFiles called with \(files.count) file(s): \(names)")
-        await performSync(files: files)
+
+        // No preparation phase needed - files are already provided
+        syncTask = Task {
+            await performSync(files: files)
+            syncTask = nil
+        }
+    }
+
+    /// Cancel the currently running sync operation.
+    func cancelSync() {
+        guard isSyncing, let task = syncTask else {
+            AppLogger.fileSystem.info("[sync] cancelSync called but no sync in progress")
+            return
+        }
+        AppLogger.fileSystem.info("[sync] Cancelling sync...")
+        syncState = .stopping
+        task.cancel()
     }
 
     /// Shared sync pipeline for a given list of device files.
@@ -165,7 +210,7 @@ final class RecordingSyncService {
         speedSamples = []
 
         await MainActor.run {
-            isSyncing = true
+            syncState = .syncing
             totalBytesExpected = 0
             totalBytesSynced = 0
             bytesPerSecond = 0
@@ -220,15 +265,14 @@ final class RecordingSyncService {
             }
 
             let stats = SyncStats(total: total, downloaded: downloaded, skipped: skipped, failed: failed)
+            let errorText = failed > 0 ? failedErrors.joined(separator: "\n") : nil
             await MainActor.run {
                 syncStats = stats
                 totalBytesSynced = totalBytesExpected
                 currentFile = nil
                 bytesPerSecond = 0
                 estimatedSecondsRemaining = 0
-                if failed > 0 {
-                    errorMessage = failedErrors.joined(separator: "\n")
-                }
+                errorMessage = errorText
             }
 
             AppLogger.fileSystem.info("Sync complete: \(stats.description)")
@@ -246,10 +290,10 @@ final class RecordingSyncService {
         }
 
         await MainActor.run {
-            isSyncing = false
+            syncState = .idle
         }
     }
-    
+
     // MARK: - File Processing
     
     private enum ProcessResult {

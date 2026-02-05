@@ -71,18 +71,6 @@ struct DeviceDashboardView: View {
             emptyState
         } else {
             Table(viewModel.sortedFiles, selection: $viewModel.selection, sortOrder: $viewModel.sortOrder) {
-                TableColumn("", sortUsing: KeyPathComparator(\DeviceFileRow.isSynced, comparator: BoolComparator())) { row in
-                    SyncStatusIcon(isSynced: row.isSynced)
-                }
-                .width(28)
-
-                TableColumn("Name", value: \.filename) { row in
-                    Text(row.filename)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
-                .width(min: 150, ideal: 270)
-
                 TableColumn("Date", value: \.sortableDate) { row in
                     if let date = row.createdAt {
                         Text(date.formatted(
@@ -100,7 +88,15 @@ struct DeviceDashboardView: View {
                             .foregroundStyle(.tertiary)
                     }
                 }
-                .width(min: 140, ideal: 180)
+                .width(min: 180, ideal: 190)
+
+                TableColumn("Name", value: \.filename) { row in
+                    Text(row.filename)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .monospacedDigit()
+                }
+                .width(min: 150, ideal: 270)
 
                 TableColumn("Duration", value: \.durationSeconds) { row in
                     Text(row.durationSeconds.formattedDurationFull)
@@ -118,12 +114,17 @@ struct DeviceDashboardView: View {
                         .monospacedDigit()
                 }
                 .width(min: 60, ideal: 80)
+
+                TableColumn("", sortUsing: KeyPathComparator(\DeviceFileRow.isSynced, comparator: BoolComparator())) { row in
+                    SyncStatusIcon(isSynced: row.isSynced)
+                }
+                .width(28)
             }
             .contextMenu(forSelectionType: String.self) { selectedIds in
                 if !selectedIds.isEmpty {
                     Button("Import Selected") {
                         let files = viewModel.deviceFiles(for: selectedIds)
-                        Task { await syncService.syncFiles(files) }
+                        syncService.syncFiles(files)
                     }
                     .disabled(syncService.isSyncing)
 
@@ -221,24 +222,7 @@ private struct DeviceHeaderSection: View {
                             recordingsBytes: recordingsBytes
                         )
 
-                        ZStack {
-                            // Invisible button to reserve space
-                            Button("Sync") {}
-                                .buttonStyle(.borderedProminent)
-                                .controlSize(.regular)
-                                .hidden()
-
-                            if syncService.isSyncing {
-                                ProgressView()
-                                    .controlSize(.small)
-                            } else {
-                                Button("Sync") {
-                                    Task { await syncService.syncFromDevice() }
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .controlSize(.regular)
-                            }
-                        }
+                        SyncButton(syncService: syncService)
                     }
                     .padding(.top, 4)
                 }
@@ -354,7 +338,11 @@ struct SyncProgressFooter: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                if let file = syncService.currentFile {
+                if syncService.syncState == .stopping {
+                    Text("Stopping after current file…")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                } else if let file = syncService.currentFile {
                     Text("Syncing \"\(file)\"")
                         .font(.callout)
                         .lineLimit(1)
@@ -380,6 +368,57 @@ struct SyncProgressFooter: View {
             }
             .fixedSize()
         }
+    }
+}
+
+// MARK: - Sync Button
+
+private struct SyncButton: View {
+    var syncService: RecordingSyncService
+
+    private var showsSpinner: Bool {
+        syncService.syncState == .preparing || syncService.syncState == .stopping
+    }
+
+    private var label: String {
+        switch syncService.syncState {
+        case .idle: "Sync"
+        case .preparing: "Preparing…"
+        case .syncing: "Stop"
+        case .stopping: "Stopping…"
+        }
+    }
+
+    var body: some View {
+        if syncService.syncState == .idle {
+            button.buttonStyle(.borderedProminent)
+        } else {
+            button.buttonStyle(.bordered)
+        }
+    }
+
+    private var button: some View {
+        Button {
+            switch syncService.syncState {
+            case .idle:
+                syncService.syncFromDevice()
+            case .preparing, .syncing:
+                syncService.cancelSync()
+            case .stopping:
+                break
+            }
+        } label: {
+            HStack(spacing: 6) {
+                if showsSpinner {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+                Text(label)
+            }
+            .frame(minWidth: 100)
+        }
+        .controlSize(.regular)
+        .disabled(syncService.syncState == .stopping)
     }
 }
 

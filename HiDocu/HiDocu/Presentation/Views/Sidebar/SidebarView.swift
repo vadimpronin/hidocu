@@ -70,7 +70,7 @@ struct SidebarView: View {
             .tag(SidebarItem.device)
             .contextMenu {
                 Button("Sync All") {
-                    Task { await syncService.syncFromDevice() }
+                    syncService.syncFromDevice()
                 }
                 .disabled(syncService.isSyncing)
 

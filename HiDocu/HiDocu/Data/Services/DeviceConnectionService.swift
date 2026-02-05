@@ -187,7 +187,7 @@ final class DeviceConnectionService {
         filename: String,
         expectedSize: Int,
         toPath: URL,
-        progress: @escaping (Int64, Int64) -> Void
+        progress: @escaping @Sendable (Int64, Int64) -> Void
     ) async throws {
         try await driver.downloadFile(
             filename: filename,
