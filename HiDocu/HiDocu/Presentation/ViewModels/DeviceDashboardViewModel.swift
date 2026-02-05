@@ -47,16 +47,16 @@ final class DeviceDashboardViewModel {
 
     // MARK: - Dependencies
 
-    private let deviceService: DeviceConnectionService
+    private let deviceController: DeviceController
     private let repository: any RecordingRepository
 
     // MARK: - Initialization
 
     init(
-        deviceService: DeviceConnectionService,
+        deviceController: DeviceController,
         repository: any RecordingRepository
     ) {
-        self.deviceService = deviceService
+        self.deviceController = deviceController
         self.repository = repository
     }
 
@@ -69,7 +69,7 @@ final class DeviceDashboardViewModel {
         errorMessage = nil
 
         do {
-            let deviceFiles = try await deviceService.listFiles()
+            let deviceFiles = try await deviceController.listFiles()
             var rows: [DeviceFileRow] = []
 
             for file in deviceFiles {
@@ -92,7 +92,7 @@ final class DeviceDashboardViewModel {
     func deleteFiles(_ filenames: Set<String>) async {
         for filename in filenames {
             do {
-                try await deviceService.deleteFile(filename: filename)
+                try await deviceController.deleteFile(filename: filename)
             } catch {
                 AppLogger.ui.error("Failed to delete \(filename): \(error.localizedDescription)")
             }
@@ -100,7 +100,7 @@ final class DeviceDashboardViewModel {
 
         selection.removeAll()
         await loadFiles()
-        await deviceService.refreshStorageInfo()
+        await deviceController.refreshStorageInfo()
     }
 
     /// Returns the DeviceFileInfo objects for the given set of filenames.

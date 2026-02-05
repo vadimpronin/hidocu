@@ -9,7 +9,7 @@ import SwiftUI
 
 struct SidebarView: View {
     @Bindable var navigationVM: NavigationViewModel
-    var deviceService: DeviceConnectionService
+    var deviceManager: DeviceManager
     var importService: RecordingImportService
 
     var body: some View {
@@ -23,36 +23,35 @@ struct SidebarView: View {
                     .tag(SidebarItem.filteredByStatus(.new))
             }
             
-            // Locations section — shown when device is connected or connecting
-            if shouldShowLocations {
-                Section("Import locations") {
-                    locationContent
+            // Locations section — shown when ANY device is connected
+            if !deviceManager.connectedDevices.isEmpty {
+                Section("Devices") {
+                    ForEach(deviceManager.connectedDevices) { controller in
+                        DeviceSidebarRow(
+                            controller: controller,
+                            importService: importService
+                        )
+                        .tag(SidebarItem.device(id: controller.id))
+                    }
                 }
             }
 
         }
         .navigationSplitViewColumnWidth(min: 180, ideal: 220)
     }
+}
 
-    // MARK: - Locations Content
+// MARK: - Device Row
 
-    private var shouldShowLocations: Bool {
-        switch deviceService.connectionState {
-        case .connecting, .connected, .connectionFailed:
-            return true
-        case .disconnected:
-            return false
-        }
-    }
-
-    @ViewBuilder
-    private var locationContent: some View {
-        let modelName = deviceService.connectionInfo?.model.displayName
-                     ?? deviceService.detectedModel?.displayName
-                     ?? "HiDock"
-
-        switch deviceService.connectionState {
-        case .connecting(_, _):
+struct DeviceSidebarRow: View {
+    let controller: DeviceController
+    let importService: RecordingImportService
+    
+    var body: some View {
+        let modelName = controller.displayName
+        
+        switch controller.connectionState {
+        case .connecting:
             VStack(alignment: .leading, spacing: 2) {
                 Label {
                     Text(modelName)
@@ -61,47 +60,46 @@ struct SidebarView: View {
                         .controlSize(.small)
                 }
             }
-            .tag(SidebarItem.device)
-
+            
         case .connected:
             Label {
-                Text(modelName)
+                HStack {
+                    Text(modelName)
+                    Spacer()
+                    if let battery = controller.batteryInfo {
+                        BatteryIndicatorView(battery: battery)
+                    }
+                }
             } icon: {
-                SidebarDeviceIcon(model: deviceService.connectionInfo?.model ?? deviceService.detectedModel)
+                SidebarDeviceIcon(model: controller.connectionInfo?.model, failed: false)
             }
-            .tag(SidebarItem.device)
             .contextMenu {
                 Button("Import All") {
-                    importService.importFromDevice()
+                    importService.importFromDevice(controller: controller)
                 }
-                .disabled(importService.isImporting)
+                .disabled(importService.session(for: controller.id)?.isImporting ?? false)
 
                 Divider()
 
-                Button("Eject \(modelName)") {
-                    Task { @MainActor in await deviceService.disconnect() }
+                Button("Disconnect") {
+                    Task { @MainActor in await controller.disconnect() }
                 }
             }
-
-        case .connectionFailed(_):
+            
+        case .connectionFailed, .disconnected:
             VStack(alignment: .leading, spacing: 2) {
                 Label {
                     Text(modelName)
                         .foregroundStyle(.secondary)
                 } icon: {
-                    SidebarDeviceIcon(model: deviceService.detectedModel, failed: true)
+                    SidebarDeviceIcon(model: nil, failed: true)
                 }
             }
-            .tag(SidebarItem.device)
             .contextMenu {
-                Button("Retry Connection") {
-                    Task { @MainActor in await deviceService.manualRetry() }
-                }
+                 Button("Retry") {
+                     Task { @MainActor in await controller.connect() }
+                 }
             }
-            .help("Device detected but communication failed. Right-click to retry.")
-
-        case .disconnected:
-            EmptyView()
         }
     }
 }

@@ -2,6 +2,7 @@ import Foundation
 
 public class USBTransport: JensenTransport {
     private var device: USBDevice?
+    public let entryID: UInt64?
     
     public var isConnected: Bool {
         return device?.isOpen ?? false
@@ -11,10 +12,16 @@ public class USBTransport: JensenTransport {
         return device?.model ?? .unknown
     }
     
-    public init() {}
+    public init(entryID: UInt64? = nil) {
+        self.entryID = entryID
+    }
     
     public func connect() throws {
-        device = try USBDevice.findDevice()
+        if let id = entryID {
+            device = try USBDevice.open(entryID: id)
+        } else {
+            device = try USBDevice.findDevice()
+        }
         try device?.open()
     }
     

@@ -9,16 +9,39 @@
 import SwiftUI
 
 struct DeviceDashboardView: View {
-    var deviceService: DeviceConnectionService
+    var deviceController: DeviceController
     var importService: RecordingImportService
-    @State var viewModel: DeviceDashboardViewModel
+    var viewModel: DeviceDashboardViewModel
 
     var body: some View {
-        VStack(spacing: 0) {
+        Group {
+            switch deviceController.connectionState {
+            case .connected:
+                dashboardContent
+            case .connecting(let attempt, let maxAttempts):
+                DeviceConnectingView(
+                    attempt: attempt,
+                    maxAttempts: maxAttempts,
+                    modelName: deviceController.displayName
+                )
+            case .connectionFailed, .disconnected:
+                DeviceConnectionFailedView(deviceController: deviceController)
+            }
+        }
+        .navigationTitle(deviceController.displayName)
+    }
+
+    // MARK: - Main Dashboard Content
+    
+    private var dashboardContent: some View {
+        let session = importService.session(for: deviceController.id)
+        
+        return VStack(spacing: 0) {
             // Device Header with inline Import button
             DeviceHeaderSection(
-                deviceService: deviceService,
+                deviceController: deviceController,
                 importService: importService,
+                session: session,
                 recordingsBytes: recordingsBytes
             )
             .padding(.horizontal, 20)
@@ -32,19 +55,19 @@ struct DeviceDashboardView: View {
                 .frame(maxHeight: .infinity)
 
             // Import Footer (progress only)
-            if importService.isImporting {
+            if let session = session, session.isImporting {
                 Divider()
-                ImportProgressFooter(importService: importService)
+                ImportProgressFooter(session: session)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 12)
             }
         }
-        .navigationTitle("Connected device")
         .task {
             await viewModel.loadFiles()
         }
-        .onChange(of: importService.isImporting) { wasImporting, isImporting in
-            if wasImporting && !isImporting {
+        .onChange(of: session?.isImporting) { oldValue, newValue in
+            // If import finished (true -> false/nil), reload files
+            if (oldValue == true) && (newValue == false || newValue == nil) {
                 Task { await viewModel.loadFiles() }
             }
         }
@@ -60,7 +83,8 @@ struct DeviceDashboardView: View {
         } else if viewModel.files.isEmpty {
             emptyState
         } else {
-            Table(viewModel.sortedFiles, selection: $viewModel.selection, sortOrder: $viewModel.sortOrder) {
+            @Bindable var bindableViewModel = viewModel
+            Table(viewModel.sortedFiles, selection: $bindableViewModel.selection, sortOrder: $bindableViewModel.sortOrder) {
                 TableColumn("Date", value: \.sortableDate) { row in
                     if let date = row.createdAt {
                         Text(date.formatted(
@@ -114,9 +138,9 @@ struct DeviceDashboardView: View {
                 if !selectedIds.isEmpty {
                     Button("Import Selected") {
                         let files = viewModel.deviceFiles(for: selectedIds)
-                        importService.importDeviceFiles(files)
+                        importService.importDeviceFiles(files, from: deviceController)
                     }
-                    .disabled(importService.isImporting)
+                    .disabled(importService.session(for: deviceController.id)?.isImporting ?? false)
 
                     Divider()
 
@@ -131,17 +155,17 @@ struct DeviceDashboardView: View {
     private var emptyState: some View {
         VStack(spacing: 12) {
             Image(systemName: "waveform.slash")
-                .font(.system(size: 36))
-                .foregroundStyle(.tertiary)
+            .font(.system(size: 36))
+            .foregroundStyle(.tertiary)
 
             Text("No Recordings on Device")
-                .font(.title3)
-                .foregroundStyle(.secondary)
+            .font(.title3)
+            .foregroundStyle(.secondary)
 
             if let error = viewModel.errorMessage {
                 Text(error)
-                    .font(.caption)
-                    .foregroundStyle(.red)
+                .font(.caption)
+                .foregroundStyle(.red)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -157,12 +181,13 @@ struct DeviceDashboardView: View {
 // MARK: - Device Header Section
 
 private struct DeviceHeaderSection: View {
-    var deviceService: DeviceConnectionService
+    var deviceController: DeviceController
     var importService: RecordingImportService
+    var session: ImportSession?
     var recordingsBytes: Int64
 
     private var model: DeviceModel {
-        deviceService.connectionInfo?.model ?? .unknown
+        deviceController.connectionInfo?.model ?? .unknown
     }
 
     var body: some View {
@@ -171,25 +196,25 @@ private struct DeviceHeaderSection: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .center, spacing: 8) {
-                Text(deviceService.connectionInfo?.model.displayName ?? "HiDock")
+                Text(deviceController.displayName)
                     .font(.title2)
                     .fontWeight(.semibold)
 
                     Button {
                         Task {
-                            await deviceService.disconnect()
+                            await deviceController.disconnect()
                         }
                     } label: {
                         Image(systemName: "eject.fill")
-                        .fontWeight(.medium) // Matches the title weight slightly better
+                        .fontWeight(.medium)
                     }
-                    .buttonStyle(.borderless) // Keeps it looking like a clean icon
+                    .buttonStyle(.borderless)
                     .help("Safely disconnect device")
                 }
 
                 // Metadata grid
                 Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 4) {
-                    if let info = deviceService.connectionInfo {
+                    if let info = deviceController.connectionInfo {
                         GridRow {
                             Text("Serial Number:")
                                 .font(.caption)
@@ -207,26 +232,31 @@ private struct DeviceHeaderSection: View {
                         }
                     }
 
-                    if let battery = deviceService.batteryInfo,
-                       deviceService.connectionInfo?.supportsBattery == true {
+                    if let battery = deviceController.batteryInfo,
+                       deviceController.connectionInfo?.supportsBattery == true {
                         GridRow {
                             Text("Battery:")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                             BatteryIndicatorView(battery: battery)
                         }
                     }
                 }
 
                 // Storage bar with inline Import button
-                if let storage = deviceService.storageInfo {
+                if let storage = deviceController.storageInfo {
                     HStack(alignment: .top, spacing: 12) {
                         FinderStorageBar(
                             storage: storage,
                             recordingsBytes: recordingsBytes
                         )
 
-                        ImportButton(importService: importService)
+                        // Import button needs to hook up to controller
+                        ImportButton(
+                            importService: importService,
+                            controller: deviceController,
+                            session: session
+                        )
                     }
                     .padding(.top, 4)
                 }
@@ -239,8 +269,6 @@ private struct DeviceHeaderSection: View {
 
 // MARK: - Device Icon
 
-/// Shows custom device image for P1/P1 Mini, or SF Symbol for other devices.
-/// Custom PNG icons use template rendering to adapt to light/dark mode like SF Symbols.
 private struct DeviceIcon: View {
     let model: DeviceModel
 
@@ -262,7 +290,7 @@ private struct DeviceIcon: View {
 }
 
 // MARK: - Finder-Style Storage Bar
-
+// (Unchanged, included for completeness or reference from previous)
 struct FinderStorageBar: View {
     let storage: DeviceStorageInfo
     let recordingsBytes: Int64
@@ -294,7 +322,6 @@ struct FinderStorageBar: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            // The bar
             GeometryReader { geo in
                 HStack(spacing: 0) {
                     ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
@@ -307,7 +334,6 @@ struct FinderStorageBar: View {
             }
             .frame(height: 14)
 
-            // Legend (single source of space info — no duplicate summary)
             HStack(spacing: 12) {
                 ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
                     HStack(spacing: 4) {
@@ -361,34 +387,34 @@ struct ImportStatusIcon: View {
 // MARK: - Import Progress Footer
 
 struct ImportProgressFooter: View {
-    var importService: RecordingImportService
+    var session: ImportSession
 
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                if importService.importState == .stopping {
+                if session.importState == .stopping {
                     Text("Stopping after current file…")
                         .font(.callout)
                         .foregroundStyle(.secondary)
-                } else if let file = importService.currentFile {
+                } else if let file = session.currentFile {
                     Text("Importing \"\(file)\"")
                         .font(.callout)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
 
-                ProgressView(value: importService.progress)
+                ProgressView(value: session.progress)
                     .progressViewStyle(.linear)
             }
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text(importService.formattedBytesProgress)
+                Text(session.formattedBytesProgress)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
 
-                if importService.bytesPerSecond > 0 {
-                    Text(importService.formattedTelemetry)
+                if session.bytesPerSecond > 0 {
+                    Text(session.formattedTelemetry)
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .monospacedDigit()
@@ -403,13 +429,19 @@ struct ImportProgressFooter: View {
 
 private struct ImportButton: View {
     var importService: RecordingImportService
+    var controller: DeviceController
+    var session: ImportSession?
+
+    private var state: ImportState {
+        session?.importState ?? .idle
+    }
 
     private var showsSpinner: Bool {
-        importService.importState == .preparing || importService.importState == .stopping
+        state == .preparing || state == .stopping
     }
 
     private var label: String {
-        switch importService.importState {
+        switch state {
         case .idle: "Import"
         case .preparing: "Preparing…"
         case .importing: "Stop"
@@ -418,7 +450,7 @@ private struct ImportButton: View {
     }
 
     var body: some View {
-        if importService.importState == .idle {
+        if state == .idle {
             button.buttonStyle(.borderedProminent)
         } else {
             button.buttonStyle(.bordered)
@@ -427,11 +459,11 @@ private struct ImportButton: View {
 
     private var button: some View {
         Button {
-            switch importService.importState {
+            switch state {
             case .idle:
-                importService.importFromDevice()
+                importService.importFromDevice(controller: controller)
             case .preparing, .importing:
-                importService.cancelImport()
+                importService.cancelImport(for: controller.id)
             case .stopping:
                 break
             }
@@ -446,7 +478,7 @@ private struct ImportButton: View {
             .frame(minWidth: 100)
         }
         .controlSize(.regular)
-        .disabled(importService.importState == .stopping)
+        .disabled(state == .stopping)
     }
 }
 
@@ -500,10 +532,10 @@ struct DeviceConnectingView: View {
 // MARK: - Device Connection Failed Placeholder
 
 struct DeviceConnectionFailedView: View {
-    var deviceService: DeviceConnectionService
+    var deviceController: DeviceController
 
     private var errorMessage: String {
-        deviceService.lastError ?? "Unable to communicate with device"
+        deviceController.lastError ?? "Unable to communicate with device"
     }
 
     var body: some View {
@@ -524,7 +556,7 @@ struct DeviceConnectionFailedView: View {
 
             Button {
                 Task { @MainActor in
-                    await deviceService.manualRetry()
+                    await deviceController.connect()
                 }
             } label: {
                 Label("Retry Connection", systemImage: "arrow.clockwise")

@@ -108,9 +108,12 @@ public class USBDevice {
     public private(set) var isOpen: Bool = false
     public private(set) var isInterfaceClaimed: Bool = false
     
-    init(productID: UInt16, vendorID: UInt16, deviceInterface: UnsafeMutablePointer<UnsafeMutablePointer<IOUSBDeviceInterface>?>?) {
+    public let entryID: UInt64
+    
+    init(productID: UInt16, vendorID: UInt16, entryID: UInt64, deviceInterface: UnsafeMutablePointer<UnsafeMutablePointer<IOUSBDeviceInterface>?>?) {
         self.productID = productID
         self.vendorID = vendorID
+        self.entryID = entryID
         self.deviceInterface = deviceInterface
         self.model = HiDockModel.from(productID: productID)
     }
@@ -121,14 +124,31 @@ public class USBDevice {
     
     // MARK: - Device Discovery
     
+    public static func open(entryID: UInt64) throws -> USBDevice {
+        let devices = try findAllDevices()
+        if let device = devices.first(where: { $0.entryID == entryID }) {
+            return device
+        }
+        throw USBError.deviceNotFound
+    }
+    
     public static func findDevice() throws -> USBDevice {
+        let devices = try findAllDevices()
+        if let device = devices.first {
+            return device
+        }
+        throw USBError.deviceNotFound
+    }
+    
+    public static func findAllDevices() throws -> [USBDevice] {
+        var devices: [USBDevice] = []
         let matchingDict = IOServiceMatching(kIOUSBDeviceClassName) as NSMutableDictionary
         
         var iterator: io_iterator_t = 0
         let result = IOServiceGetMatchingServices(kIOMainPortDefault, matchingDict, &iterator)
         
         guard result == kIOReturnSuccess else {
-            throw USBError.deviceNotFound
+            return []
         }
         
         defer { IOObjectRelease(iterator) }
@@ -154,6 +174,11 @@ public class USBDevice {
             
             // Check if this is a HiDock device
             if Self.vendorIDs.contains(vendorID) {
+                
+                var entryID: UInt64 = 0
+                let idResult = IORegistryEntryGetRegistryEntryID(service, &entryID)
+                guard idResult == kIOReturnSuccess else { continue }
+                
                 // Get device interface
                 var score: Int32 = 0
                 var plugInInterface: UnsafeMutablePointer<UnsafeMutablePointer<IOCFPlugInInterface>?>?
@@ -185,11 +210,17 @@ public class USBDevice {
                     continue
                 }
                 
-                return USBDevice(productID: productID, vendorID: vendorID, deviceInterface: deviceInterface)
+                let device = USBDevice(
+                    productID: productID,
+                    vendorID: vendorID,
+                    entryID: entryID,
+                    deviceInterface: deviceInterface
+                )
+                devices.append(device)
             }
         }
         
-        throw USBError.deviceNotFound
+        return devices
     }
     
     // MARK: - Connection Management

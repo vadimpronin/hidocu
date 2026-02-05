@@ -6,6 +6,14 @@ public class Jensen {
     internal let transport: JensenTransport
     public var verbose: Bool = false
     
+    /// Unique identifier for the connected device (RegistryEntryID for USB)
+    public var uniqueID: UInt64? {
+        if let usbTransport = transport as? USBTransport {
+            return usbTransport.entryID
+        }
+        return nil
+    }
+    
     // Feature Controllers
     public lazy var file: FileController = FileController(core: self)
     public lazy var time: TimeController = TimeController(core: self)

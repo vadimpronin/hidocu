@@ -9,7 +9,7 @@ import Foundation
 
 /// Represents a selectable item in the sidebar.
 enum SidebarItem: Hashable {
-    case device
+    case device(id: UInt64)
     case allRecordings
     case filteredByStatus(RecordingStatus)
 

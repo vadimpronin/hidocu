@@ -31,8 +31,17 @@ actor JensenActor {
     /// The underlying Jensen instance (only accessed through this actor)
     private var jensen: Jensen?
 
+    /// The transport to use for connection (optional, defaults to standard USB detection)
+    private let transport: JensenTransport?
+
     /// Cached connection info
     private var cachedConnectionInfo: DeviceConnectionInfo?
+
+    // MARK: - Initialization
+
+    init(transport: JensenTransport? = nil) {
+        self.transport = transport
+    }
 
     // MARK: - Connection State
 
@@ -69,7 +78,8 @@ actor JensenActor {
 
         AppLogger.usb.info("[JensenActor] Connecting...")
 
-        let device = Jensen()
+        // Use injected transport or default
+        let device = Jensen(transport: transport)
         try device.connect()
 
         let info = DeviceConnectionInfo(

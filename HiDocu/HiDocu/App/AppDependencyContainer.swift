@@ -25,8 +25,8 @@ final class AppDependencyContainer {
     /// File system service - handles sandbox-compliant file operations
     let fileSystemService: FileSystemService
     
-    /// Device connection service - wraps JensenUSB (MUST stay alive)
-    let deviceService: DeviceConnectionService
+    /// Device manager - manages multiple device connections (MUST stay alive)
+    let deviceManager: DeviceManager
     
     /// Audio compatibility service - handles .hda format and validation
     let audioService: AudioCompatibilityService
@@ -66,8 +66,8 @@ final class AppDependencyContainer {
         // Initialize file system service
         self.fileSystemService = FileSystemService()
         
-        // Initialize device service (long-lived singleton)
-        self.deviceService = DeviceConnectionService()
+        // Initialize device manager (long-lived singleton)
+        self.deviceManager = DeviceManager()
         
         // Initialize audio compatibility service
         self.audioService = AudioCompatibilityService()
@@ -94,7 +94,6 @@ final class AppDependencyContainer {
 
         // Initialize import service
         self.importService = RecordingImportService(
-            deviceService: deviceService,
             fileSystemService: fileSystemService,
             audioService: audioService,
             repository: recordingRepository

@@ -13,7 +13,11 @@ struct ContentView: View {
 
     var body: some View {
         if hasCompletedOnboarding {
-            MainSplitView()
+            if let container {
+                MainSplitView(container: container)
+            } else {
+                ProgressView()
+            }
         } else {
             OnboardingView()
         }
@@ -24,144 +28,169 @@ struct ContentView: View {
 
 /// The primary app interface with sidebar and detail navigation.
 struct MainSplitView: View {
-    @Environment(\.container) private var container
+    let container: AppDependencyContainer
 
     @State private var navigationVM = NavigationViewModel()
     @State private var recordingsVM: RecordingsListViewModel?
+    
+    // Manage dashboard VM for the currently selected device
     @State private var deviceDashboardVM: DeviceDashboardViewModel?
     @State private var importError: String?
 
     var body: some View {
-        NavigationSplitView {
-            if let container {
-                SidebarView(
-                    navigationVM: navigationVM,
-                    deviceService: container.deviceService,
-                    importService: container.importService
-                )
-            }
-        } detail: {
-            if let container {
-                detailContent(container: container)
-            } else {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-        }
+        splitView
         .errorBanner($importError)
         .onAppear {
-            if recordingsVM == nil, let container {
-                let vm = RecordingsListViewModel(
-                    repository: container.recordingRepository
-                )
-                vm.setFilter(navigationVM.selectedSidebarItem?.statusFilter)
-                recordingsVM = vm
-            }
+            handleAppear()
         }
         .onChange(of: navigationVM.selectedSidebarItem) { _, newValue in
-            guard let container else { return }
-
-            if let newValue, newValue.isLibraryItem {
-                recordingsVM?.setFilter(newValue.statusFilter)
-            }
-
-            // Create device dashboard VM on demand
-            if newValue == .device, deviceDashboardVM == nil {
-                deviceDashboardVM = DeviceDashboardViewModel(
-                    deviceService: container.deviceService,
-                    repository: container.recordingRepository
-                )
-            }
+            handleSidebarSelectionChange(newValue)
         }
         .onChange(of: navigationVM.selectedRecordingId) { _, newId in
-            guard let newId, let container else {
-                navigationVM.selectedRecording = nil
-                return
-            }
-
-            Task {
-                do {
-                    let recording = try await container.recordingRepository.fetchById(newId)
-                    await MainActor.run {
-                        navigationVM.selectedRecording = recording
-                    }
-                } catch {
-                    AppLogger.ui.error("Failed to fetch recording: \(error.localizedDescription)")
-                }
-            }
+            handleRecordingSelectionChange(newId)
         }
-        .onChange(of: container?.deviceService.isConnected) { wasConnected, isConnected in
-            // Auto-navigate away from device dashboard on disconnect
-            if wasConnected == true && isConnected != true {
-                if navigationVM.selectedSidebarItem == .device {
-                    navigationVM.selectedSidebarItem = .allRecordings
-                }
-                deviceDashboardVM = nil
-            }
+        .onChange(of: container.deviceManager.connectedDevices) { _, newDevices in
+            handleDeviceListChange(newDevices)
         }
-        .onChange(of: container?.importService.errorMessage) { _, newError in
-            if let newError {
-                importError = newError
-            }
+        .onChange(of: container.importService.errorMessage) { _, newError in
+             if let newError { importError = newError }
+        }
+    }
+    
+    // MARK: - Split View
+    
+    private var splitView: some View {
+        NavigationSplitView {
+            sidebarContent
+        } detail: {
+            detailView
         }
     }
 
-    // MARK: - Detail Content
+    // MARK: - Sidebar Content
+    
+    @ViewBuilder
+    private var sidebarContent: some View {
+        SidebarView(
+            navigationVM: navigationVM,
+            deviceManager: container.deviceManager,
+            importService: container.importService
+        )
+    }
+
+    // MARK: - Detail View Wrapper
+    
+    @ViewBuilder
+    private var detailView: some View {
+        detailContent()
+    }
+
+    // MARK: - Detail Content Logic
 
     @ViewBuilder
-    private func detailContent(container: AppDependencyContainer) -> some View {
-        switch navigationVM.selectedSidebarItem {
-        case .device:
-            switch container.deviceService.connectionState {
-            case .connected:
-                if let deviceDashboardVM {
+    private func detailContent() -> some View {
+        // Handle Sidebar Item Selection
+        if let selection = navigationVM.selectedSidebarItem {
+            switch selection {
+            case .device(let id):
+                // Find the device controller for this ID
+                if let controller = container.deviceManager.connectedDevices.first(where: { $0.id == id }),
+                   let viewModel = deviceDashboardVM {
+                    
                     DeviceDashboardView(
-                        deviceService: container.deviceService,
+                        deviceController: controller,
                         importService: container.importService,
-                        viewModel: deviceDashboardVM
+                        viewModel: viewModel
                     )
+                    .id(controller.id)
                 } else {
-                    ProgressView("Loading...")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    // Device selected but not found in manager (e.g. just disconnected)
+                    DeviceDisconnectedView()
                 }
-            case .connecting(let attempt, let maxAttempts):
-                DeviceConnectingView(
-                    attempt: attempt,
-                    maxAttempts: maxAttempts,
-                    modelName: container.deviceService.detectedModel?.displayName
-                )
-            case .connectionFailed:
-                DeviceConnectionFailedView(deviceService: container.deviceService)
-            case .disconnected:
-                DeviceDisconnectedView()
-            }
 
-        case .allRecordings, .filteredByStatus:
-            if let recordingsVM {
-                NavigationStack {
-                    RecordingsListView(
-                        viewModel: recordingsVM,
-                        selectedRecordingId: $navigationVM.selectedRecordingId,
-                        importService: container.importService
-                    )
-                    .navigationTitle(navigationVM.selectedSidebarItem?.title ?? "Recordings")
-                    .navigationDestination(item: $navigationVM.selectedRecording) { recording in
-                        RecordingDetailView(recording: recording, container: container)
+            case .allRecordings, .filteredByStatus:
+                if let recordingsVM {
+                    NavigationStack {
+                        RecordingsListView(
+                            viewModel: recordingsVM,
+                            selectedRecordingId: $navigationVM.selectedRecordingId,
+                            importService: container.importService
+                        )
+                        .navigationTitle(selection.title)
+                        .navigationDestination(item: $navigationVM.selectedRecording) { recording in
+                            RecordingDetailView(recording: recording, container: container)
+                        }
                     }
+                } else {
+                    ProgressView()
                 }
-            } else {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-
-        case nil:
+        } else {
+            // No selection
             Text("Select an item")
                 .font(.title3)
                 .foregroundStyle(.tertiary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
+    
+    // MARK: - Event Handlers
+    
+    private func handleAppear() {
+        if recordingsVM == nil {
+            let vm = RecordingsListViewModel(
+                repository: container.recordingRepository
+            )
+            vm.setFilter(navigationVM.selectedSidebarItem?.statusFilter)
+            recordingsVM = vm
+        }
+    }
+    
+    private func handleSidebarSelectionChange(_ newValue: SidebarItem?) {
+        if let newValue, newValue.isLibraryItem {
+            recordingsVM?.setFilter(newValue.statusFilter)
+            deviceDashboardVM = nil // Clear device VM when switching to library
+        } else if case .device(let id) = newValue {
+            // Find controller and create/update VM
+            if let controller = container.deviceManager.connectedDevices.first(where: { $0.id == id }) {
+                deviceDashboardVM = DeviceDashboardViewModel(
+                    deviceController: controller,
+                    repository: container.recordingRepository
+                )
+                Task { await deviceDashboardVM?.loadFiles() }
+            } else {
+                deviceDashboardVM = nil
+            }
+        }
+    }
+    
+    private func handleRecordingSelectionChange(_ newId: Int64?) {
+        guard let newId else {
+            navigationVM.selectedRecording = nil
+            return
+        }
 
+        Task {
+            do {
+                let recording = try await container.recordingRepository.fetchById(newId)
+                await MainActor.run {
+                    navigationVM.selectedRecording = recording
+                }
+            } catch {
+                AppLogger.ui.error("Failed to fetch recording: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    private func handleDeviceListChange(_ newDevices: [DeviceController]) {
+        // Check if selected device was disconnected
+        if case .device(let id) = navigationVM.selectedSidebarItem {
+            if !newDevices.contains(where: { $0.id == id }) {
+                // Device disconnected, navigate back to library
+                navigationVM.selectedSidebarItem = .allRecordings
+            }
+        }
+    }
 }
 
 #Preview {
