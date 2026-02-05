@@ -142,6 +142,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		09A667772F34CB7D004D0544 /* Device */ = {
+			isa = PBXGroup;
+			children = (
+				09134FD2A3C89DFB7EA7BB0F /* DeviceDashboardView.swift */,
+			);
+			path = Device;
+			sourceTree = "<group>";
+		};
 		D8402727206E439A8869D212 /* Components */ = {
 			isa = PBXGroup;
 			children = (
@@ -157,8 +165,6 @@
 				F2000001F2000001 /* HiDocu */,
 				F2A00001F2A00001 /* HiDocuTests */,
 				F2000099F2000099 /* Products */,
-				14B1464F9B61FF0B4ED761F6 /* DeviceDashboardViewModel.swift */,
-				09134FD2A3C89DFB7EA7BB0F /* DeviceDashboardView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -314,12 +320,13 @@
 		F2000010F2000010 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				F0000033F0000033 /* ContentView.swift */,
+				09A667772F34CB7D004D0544 /* Device */,
 				F3000070F3000070 /* Sidebar */,
 				F3000071F3000071 /* Library */,
 				D8402727206E439A8869D212 /* Components */,
 				F8000030F8000030 /* Settings */,
 				F8000031F8000031 /* Onboarding */,
+				F0000033F0000033 /* ContentView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -327,6 +334,7 @@
 		F2000011F2000011 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
+				14B1464F9B61FF0B4ED761F6 /* DeviceDashboardViewModel.swift */,
 				79432DA08D5943A38BE62137 /* RecordingDetailViewModel.swift */,
 				F3000050F3000050 /* NavigationViewModel.swift */,
 				F3000051F3000051 /* RecordingsListViewModel.swift */,
