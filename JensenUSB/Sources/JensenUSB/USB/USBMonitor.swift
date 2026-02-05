@@ -13,7 +13,8 @@ public final class USBMonitor: NSObject {
     private let logger = Logger(subsystem: "com.hidocu.jensenusb", category: "USBMonitor")
     
     // Callbacks
-    public var deviceDidConnect: ((UInt64) -> Void)?
+    /// Called when a HiDock device is connected. Parameters: (entryID, productID)
+    public var deviceDidConnect: ((UInt64, UInt16) -> Void)?
     public var deviceDidDisconnect: ((UInt64) -> Void)?
     
     private var notificationPort: IONotificationPortRef?
@@ -126,21 +127,27 @@ public final class USBMonitor: NSObject {
     
     fileprivate func processDevices(iterator: io_iterator_t, isArrival: Bool) {
         while case let device = IOIteratorNext(iterator), device != 0 {
-            // Filter by Vendor ID
+            // Extract Vendor ID
             var vendorID: UInt16 = 0
             if let vendorRef = IORegistryEntryCreateCFProperty(device, "idVendor" as CFString, kCFAllocatorDefault, 0) {
                  vendorID = (vendorRef.takeRetainedValue() as? NSNumber)?.uint16Value ?? 0
             }
-            
+
             // Only proceed if it matches our vendors
             if USBDevice.vendorIDs.contains(vendorID) {
+                // Extract Product ID (for model detection)
+                var productID: UInt16 = 0
+                if let productRef = IORegistryEntryCreateCFProperty(device, "idProduct" as CFString, kCFAllocatorDefault, 0) {
+                    productID = (productRef.takeRetainedValue() as? NSNumber)?.uint16Value ?? 0
+                }
+
                 var entryID: UInt64 = 0
                 let result = IORegistryEntryGetRegistryEntryID(device, &entryID)
-                
+
                 if result == kIOReturnSuccess {
-                    logger.info("HiDock Device event: \(isArrival ? "CONNECTED" : "DISCONNECTED") (Vendor: \(vendorID), EntryID: \(entryID))")
+                    logger.info("HiDock Device event: \(isArrival ? "CONNECTED" : "DISCONNECTED") (Vendor: \(vendorID), Product: \(productID), EntryID: \(entryID))")
                     if isArrival {
-                        deviceDidConnect?(entryID)
+                        deviceDidConnect?(entryID, productID)
                     } else {
                         deviceDidDisconnect?(entryID)
                     }
@@ -148,7 +155,7 @@ public final class USBMonitor: NSObject {
                      logger.error("Failed to get RegistryEntryID")
                 }
             }
-            
+
             IOObjectRelease(device)
         }
     }

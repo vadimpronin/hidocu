@@ -36,6 +36,33 @@ struct HiDocuApp: App {
                 }
                 .keyboardShortcut("o")
             }
+
+            #if DEBUG
+            // Debug menu for testing connection behavior
+            CommandMenu("Debug") {
+                Button("Simulate Unresponsive Device (P1)") {
+                    Task { @MainActor in
+                        await container.deviceService.simulateUnresponsiveDevice(model: .p1)
+                    }
+                }
+                .keyboardShortcut("u", modifiers: [.command, .shift])
+
+                Button("Simulate Unresponsive Device (H1)") {
+                    Task { @MainActor in
+                        await container.deviceService.simulateUnresponsiveDevice(model: .h1)
+                    }
+                }
+
+                Divider()
+
+                Button("Simulate Device Disconnect") {
+                    Task { @MainActor in
+                        await container.deviceService.simulateDisconnect()
+                    }
+                }
+                .keyboardShortcut("d", modifiers: [.command, .shift])
+            }
+            #endif
         }
 
         // Settings window (Cmd+,)

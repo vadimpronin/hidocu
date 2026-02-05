@@ -28,21 +28,6 @@ enum SidebarItem: Hashable {
         }
     }
 
-    var iconName: String {
-        switch self {
-        case .device:
-            return "externaldrive.fill"
-        case .allRecordings:
-            return "waveform"
-        case .filteredByStatus(let status):
-            switch status {
-            case .new:         return "circle.fill"
-            case .downloaded:  return "arrow.down.circle.fill"
-            case .transcribed: return "text.bubble.fill"
-            }
-        }
-    }
-
     /// The status filter to pass to the repository, or nil for "all".
     var statusFilter: RecordingStatus? {
         switch self {

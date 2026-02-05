@@ -14,29 +14,22 @@ struct SidebarView: View {
 
     var body: some View {
         List(selection: $navigationVM.selectedSidebarItem) {
+
+            Section("Library") {
+                Label("All Recordings", systemImage: "tray.fill")
+                    .tag(SidebarItem.allRecordings)
+
+                Label("Uncategorized", systemImage: "questionmark.folder")
+                    .tag(SidebarItem.filteredByStatus(.new))
+            }
+            
             // Locations section — shown when device is connected or connecting
             if shouldShowLocations {
-                Section("Locations") {
+                Section("Import locations") {
                     locationContent
                 }
             }
 
-            Section("Library") {
-                Label("All Recordings", systemImage: "waveform")
-                    .tag(SidebarItem.allRecordings)
-
-                Label("New", systemImage: "circle.fill")
-                    .foregroundStyle(.blue)
-                    .tag(SidebarItem.filteredByStatus(.new))
-
-                Label("Downloaded", systemImage: "arrow.down.circle.fill")
-                    .foregroundStyle(.green)
-                    .tag(SidebarItem.filteredByStatus(.downloaded))
-
-                Label("Transcribed", systemImage: "text.bubble.fill")
-                    .foregroundStyle(.purple)
-                    .tag(SidebarItem.filteredByStatus(.transcribed))
-            }
         }
         .navigationSplitViewColumnWidth(min: 180, ideal: 220)
     }
@@ -45,28 +38,37 @@ struct SidebarView: View {
 
     private var shouldShowLocations: Bool {
         switch deviceService.connectionState {
-        case .connecting, .connected:
+        case .connecting, .connected, .connectionFailed:
             return true
-        case .disconnected, .error:
+        case .disconnected:
             return false
         }
     }
 
     @ViewBuilder
     private var locationContent: some View {
+        let modelName = deviceService.connectionInfo?.model.displayName
+                     ?? deviceService.detectedModel?.displayName
+                     ?? "HiDock"
+
         switch deviceService.connectionState {
-        case .connecting:
-            HStack(spacing: 6) {
-                ProgressView()
-                    .controlSize(.small)
-                Text("Connecting...")
-                    .foregroundStyle(.secondary)
+        case .connecting(_, _):
+            VStack(alignment: .leading, spacing: 2) {
+                Label {
+                    Text(modelName)
+                } icon: {
+                    ProgressView()
+                        .controlSize(.small)
+                }
             }
+            .tag(SidebarItem.device)
+
         case .connected:
-            Label(
-                deviceService.connectionInfo?.model.displayName ?? "HiDock",
-                systemImage: deviceService.connectionInfo?.model.sfSymbolName ?? "externaldrive.fill"
-            )
+            Label {
+                Text(modelName)
+            } icon: {
+                Image(systemName: "waveform")
+            }
             .tag(SidebarItem.device)
             .contextMenu {
                 Button("Sync All") {
@@ -76,11 +78,30 @@ struct SidebarView: View {
 
                 Divider()
 
-                Button("Eject \(deviceService.connectionInfo?.model.displayName ?? "Device")") {
+                Button("Eject \(modelName)") {
                     Task { @MainActor in await deviceService.disconnect() }
                 }
             }
-        default:
+
+        case .connectionFailed(_):
+            VStack(alignment: .leading, spacing: 2) {
+                Label {
+                    Text(modelName)
+                        .foregroundStyle(.secondary)
+                } icon: {
+                    Image(systemName: "waveform.slash")
+                        .foregroundStyle(.red)
+                }
+            }
+            .tag(SidebarItem.device)
+            .contextMenu {
+                Button("Retry Connection") {
+                    Task { @MainActor in await deviceService.manualRetry() }
+                }
+            }
+            .help("Device detected but communication failed. Right-click to retry.")
+
+        case .disconnected:
             EmptyView()
         }
     }
