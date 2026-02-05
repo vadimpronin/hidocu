@@ -88,9 +88,9 @@ struct RecordingRowView: View {
 
     private func modeIcon(_ mode: RecordingMode) -> String {
         switch mode {
-        case .call:    return "phone"
-        case .room:    return "mic"
-        case .whisper: return "mouth"
+        case .call:      return "phone"
+        case .recording: return "mic"
+        case .whisper:   return "mouth"
         }
     }
 

@@ -272,12 +272,12 @@ public class FileController {
             default: duration = Double(fileSize) / 32.0 / 1000.0
             }
             
-            var mode = "room"
+            var mode = "recording" // "room" in original jensen_usb
             if let match = name.range(of: #"-(\w+)\d+\.\w+$"#, options: .regularExpression) {
                 let modeStr = String(name[match]).uppercased()
                 if modeStr.contains("WHSP") || modeStr.contains("WIP") { mode = "whisper" }
                 else if modeStr.contains("CALL") { mode = "call" }
-                else if modeStr.contains("REC") { mode = "room" }
+                else if modeStr.contains("REC") { mode = "recording" } // "room" in original jensen_usb
             }
             
             if !name.isEmpty {

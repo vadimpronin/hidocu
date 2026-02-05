@@ -27,7 +27,7 @@ final class HiDocuTests: XCTestCase {
     func testRecordingModeRawValues() {
         // Verify mode raw values match expected database values
         XCTAssertEqual(RecordingMode.call.rawValue, "call")
-        XCTAssertEqual(RecordingMode.room.rawValue, "room")
+        XCTAssertEqual(RecordingMode.recording.rawValue, "recording")
         XCTAssertEqual(RecordingMode.whisper.rawValue, "whisper")
     }
 }

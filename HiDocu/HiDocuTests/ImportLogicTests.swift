@@ -558,7 +558,7 @@ final class ImportAlgorithmTests: XCTestCase {
         mockRepo.fetchByFilenameResult = nil // File does not exist
 
         mockDevice.filesToReturn = [
-            DeviceFileInfo(filename: "NewFile.wav", size: wavSize, durationSeconds: 30, createdAt: Date(), mode: .room)
+            DeviceFileInfo(filename: "NewFile.wav", size: wavSize, durationSeconds: 30, createdAt: Date(), mode: .recording)
         ]
 
         importService.importFromDevice()
