@@ -33,8 +33,8 @@ struct MainSplitView: View {
     @State private var navigationVM = NavigationViewModel()
     @State private var recordingsVM: RecordingsListViewModel?
     
-    // Manage dashboard VM for the currently selected device
-    @State private var deviceDashboardVM: DeviceDashboardViewModel?
+    // Dashboard VMs keyed by device ID — cached until device disconnects
+    @State private var deviceDashboardVMs: [UInt64: DeviceDashboardViewModel] = [:]
     @State private var importError: String?
 
     var body: some View {
@@ -51,6 +51,9 @@ struct MainSplitView: View {
         }
         .onChange(of: container.deviceManager.connectedDevices) { _, newDevices in
             handleDeviceListChange(newDevices)
+        }
+        .onChange(of: fullyConnectedDeviceIDs) { _, newIDs in
+            ensureViewModelsForConnectedDevices(newIDs)
         }
         .onChange(of: container.importService.errorMessage) { _, newError in
              if let newError { importError = newError }
@@ -93,10 +96,9 @@ struct MainSplitView: View {
         if let selection = navigationVM.selectedSidebarItem {
             switch selection {
             case .device(let id):
-                // Find the device controller for this ID
                 if let controller = container.deviceManager.connectedDevices.first(where: { $0.id == id }),
-                   let viewModel = deviceDashboardVM {
-                    
+                   let viewModel = deviceDashboardVMs[id] {
+
                     DeviceDashboardView(
                         deviceController: controller,
                         importService: container.importService,
@@ -104,7 +106,6 @@ struct MainSplitView: View {
                     )
                     .id(controller.id)
                 } else {
-                    // Device selected but not found in manager (e.g. just disconnected)
                     DeviceDisconnectedView()
                 }
 
@@ -149,18 +150,6 @@ struct MainSplitView: View {
     private func handleSidebarSelectionChange(_ newValue: SidebarItem?) {
         if let newValue, newValue.isLibraryItem {
             recordingsVM?.setFilter(newValue.statusFilter)
-            deviceDashboardVM = nil // Clear device VM when switching to library
-        } else if case .device(let id) = newValue {
-            // Find controller and create/update VM
-            if let controller = container.deviceManager.connectedDevices.first(where: { $0.id == id }) {
-                deviceDashboardVM = DeviceDashboardViewModel(
-                    deviceController: controller,
-                    repository: container.recordingRepository
-                )
-                Task { await deviceDashboardVM?.loadFiles() }
-            } else {
-                deviceDashboardVM = nil
-            }
         }
     }
     
@@ -182,11 +171,32 @@ struct MainSplitView: View {
         }
     }
     
+    private var fullyConnectedDeviceIDs: Set<UInt64> {
+        Set(container.deviceManager.connectedDevices.filter(\.isConnected).map(\.id))
+    }
+
+    private func ensureViewModelsForConnectedDevices(_ connectedIDs: Set<UInt64>) {
+        for id in connectedIDs {
+            if deviceDashboardVMs[id] == nil,
+               let controller = container.deviceManager.connectedDevices.first(where: { $0.id == id }) {
+                let vm = DeviceDashboardViewModel(
+                    deviceController: controller,
+                    repository: container.recordingRepository
+                )
+                deviceDashboardVMs[id] = vm
+                Task { await vm.loadFiles() }
+            }
+        }
+    }
+
     private func handleDeviceListChange(_ newDevices: [DeviceController]) {
-        // Check if selected device was disconnected
+        // Clean up VMs for disconnected devices
+        let connectedIDs = Set(newDevices.map(\.id))
+        deviceDashboardVMs = deviceDashboardVMs.filter { connectedIDs.contains($0.key) }
+
+        // Navigate away if selected device was disconnected
         if case .device(let id) = navigationVM.selectedSidebarItem {
             if !newDevices.contains(where: { $0.id == id }) {
-                // Device disconnected, navigate back to library
                 navigationVM.selectedSidebarItem = .allRecordings
             }
         }

@@ -63,12 +63,27 @@ struct DeviceDashboardView: View {
             }
         }
         .task {
-            await viewModel.loadFiles()
+            // Only load on first appearance; cached files skip this
+            if viewModel.files.isEmpty && !viewModel.isLoading && viewModel.errorMessage == nil {
+                await viewModel.loadFiles()
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    Task { await viewModel.loadFiles() }
+                } label: {
+                    Label("Refresh", systemImage: "arrow.clockwise")
+                }
+                .keyboardShortcut("r", modifiers: .command)
+                .help("Refresh file list")
+                .disabled(viewModel.isLoading)
+            }
         }
         .onChange(of: session?.isImporting) { oldValue, newValue in
-            // If import finished (true -> false/nil), reload files
+            // If import finished, refresh import status without re-fetching file list
             if (oldValue == true) && (newValue == false || newValue == nil) {
-                Task { await viewModel.loadFiles() }
+                Task { await viewModel.refreshImportStatus() }
             }
         }
     }
@@ -155,18 +170,28 @@ struct DeviceDashboardView: View {
     private var emptyState: some View {
         VStack(spacing: 12) {
             Image(systemName: "waveform.slash")
-            .font(.system(size: 36))
-            .foregroundStyle(.tertiary)
+                .font(.system(size: 36))
+                .foregroundStyle(.tertiary)
 
             Text("No Recordings on Device")
-            .font(.title3)
-            .foregroundStyle(.secondary)
+                .font(.title3)
+                .foregroundStyle(.secondary)
 
             if let error = viewModel.errorMessage {
                 Text(error)
-                .font(.caption)
-                .foregroundStyle(.red)
+                    .font(.caption)
+                    .foregroundStyle(.red)
             }
+
+            Button {
+                Task { await viewModel.loadFiles() }
+            } label: {
+                Label("Refresh", systemImage: "arrow.clockwise")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .padding(.top, 4)
+            .disabled(viewModel.isLoading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

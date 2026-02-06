@@ -89,6 +89,22 @@ final class DeviceDashboardViewModel {
         isLoading = false
     }
 
+    /// Re-check import status for all cached files without re-fetching from device.
+    /// Called after import finishes to update checkmarks.
+    func refreshImportStatus() async {
+        guard !files.isEmpty else { return }
+
+        var updatedRows: [DeviceFileRow] = []
+        for row in files {
+            let imported = (try? await repository.exists(
+                filename: row.fileInfo.filename,
+                sizeBytes: row.fileInfo.size
+            )) ?? row.isImported
+            updatedRows.append(DeviceFileRow(fileInfo: row.fileInfo, isImported: imported))
+        }
+        files = updatedRows
+    }
+
     func deleteFiles(_ filenames: Set<String>) async {
         for filename in filenames {
             do {
