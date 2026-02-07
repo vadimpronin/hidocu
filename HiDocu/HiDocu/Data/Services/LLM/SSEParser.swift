@@ -166,8 +166,14 @@ enum SSEParser {
                     }
 
                     guard (200...299).contains(httpResponse.statusCode) else {
+                        // Read error body from the byte stream
+                        var errorBytes: [UInt8] = []
+                        for try await byte in bytes {
+                            errorBytes.append(byte)
+                        }
+                        let errorBody = String(bytes: errorBytes, encoding: .utf8) ?? "Unknown error"
                         throw LLMError.invalidResponse(
-                            detail: "HTTP \(httpResponse.statusCode)"
+                            detail: "HTTP \(httpResponse.statusCode): \(errorBody)"
                         )
                     }
 

@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import Security
 import os
 
 private let logger = Logger(subsystem: "com.hidocu.app", category: "llm")
@@ -26,8 +27,8 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
     // MARK: - API Constants
 
     private static let apiBaseURL = "https://chatgpt.com/backend-api/codex"
-    private static let userAgent = "codex_cli_rs/99.99.99 (Mac OS 26.0.1; arm64) Apple_Terminal/464"
-    private static let clientVersion = "99.99.99"
+    private static let userAgent = "codex_cli_rs/0.98.0 (Mac OS 26.0.1; arm64) Apple_Terminal/464"
+    private static let clientVersion = "0.98.0"
 
     // MARK: - Properties
 
@@ -199,7 +200,12 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
         request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
         request.setValue(Self.clientVersion, forHTTPHeaderField: "Version")
         request.setValue("responses=experimental", forHTTPHeaderField: "Openai-Beta")
+        request.setValue(UUID().uuidString, forHTTPHeaderField: "Session_id")
         request.setValue("codex_cli_rs", forHTTPHeaderField: "Originator")
+        request.setValue("Keep-Alive", forHTTPHeaderField: "Connection")
+        if let accountId = tokenData?.accountId {
+            request.setValue(accountId, forHTTPHeaderField: "Chatgpt-Account-Id")
+        }
         request.httpBody = jsonData
 
         logger.debug("Sending SSE request to \(request.url?.absoluteString ?? "unknown")")
@@ -259,6 +265,9 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
                     break
                 }
             }
+        } catch let llmError as LLMError {
+            logger.error("SSE stream error: \(String(describing: llmError))")
+            throw llmError
         } catch {
             logger.error("SSE stream error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
@@ -281,6 +290,16 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
     }
 
     // MARK: - Private Helpers
+
+    /// Generates a fake user ID for request metadata.
+    /// Format: user_{64-hex-chars}_account__session_{UUID-v4}
+    private func generateFakeUserID() -> String {
+        var bytes = [UInt8](repeating: 0, count: 32)
+        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        let hexPart = bytes.map { String(format: "%02x", $0) }.joined()
+        let uuidPart = UUID().uuidString.lowercased()
+        return "user_\(hexPart)_account__session_\(uuidPart)"
+    }
 
     /// Exchanges authorization code for access and refresh tokens.
     private func exchangeCodeForTokens(
@@ -403,33 +422,42 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
         model: String,
         options: LLMRequestOptions
     ) throws -> [String: Any] {
-        // Extract system instructions
-        var systemInstructions = ""
-        if let systemPrompt = options.systemPrompt {
-            systemInstructions = systemPrompt
-        } else {
-            let systemMessages = messages.filter { $0.role == .system }
-            if !systemMessages.isEmpty {
-                systemInstructions = systemMessages.map { $0.content }.joined(separator: "\n\n")
-            }
+        // Convert conversation messages to Responses API input format
+        // System messages become role "developer", matching Go reference
+        var input: [[String: Any]] = []
+
+        // If systemPrompt is provided via options, prepend it as a developer message
+        if let systemPrompt = options.systemPrompt, !systemPrompt.isEmpty {
+            input.append([
+                "type": "message",
+                "role": "developer",
+                "content": [
+                    [
+                        "type": "input_text",
+                        "text": systemPrompt
+                    ]
+                ]
+            ])
         }
 
-        // Convert conversation messages to Responses API input format
-        var input: [[String: Any]] = []
-        for message in messages where message.role != .system {
+        for message in messages {
+            let role: String
             let textType: String
             switch message.role {
+            case .system:
+                role = "developer"
+                textType = "input_text"
             case .user:
+                role = "user"
                 textType = "input_text"
             case .assistant:
+                role = "assistant"
                 textType = "output_text"
-            case .system:
-                continue
             }
 
             input.append([
                 "type": "message",
-                "role": message.role.rawValue,
+                "role": role,
                 "content": [
                     [
                         "type": textType,
@@ -439,18 +467,25 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
             ])
         }
 
-        var requestBody: [String: Any] = [
+        // Fields match Go reference: codex_openai_request.go (chat-completions translator)
+        // + codex_executor.go (executor post-processing)
+        // + codex_openai-responses_request.go (responses translator)
+        //
+        // Codex API rejects: max_tokens, max_output_tokens, temperature, top_p,
+        //                    service_tier, messages, metadata
+        let requestBody: [String: Any] = [
             "model": model,
-            "stream": true,
-            "instructions": systemInstructions,
+            "instructions": "",
             "input": input,
-            "max_output_tokens": options.maxTokens
+            "stream": true,
+            "store": false,
+            "parallel_tool_calls": true,
+            "reasoning": [
+                "effort": "medium",
+                "summary": "auto"
+            ],
+            "include": ["reasoning.encrypted_content"]
         ]
-
-        // Add temperature if specified
-        if let temperature = options.temperature {
-            requestBody["temperature"] = temperature
-        }
 
         return requestBody
     }
