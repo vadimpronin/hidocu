@@ -275,7 +275,13 @@ private struct FolderTreeRow: View {
     }
 
     private func revealDataDirectoryInFinder() {
-        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: fileSystemService.dataDirectory.path)
+        let folderURL: URL
+        if let diskPath = node.folder.diskPath, !diskPath.isEmpty {
+            folderURL = fileSystemService.dataDirectory.appendingPathComponent(diskPath, isDirectory: true)
+        } else {
+            folderURL = fileSystemService.dataDirectory
+        }
+        NSWorkspace.shared.activateFileViewerSelecting([folderURL])
     }
 }
 

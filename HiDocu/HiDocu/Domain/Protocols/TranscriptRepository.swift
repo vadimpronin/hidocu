@@ -15,4 +15,5 @@ protocol TranscriptRepository: Sendable {
     func update(_ transcript: Transcript) async throws
     func delete(id: Int64) async throws
     func setPrimary(id: Int64, sourceId: Int64) async throws
+    func updateFilePathPrefix(oldPrefix: String, newPrefix: String) async throws
 }

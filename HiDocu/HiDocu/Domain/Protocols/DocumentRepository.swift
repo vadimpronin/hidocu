@@ -18,4 +18,5 @@ protocol DocumentRepository: Sendable {
     func moveDocument(id: Int64, toFolderId: Int64?) async throws
     func observeAll(folderId: Int64?) -> AsyncThrowingStream<[Document], Error>
     func observeAllDocuments() -> AsyncThrowingStream<[Document], Error>
+    func updateDiskPathPrefix(oldPrefix: String, newPrefix: String) async throws
 }

@@ -11,6 +11,7 @@ struct Folder: Identifiable, Sendable, Equatable, Hashable {
     let id: Int64
     var parentId: Int64?
     var name: String
+    var diskPath: String?
     var transcriptionContext: String?
     var categorizationContext: String?
     var preferSummary: Bool
@@ -23,6 +24,7 @@ struct Folder: Identifiable, Sendable, Equatable, Hashable {
         id: Int64 = 0,
         parentId: Int64? = nil,
         name: String,
+        diskPath: String? = nil,
         transcriptionContext: String? = nil,
         categorizationContext: String? = nil,
         preferSummary: Bool = true,
@@ -34,6 +36,7 @@ struct Folder: Identifiable, Sendable, Equatable, Hashable {
         self.id = id
         self.parentId = parentId
         self.name = name
+        self.diskPath = diskPath
         self.transcriptionContext = transcriptionContext
         self.categorizationContext = categorizationContext
         self.preferSummary = preferSummary

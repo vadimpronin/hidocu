@@ -106,4 +106,17 @@ final class SQLiteTranscriptRepository: TranscriptRepository, Sendable {
             )
         }
     }
+
+    func updateFilePathPrefix(oldPrefix: String, newPrefix: String) async throws {
+        try await db.asyncWrite { database in
+            try database.execute(
+                sql: """
+                UPDATE transcripts
+                SET md_file_path = ? || substr(md_file_path, ? + 1)
+                WHERE md_file_path LIKE ? || '%'
+                """,
+                arguments: [newPrefix, oldPrefix.count, oldPrefix]
+            )
+        }
+    }
 }

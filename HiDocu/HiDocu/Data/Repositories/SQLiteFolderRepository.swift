@@ -115,4 +115,18 @@ final class SQLiteFolderRepository: FolderRepository, Sendable {
             }
         }
     }
+
+    func updateDiskPathPrefix(oldPrefix: String, newPrefix: String) async throws {
+        try await db.asyncWrite { database in
+            try database.execute(
+                sql: """
+                UPDATE folders
+                SET disk_path = ? || substr(disk_path, ? + 1),
+                    modified_at = ?
+                WHERE disk_path LIKE ? || '%'
+                """,
+                arguments: [newPrefix, oldPrefix.count, Date(), oldPrefix]
+            )
+        }
+    }
 }

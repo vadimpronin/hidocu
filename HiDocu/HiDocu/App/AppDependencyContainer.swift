@@ -76,13 +76,20 @@ final class AppDependencyContainer {
         // Initialize services
         self.settingsService = SettingsService()
 
-        self.folderService = FolderService(folderRepository: folderRepository)
+        self.folderService = FolderService(
+            folderRepository: folderRepository,
+            documentRepository: documentRepository,
+            sourceRepository: sourceRepository,
+            transcriptRepository: transcriptRepository,
+            fileSystemService: fileSystemService
+        )
 
         self.documentService = DocumentService(
             documentRepository: documentRepository,
             sourceRepository: sourceRepository,
             transcriptRepository: transcriptRepository,
             deletionLogRepository: deletionLogRepository,
+            folderRepository: folderRepository,
             fileSystemService: fileSystemService
         )
 
@@ -95,6 +102,7 @@ final class AppDependencyContainer {
         self.trashService = TrashService(
             deletionLogRepository: deletionLogRepository,
             documentRepository: documentRepository,
+            folderRepository: folderRepository,
             fileSystemService: fileSystemService
         )
 

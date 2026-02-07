@@ -24,14 +24,35 @@ import argparse
 from pathlib import Path
 from datetime import datetime, timedelta
 import hashlib
+import re
+
+
+def sanitize_filename(name):
+    """Sanitize a string for use as a file/directory name (matches Swift PathSanitizer)."""
+    # Replace path traversal
+    result = name.replace('..', '_')
+    # Replace / : null and control chars
+    result = re.sub(r'[/:\x00-\x1f]', '-', result)
+    # Collapse multiple spaces
+    result = re.sub(r' +', ' ', result)
+    # Trim whitespace and dots
+    result = result.strip().strip('.')
+    # Truncate to 255 bytes
+    while len(result.encode('utf-8')) > 255:
+        result = result[:-1]
+    # Fallback
+    if not result:
+        result = 'Untitled'
+    return result
 
 
 class HiDocuImporter:
-    def __init__(self, db_path: str, data_dir: str):
+    def __init__(self, db_path: str, data_dir: str, db_only: bool = False):
         self.db_path = db_path
         self.data_dir = Path(data_dir)
         self.conn = None
-        self.folder_map = {}  # path -> folder_id mapping
+        self.folder_map = {}  # path -> (folder_id, disk_path) mapping
+        self.db_only = db_only  # skip file creation, reuse existing files on disk
 
     def connect(self):
         """Connect to the SQLite database"""
@@ -64,96 +85,105 @@ class HiDocuImporter:
 
         return name
 
-    def create_folder(self, name: str, parent_id: int = None) -> int:
-        """Create a folder in the database"""
+    def create_folder(self, name: str, parent_id: int = None, parent_disk_path: str = "") -> tuple:
+        """Create a folder in the database and file system. Returns (folder_id, disk_path)."""
         now = datetime.now().isoformat()
+        sanitized = sanitize_filename(name)
+        disk_path = f"{parent_disk_path}/{sanitized}" if parent_disk_path else sanitized
+
+        if not self.db_only:
+            folder_dir = self.data_dir / disk_path
+            folder_dir.mkdir(parents=True, exist_ok=True)
+
         cursor = self.conn.cursor()
         cursor.execute("""
-            INSERT INTO folders (parent_id, name, transcription_context, categorization_context,
+            INSERT INTO folders (parent_id, name, disk_path, transcription_context, categorization_context,
                                prefer_summary, minimize_before_llm, sort_order, created_at, modified_at)
-            VALUES (?, ?, '', '', 1, 0, 0, ?, ?)
-        """, (parent_id, name, now, now))
+            VALUES (?, ?, ?, '', '', 1, 0, 0, ?, ?)
+        """, (parent_id, name, disk_path, now, now))
         folder_id = cursor.lastrowid
         self.conn.commit()
-        print(f"  Created folder: {name} (id={folder_id}, parent={parent_id})")
-        return folder_id
+        print(f"  Created folder: {name} (id={folder_id}, path={disk_path})")
+        return (folder_id, disk_path)
 
-    def get_or_create_folder_hierarchy(self, rel_path: Path) -> int:
+    def get_or_create_folder_hierarchy(self, rel_path: Path) -> tuple:
         """
         Get or create folder hierarchy for a path.
-        Returns the folder_id for the deepest folder.
+        Returns (folder_id, disk_path) for the deepest folder.
         """
         # Root level - no folder
         if rel_path == Path('.'):
-            return None
+            return (None, "")
 
         parts = rel_path.parts
         parent_id = None
+        parent_disk_path = ""
 
         for i, part in enumerate(parts):
             current_path = Path(*parts[:i+1])
             path_str = str(current_path)
 
             if path_str not in self.folder_map:
-                folder_id = self.create_folder(part, parent_id)
-                self.folder_map[path_str] = folder_id
+                folder_id, disk_path = self.create_folder(part, parent_id, parent_disk_path)
+                self.folder_map[path_str] = (folder_id, disk_path)
             else:
-                folder_id = self.folder_map[path_str]
+                folder_id, disk_path = self.folder_map[path_str]
 
             parent_id = folder_id
+            parent_disk_path = disk_path
 
-        return parent_id
+        return (parent_id, parent_disk_path)
 
     def sha256(self, content: str) -> str:
         """Calculate SHA256 hash of content"""
         return hashlib.sha256(content.encode('utf-8')).hexdigest()
 
-    def create_document(self, title: str, folder_id: int, content: str, created_at: datetime) -> int:
+    def create_document(self, title: str, folder_id: int, content: str, created_at: datetime, folder_disk_path: str = "") -> int:
         """Create a document in the database and file system"""
         now = datetime.now().isoformat()
         created_iso = created_at.isoformat()
 
-        # Insert placeholder to get ID
+        # Sanitize title for filesystem
+        sanitized = sanitize_filename(title)
+        doc_dir_name = f"{sanitized}.document"
+        disk_path = f"{folder_disk_path}/{doc_dir_name}" if folder_disk_path else doc_dir_name
+
+        if not self.db_only:
+            # Handle conflicts (only when creating files)
+            counter = 2
+            while (self.data_dir / disk_path).exists():
+                doc_dir_name = f"{sanitized} {counter}.document"
+                disk_path = f"{folder_disk_path}/{doc_dir_name}" if folder_disk_path else doc_dir_name
+                counter += 1
+
+        # Insert with real disk path directly (no placeholder)
         cursor = self.conn.cursor()
         cursor.execute("""
             INSERT INTO documents (folder_id, title, document_type, disk_path, body_preview,
                                  summary_text, body_hash, summary_hash, prefer_summary,
                                  minimize_before_llm, created_at, modified_at)
-            VALUES (?, ?, 'markdown', 'pending', ?, '', ?, '', 0, 0, ?, ?)
-        """, (folder_id, title, content[:500], self.sha256(content), created_iso, created_iso))
+            VALUES (?, ?, 'markdown', ?, ?, '', ?, '', 0, 0, ?, ?)
+        """, (folder_id, title, disk_path, content[:500], self.sha256(content), created_iso, created_iso))
         doc_id = cursor.lastrowid
 
-        # Create document folder structure
-        disk_path = f"{doc_id}.document"
+        if not self.db_only:
+            # Create document folder
+            doc_folder = self.data_dir / disk_path
+            doc_folder.mkdir(parents=True, exist_ok=True)
+            (doc_folder / "sources").mkdir(exist_ok=True)
+
+            # Write files
+            (doc_folder / "body.md").write_text(content, encoding='utf-8')
+            (doc_folder / "summary.md").write_text('', encoding='utf-8')
+
+        # Write metadata.yaml (always — updates doc id for this DB)
         doc_folder = self.data_dir / disk_path
-        doc_folder.mkdir(parents=True, exist_ok=True)
-        (doc_folder / "sources").mkdir(exist_ok=True)
+        escaped_title = title.replace('"', '\\"')
+        metadata_content = f'id: {doc_id}\ntitle: "{escaped_title}"\ncreated: {created_iso}\n'
+        (doc_folder / "metadata.yaml").write_text(metadata_content, encoding='utf-8')
 
-        # Write body.md
-        body_file = doc_folder / "body.md"
-        body_file.write_text(content, encoding='utf-8')
-
-        # Write empty summary.md
-        summary_file = doc_folder / "summary.md"
-        summary_file.write_text('', encoding='utf-8')
-
-        # Write metadata.yaml
-        metadata_content = f"""title: {title}
-created: {created_iso}
-modified: {created_iso}
-"""
-        metadata_file = doc_folder / "metadata.yaml"
-        metadata_file.write_text(metadata_content, encoding='utf-8')
-
-        # Update document with real disk path
-        cursor.execute("""
-            UPDATE documents
-            SET disk_path = ?
-            WHERE id = ?
-        """, (disk_path, doc_id))
         self.conn.commit()
-
-        print(f"    Created document: {title} (id={doc_id})")
+        print(f"    Created document: {title} (id={doc_id}, path={disk_path})")
         return doc_id
 
     def import_directory(self, source_dir: Path):
@@ -182,7 +212,7 @@ modified: {created_iso}
             folder_path = rel_path.parent
 
             # Get or create folder hierarchy
-            folder_id = self.get_or_create_folder_hierarchy(folder_path)
+            folder_id, folder_disk_path = self.get_or_create_folder_hierarchy(folder_path)
 
             # Read content
             try:
@@ -199,7 +229,7 @@ modified: {created_iso}
             # Subtract index * 1 minute to ensure files sort correctly by creation date
             created_at = file_mtime - timedelta(minutes=len(md_files) - i)
 
-            self.create_document(title, folder_id, content, created_at)
+            self.create_document(title, folder_id, content, created_at, folder_disk_path)
 
         print(f"\n✓ Import complete! Imported {len(md_files)} documents")
 
@@ -216,52 +246,70 @@ modified: {created_iso}
         print("✓ Database cleared")
 
     def clear_filesystem(self):
-        """Remove all document folders from file system"""
+        """Remove all document folders and physical folders from file system"""
         if self.data_dir.exists():
             print(f"Clearing file system at {self.data_dir}...")
             for item in self.data_dir.iterdir():
-                if item.is_dir() and item.name.endswith('.document'):
+                if item.is_dir() and not item.name.startswith('.'):
                     shutil.rmtree(item)
             print("✓ File system cleared")
 
 
-def find_db_path():
-    """Try to find the HiDocu database automatically"""
+DB_LOCATIONS = [
+    ("Application Support", "Library/Application Support/HiDocu/hidocu.sqlite"),
+    ("Sandbox container", "Library/Containers/com.hidocu.app/Data/Library/Application Support/HiDocu/hidocu.sqlite"),
+    ("Application Support (.db)", "Library/Application Support/HiDocu/hidocu.db"),
+    ("Home directory", "HiDocu/hidocu.sqlite"),
+]
+
+
+def find_all_db_paths():
+    """Find all existing HiDocu database instances."""
     home = Path.home()
+    found = []
+    for label, rel_path in DB_LOCATIONS:
+        full = home / rel_path
+        if full.exists():
+            found.append((label, str(full)))
+    return found
 
-    # Check sandboxed container (macOS app with sandbox enabled)
-    sandboxed = home / "Library" / "Containers" / "com.hidocu.app" / "Data" / "Library" / "Application Support" / "HiDocu" / "hidocu.sqlite"
-    if sandboxed.exists():
-        return str(sandboxed)
 
-    # Check Application Support (non-sandboxed)
-    app_support = home / "Library" / "Application Support" / "HiDocu" / "hidocu.sqlite"
-    if app_support.exists():
-        return str(app_support)
+def choose_db_paths(found, auto_yes=False):
+    """
+    Let the user choose which databases to update.
+    Returns a list of (label, path) tuples.
+    If --yes is set or only one DB exists, skips the prompt.
+    """
+    if len(found) == 1:
+        return found
 
-    # Fallback to .db extension
-    app_support_db = home / "Library" / "Application Support" / "HiDocu" / "hidocu.db"
-    if app_support_db.exists():
-        return str(app_support_db)
+    print(f"\nFound {len(found)} database instances:")
+    for i, (label, path) in enumerate(found, 1):
+        print(f"  {i}) [{label}] {path}")
+    print(f"  a) All of the above")
 
-    # Check home directory
-    home_db = home / "HiDocu" / "hidocu.sqlite"
-    if home_db.exists():
-        return str(home_db)
+    if auto_yes:
+        print("  -> --yes flag set, updating all.\n")
+        return found
 
-    return None
+    while True:
+        choice = input("\nWhich database(s) to update? [a]: ").strip().lower() or "a"
+        if choice == "a":
+            return found
+        if choice.isdigit() and 1 <= int(choice) <= len(found):
+            return [found[int(choice) - 1]]
+        # Support comma-separated like "1,2"
+        parts = [p.strip() for p in choice.split(",")]
+        if all(p.isdigit() and 1 <= int(p) <= len(found) for p in parts):
+            return [found[int(p) - 1] for p in parts]
+        print("Invalid choice. Enter a number, comma-separated numbers, or 'a' for all.")
 
 
 def find_data_dir():
     """Find the HiDocu data directory"""
     home = Path.home()
 
-    # Check sandboxed container (macOS app with sandbox enabled)
-    sandboxed = home / "Library" / "Containers" / "com.hidocu.app" / "Data" / "HiDocu"
-    if sandboxed.exists():
-        return str(sandboxed)
-
-    # Default location
+    # Default location (used by non-sandboxed builds)
     default_dir = home / "HiDocu"
     return str(default_dir)
 
@@ -272,7 +320,7 @@ def main():
     )
     parser.add_argument(
         '--source-dir',
-        default='data/Job Interviews',
+        default='tmp/Job Interviews',
         help='Source directory containing .md files (default: data/Job Interviews)'
     )
     parser.add_argument(
@@ -296,52 +344,65 @@ def main():
 
     args = parser.parse_args()
 
-    # Resolve paths
-    db_path = args.db_path or find_db_path()
     data_dir = args.data_dir or find_data_dir()
 
-    if not db_path:
-        print("ERROR: Could not find HiDocu database.")
-        print("Please specify --db-path or run the HiDocu app first to create the database.")
-        sys.exit(1)
+    # Resolve database target(s)
+    if args.db_path:
+        # Explicit path — single target
+        db_targets = [("user-specified", args.db_path)]
+        if not Path(args.db_path).exists():
+            print(f"ERROR: Database not found at {args.db_path}")
+            sys.exit(1)
+    else:
+        found = find_all_db_paths()
+        if not found:
+            print("ERROR: Could not find any HiDocu database.")
+            print("Please specify --db-path or run the HiDocu app first to create the database.")
+            sys.exit(1)
+        db_targets = choose_db_paths(found, auto_yes=args.yes)
 
     print("HiDocu Data Importer")
     print("=" * 60)
-    print(f"Database:   {db_path}")
+    for label, path in db_targets:
+        print(f"Database:   {path}  [{label}]")
     print(f"Data dir:   {data_dir}")
     print(f"Source:     {args.source_dir}")
     print("=" * 60)
 
-    if not Path(db_path).exists():
-        print(f"\nERROR: Database not found at {db_path}")
-        print("Please run the HiDocu app first to create the database.")
-        sys.exit(1)
+    if args.clear and not args.yes:
+        response = input("\n⚠️  This will DELETE all existing folders and documents. Continue? (yes/no): ")
+        if response.lower() != 'yes':
+            print("Aborted.")
+            sys.exit(0)
 
-    # Create importer
-    importer = HiDocuImporter(db_path, data_dir)
+    filesystem_cleared = False
+    files_created = False
 
-    try:
-        importer.connect()
+    for label, db_path in db_targets:
+        print(f"\n{'─' * 60}")
+        print(f"Importing into: {db_path}  [{label}]")
+        print(f"{'─' * 60}")
 
-        if args.clear:
-            if not args.yes:
-                response = input("\n⚠️  This will DELETE all existing folders and documents. Continue? (yes/no): ")
-                if response.lower() != 'yes':
-                    print("Aborted.")
-                    sys.exit(0)
-            importer.clear_database()
-            importer.clear_filesystem()
+        # After the first import creates files, subsequent imports only update the DB
+        importer = HiDocuImporter(db_path, data_dir, db_only=files_created)
+        try:
+            importer.connect()
 
-        # Import
-        importer.import_directory(args.source_dir)
+            if args.clear:
+                importer.clear_database()
+                if not filesystem_cleared:
+                    importer.clear_filesystem()
+                    filesystem_cleared = True
 
-    except Exception as e:
-        print(f"\n❌ ERROR: {e}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
-    finally:
-        importer.close()
+            importer.import_directory(args.source_dir)
+            files_created = True
+        except Exception as e:
+            print(f"\n❌ ERROR importing into {db_path}: {e}")
+            import traceback
+            traceback.print_exc()
+            sys.exit(1)
+        finally:
+            importer.close()
 
     print("\n✓ All done! Launch HiDocu to see your data.")
 

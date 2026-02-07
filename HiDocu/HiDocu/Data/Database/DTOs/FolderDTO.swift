@@ -14,6 +14,7 @@ struct FolderDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
     var id: Int64?
     var parentId: Int64?
     var name: String
+    var diskPath: String?
     var transcriptionContext: String?
     var categorizationContext: String?
     var preferSummary: Bool
@@ -26,6 +27,7 @@ struct FolderDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         static let id = Column(CodingKeys.id)
         static let parentId = Column(CodingKeys.parentId)
         static let name = Column(CodingKeys.name)
+        static let diskPath = Column(CodingKeys.diskPath)
         static let transcriptionContext = Column(CodingKeys.transcriptionContext)
         static let categorizationContext = Column(CodingKeys.categorizationContext)
         static let preferSummary = Column(CodingKeys.preferSummary)
@@ -39,6 +41,7 @@ struct FolderDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         case id
         case parentId = "parent_id"
         case name
+        case diskPath = "disk_path"
         case transcriptionContext = "transcription_context"
         case categorizationContext = "categorization_context"
         case preferSummary = "prefer_summary"
@@ -52,6 +55,7 @@ struct FolderDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         self.id = domain.id == 0 ? nil : domain.id
         self.parentId = domain.parentId
         self.name = domain.name
+        self.diskPath = domain.diskPath
         self.transcriptionContext = domain.transcriptionContext
         self.categorizationContext = domain.categorizationContext
         self.preferSummary = domain.preferSummary
@@ -66,6 +70,7 @@ struct FolderDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
             id: id ?? 0,
             parentId: parentId,
             name: name,
+            diskPath: diskPath,
             transcriptionContext: transcriptionContext,
             categorizationContext: categorizationContext,
             preferSummary: preferSummary,

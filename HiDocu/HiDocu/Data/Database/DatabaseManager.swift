@@ -370,6 +370,12 @@ final class DatabaseManager: Sendable {
             AppLogger.database.info("Migration v5_deletion_log_timestamps complete")
         }
 
+        // v6: Add disk_path to folders for hierarchical path tracking
+        migrator.registerMigration("v6_hierarchical_paths") { db in
+            try db.execute(sql: "ALTER TABLE folders ADD COLUMN disk_path TEXT")
+            AppLogger.database.info("Migration v6_hierarchical_paths complete")
+        }
+
         return migrator
     }
     

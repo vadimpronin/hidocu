@@ -131,7 +131,7 @@ struct DocumentListView: View {
 
     private func revealInFinder(diskPath: String) {
         let folderURL = fileSystemService.dataDirectory.appendingPathComponent(diskPath, isDirectory: true)
-        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: folderURL.path)
+        NSWorkspace.shared.activateFileViewerSelecting([folderURL])
     }
 }
 

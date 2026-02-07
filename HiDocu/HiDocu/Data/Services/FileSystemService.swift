@@ -481,7 +481,7 @@ final class FileSystemService {
         // Create metadata.yaml
         let metadataURL = folderURL.appendingPathComponent("metadata.yaml")
         if !fm.fileExists(atPath: metadataURL.path) {
-            let yaml = "title: Untitled\ncreated: \(ISO8601DateFormatter().string(from: Date()))\n"
+            let yaml = "title: \"Untitled\"\ncreated: \(ISO8601DateFormatter().string(from: Date()))\n"
             try yaml.write(to: metadataURL, atomically: true, encoding: .utf8)
         }
 
@@ -568,7 +568,10 @@ final class FileSystemService {
 
         let fm = FileManager.default
         if fm.fileExists(atPath: trashURL.path) {
-            try fm.createDirectory(at: dataDirectory, withIntermediateDirectories: true)
+            try fm.createDirectory(
+                at: targetURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
             try fm.moveItem(at: trashURL, to: targetURL)
         }
 
@@ -621,8 +624,125 @@ final class FileSystemService {
         let metadataURL = dataDirectory
             .appendingPathComponent(diskPath, isDirectory: true)
             .appendingPathComponent("metadata.yaml")
-        let yaml = "title: \(title)\ncreated: \(ISO8601DateFormatter().string(from: Date()))\n"
+        let escapedTitle = title.replacingOccurrences(of: "\"", with: "\\\"")
+        let yaml = "title: \"\(escapedTitle)\"\ncreated: \(ISO8601DateFormatter().string(from: Date()))\n"
         try yaml.write(to: metadataURL, atomically: true, encoding: .utf8)
+    }
+
+    /// Update metadata.yaml with document id for identity across renames.
+    func updateDocumentMetadata(diskPath: String, title: String, documentId: Int64) throws {
+        let metadataURL = dataDirectory
+            .appendingPathComponent(diskPath, isDirectory: true)
+            .appendingPathComponent("metadata.yaml")
+        let escapedTitle = title.replacingOccurrences(of: "\"", with: "\\\"")
+        let yaml = "id: \(documentId)\ntitle: \"\(escapedTitle)\"\ncreated: \(ISO8601DateFormatter().string(from: Date()))\n"
+        try yaml.write(to: metadataURL, atomically: true, encoding: .utf8)
+    }
+
+    // MARK: - Hierarchical File System
+
+    /// Create a physical directory for a folder within the data directory.
+    /// Creates intermediate directories as needed.
+    func ensureFolderDirectoryExists(relativePath: String) throws {
+        guard !relativePath.isEmpty else { return }
+        let url = dataDirectory.appendingPathComponent(relativePath, isDirectory: true)
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+    }
+
+    /// Move a directory from one relative path to another within the data directory.
+    /// Creates parent directories at the destination as needed.
+    func moveDirectory(from oldRelativePath: String, to newRelativePath: String) throws {
+        let source = dataDirectory.appendingPathComponent(oldRelativePath, isDirectory: true)
+        let destination = dataDirectory.appendingPathComponent(newRelativePath, isDirectory: true)
+        let fm = FileManager.default
+        // Ensure parent of destination exists
+        try fm.createDirectory(
+            at: destination.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try fm.moveItem(at: source, to: destination)
+    }
+
+    /// Check if a relative path exists as a directory within the data directory.
+    func directoryExists(relativePath: String) -> Bool {
+        var isDir: ObjCBool = false
+        let url = dataDirectory.appendingPathComponent(relativePath, isDirectory: true)
+        return FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) && isDir.boolValue
+    }
+
+    /// Create a document bundle folder using a human-readable title within the given parent directory.
+    /// Returns the relative disk path (e.g., "Project X/Meeting Notes.document").
+    func createDocumentFolder(title: String, parentRelativePath: String) throws -> String {
+        let sanitizedTitle = PathSanitizer.sanitize(title)
+        let docDirName = PathSanitizer.resolveConflict(
+            baseName: sanitizedTitle,
+            suffix: ".document"
+        ) { candidate in
+            let fullRelative = parentRelativePath.isEmpty
+                ? candidate
+                : "\(parentRelativePath)/\(candidate)"
+            return directoryExists(relativePath: fullRelative)
+        }
+
+        let diskPath = parentRelativePath.isEmpty
+            ? docDirName
+            : "\(parentRelativePath)/\(docDirName)"
+
+        let folderURL = dataDirectory.appendingPathComponent(diskPath, isDirectory: true)
+        let fm = FileManager.default
+        try fm.createDirectory(at: folderURL, withIntermediateDirectories: true)
+        try fm.createDirectory(
+            at: folderURL.appendingPathComponent("sources", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+
+        // Create empty body.md and summary.md
+        let bodyURL = folderURL.appendingPathComponent("body.md")
+        let summaryURL = folderURL.appendingPathComponent("summary.md")
+        if !fm.fileExists(atPath: bodyURL.path) {
+            fm.createFile(atPath: bodyURL.path, contents: nil)
+        }
+        if !fm.fileExists(atPath: summaryURL.path) {
+            fm.createFile(atPath: summaryURL.path, contents: nil)
+        }
+
+        // Create metadata.yaml placeholder
+        let metadataURL = folderURL.appendingPathComponent("metadata.yaml")
+        if !fm.fileExists(atPath: metadataURL.path) {
+            let escapedTitle = title.replacingOccurrences(of: "\"", with: "\\\"")
+            let yaml = "title: \"\(escapedTitle)\"\ncreated: \(ISO8601DateFormatter().string(from: Date()))\n"
+            try yaml.write(to: metadataURL, atomically: true, encoding: .utf8)
+        }
+
+        AppLogger.fileSystem.info("Created document folder: \(diskPath)")
+        return diskPath
+    }
+
+    /// Rename a document's .document bundle on disk.
+    /// Returns the new relative disk path.
+    func renameDocumentFolder(oldDiskPath: String, newTitle: String) throws -> String {
+        let sanitizedTitle = PathSanitizer.sanitize(newTitle)
+        let parentDir = (oldDiskPath as NSString).deletingLastPathComponent
+
+        let newDocDirName = PathSanitizer.resolveConflict(
+            baseName: sanitizedTitle,
+            suffix: ".document"
+        ) { candidate in
+            let fullRelative = parentDir.isEmpty ? candidate : "\(parentDir)/\(candidate)"
+            // Don't conflict with self
+            if fullRelative == oldDiskPath { return false }
+            return directoryExists(relativePath: fullRelative)
+        }
+
+        let newDiskPath = parentDir.isEmpty
+            ? newDocDirName
+            : "\(parentDir)/\(newDocDirName)"
+
+        if newDiskPath != oldDiskPath {
+            try moveDirectory(from: oldDiskPath, to: newDiskPath)
+        }
+
+        return newDiskPath
     }
 }
 

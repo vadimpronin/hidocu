@@ -15,6 +15,7 @@ final class DocumentService {
     private let sourceRepository: any SourceRepository
     private let transcriptRepository: any TranscriptRepository
     private let deletionLogRepository: any DeletionLogRepository
+    private let folderRepository: any FolderRepository
     private let fileSystemService: FileSystemService
 
     init(
@@ -22,12 +23,14 @@ final class DocumentService {
         sourceRepository: any SourceRepository,
         transcriptRepository: any TranscriptRepository,
         deletionLogRepository: any DeletionLogRepository,
+        folderRepository: any FolderRepository,
         fileSystemService: FileSystemService
     ) {
         self.documentRepository = documentRepository
         self.sourceRepository = sourceRepository
         self.transcriptRepository = transcriptRepository
         self.deletionLogRepository = deletionLogRepository
+        self.folderRepository = folderRepository
         self.fileSystemService = fileSystemService
     }
 
@@ -36,37 +39,78 @@ final class DocumentService {
     func createDocument(title: String, folderId: Int64?) async throws -> Document {
         try fileSystemService.ensureDataDirectoryExists()
 
-        // Insert with placeholder disk path to get the ID
-        let placeholder = Document(
+        // Resolve parent folder path
+        let parentPath: String
+        if let folderId {
+            if let folder = try await folderRepository.fetchById(folderId) {
+                parentPath = folder.diskPath ?? ""
+            } else {
+                parentPath = ""
+            }
+        } else {
+            parentPath = ""
+        }
+
+        // Ensure parent directory exists
+        if !parentPath.isEmpty {
+            try fileSystemService.ensureFolderDirectoryExists(relativePath: parentPath)
+        }
+
+        // Create document folder with human-readable title
+        let diskPath = try fileSystemService.createDocumentFolder(title: title, parentRelativePath: parentPath)
+
+        // Insert document with real diskPath (no placeholder!)
+        let doc = Document(
             folderId: folderId,
             title: title,
-            diskPath: "pending"
+            diskPath: diskPath
         )
-        let inserted = try await documentRepository.insert(placeholder)
+        let inserted = try await documentRepository.insert(doc)
 
-        // Create disk folder using the assigned ID
-        let diskPath = try fileSystemService.createDocumentFolder(documentId: inserted.id)
-        try fileSystemService.updateDocumentMetadata(diskPath: diskPath, title: title)
+        // Write metadata with document id
+        try fileSystemService.updateDocumentMetadata(diskPath: diskPath, title: title, documentId: inserted.id)
 
-        // Update with real disk path
-        var updated = inserted
-        updated.diskPath = diskPath
-        try await documentRepository.update(updated)
-
-        AppLogger.fileSystem.info("Created document '\(title)' id=\(inserted.id)")
-        return updated
+        AppLogger.fileSystem.info("Created document '\(title)' id=\(inserted.id) at \(diskPath)")
+        return inserted
     }
 
     func renameDocument(id: Int64, newTitle: String) async throws {
         guard var doc = try await documentRepository.fetchById(id) else { return }
+        let oldDiskPath = doc.diskPath
+
+        // Physical rename on disk
+        let newDiskPath = try fileSystemService.renameDocumentFolder(oldDiskPath: oldDiskPath, newTitle: newTitle)
+
+        // Update database
         doc.title = newTitle
+        doc.diskPath = newDiskPath
         doc.modifiedAt = Date()
         try await documentRepository.update(doc)
-        try fileSystemService.updateDocumentMetadata(diskPath: doc.diskPath, title: newTitle)
+
+        // Update metadata.yaml with new title and document id
+        try fileSystemService.updateDocumentMetadata(diskPath: newDiskPath, title: newTitle, documentId: id)
+
+        // Cascade path updates if paths changed (append / for correct prefix matching)
+        if oldDiskPath != newDiskPath {
+            let oldCascadePrefix = oldDiskPath + "/"
+            let newCascadePrefix = newDiskPath + "/"
+            try await sourceRepository.updateDiskPathPrefix(oldPrefix: oldCascadePrefix, newPrefix: newCascadePrefix)
+            try await transcriptRepository.updateFilePathPrefix(oldPrefix: oldCascadePrefix, newPrefix: newCascadePrefix)
+            AppLogger.fileSystem.info("Renamed document \(id) on disk: \(oldDiskPath) -> \(newDiskPath)")
+        }
     }
 
     func deleteDocument(id: Int64) async throws {
         guard let doc = try await documentRepository.fetchById(id) else { return }
+
+        // Resolve folder path for deletion_log
+        let folderPath: String?
+        if let folderId = doc.folderId,
+           let folder = try await folderRepository.fetchById(folderId) {
+            folderPath = folder.diskPath
+        } else {
+            folderPath = nil
+        }
 
         // Move to trash on disk
         let trashPath = try fileSystemService.moveDocumentToTrash(diskPath: doc.diskPath, documentId: id)
@@ -78,7 +122,7 @@ final class DocumentService {
         let entry = DeletionLogEntry(
             documentId: id,
             documentTitle: doc.title,
-            folderPath: nil,
+            folderPath: folderPath,
             deletedAt: Date(),
             trashPath: trashPath,
             expiresAt: Calendar.current.date(byAdding: .day, value: 30, to: Date())!,
@@ -89,7 +133,106 @@ final class DocumentService {
     }
 
     func moveDocument(id: Int64, toFolderId: Int64?) async throws {
-        try await documentRepository.moveDocument(id: id, toFolderId: toFolderId)
+        guard var doc = try await documentRepository.fetchById(id) else { return }
+        let oldDiskPath = doc.diskPath
+
+        // Resolve new parent folder's diskPath
+        let newParentPath: String
+        if let toFolderId {
+            if let folder = try await folderRepository.fetchById(toFolderId) {
+                newParentPath = folder.diskPath ?? ""
+            } else {
+                newParentPath = ""
+            }
+        } else {
+            newParentPath = ""
+        }
+
+        // Get document directory name (e.g., "Meeting Notes.document")
+        let docDirName = (doc.diskPath as NSString).lastPathComponent
+
+        // Compute new disk path
+        let newDiskPath: String
+        if newParentPath.isEmpty {
+            newDiskPath = docDirName
+        } else {
+            newDiskPath = (newParentPath as NSString).appendingPathComponent(docDirName)
+        }
+
+        // Handle conflict at destination
+        let finalDiskPath: String
+        if oldDiskPath != newDiskPath {
+            let baseName = (docDirName as NSString).deletingPathExtension
+            let suffix = "." + (docDirName as NSString).pathExtension
+            let parent = (newDiskPath as NSString).deletingLastPathComponent
+
+            let uniqueName = PathSanitizer.resolveConflict(
+                baseName: baseName,
+                suffix: suffix,
+                existsCheck: { candidateName in
+                    let candidatePath = parent.isEmpty ? candidateName : (parent as NSString).appendingPathComponent(candidateName)
+                    let candidateURL = fileSystemService.dataDirectory.appendingPathComponent(candidatePath, isDirectory: true)
+                    return FileManager.default.fileExists(atPath: candidateURL.path)
+                }
+            )
+
+            finalDiskPath = parent.isEmpty ? uniqueName : (parent as NSString).appendingPathComponent(uniqueName)
+
+            // Ensure parent directory exists
+            if !newParentPath.isEmpty {
+                try fileSystemService.ensureFolderDirectoryExists(relativePath: newParentPath)
+            }
+
+            // Physical move on disk
+            try fileSystemService.moveDirectory(from: oldDiskPath, to: finalDiskPath)
+
+            // Update database with new folderId and diskPath
+            doc.folderId = toFolderId
+            doc.diskPath = finalDiskPath
+            doc.modifiedAt = Date()
+            try await documentRepository.update(doc)
+
+            // Cascade source/transcript path updates (append / for correct prefix matching)
+            let oldCascadePrefix = oldDiskPath + "/"
+            let newCascadePrefix = finalDiskPath + "/"
+            try await sourceRepository.updateDiskPathPrefix(oldPrefix: oldCascadePrefix, newPrefix: newCascadePrefix)
+            try await transcriptRepository.updateFilePathPrefix(oldPrefix: oldCascadePrefix, newPrefix: newCascadePrefix)
+
+            AppLogger.fileSystem.info("Moved document \(id) on disk: \(oldDiskPath) -> \(finalDiskPath)")
+        } else {
+            // No physical move needed, just update folderId
+            try await documentRepository.moveDocument(id: id, toFolderId: toFolderId)
+        }
+    }
+
+    func fetchDocument(id: Int64) async throws -> Document? {
+        try await documentRepository.fetchById(id)
+    }
+
+    func updateTitle(id: Int64, newTitle: String) async throws {
+        guard var doc = try await documentRepository.fetchById(id) else { return }
+        doc.title = newTitle
+        doc.modifiedAt = Date()
+        try await documentRepository.update(doc)
+        try fileSystemService.updateDocumentMetadata(diskPath: doc.diskPath, title: newTitle, documentId: id)
+    }
+
+    func renameDocumentOnDisk(id: Int64) async throws {
+        guard var doc = try await documentRepository.fetchById(id) else { return }
+        let oldDiskPath = doc.diskPath
+        let newDiskPath = try fileSystemService.renameDocumentFolder(oldDiskPath: oldDiskPath, newTitle: doc.title)
+
+        if oldDiskPath != newDiskPath {
+            doc.diskPath = newDiskPath
+            doc.modifiedAt = Date()
+            try await documentRepository.update(doc)
+            try fileSystemService.updateDocumentMetadata(diskPath: newDiskPath, title: doc.title, documentId: id)
+            let oldCascadePrefix = oldDiskPath + "/"
+            let newCascadePrefix = newDiskPath + "/"
+            try await sourceRepository.updateDiskPathPrefix(oldPrefix: oldCascadePrefix, newPrefix: newCascadePrefix)
+            try await transcriptRepository.updateFilePathPrefix(oldPrefix: oldCascadePrefix, newPrefix: newCascadePrefix)
+            AppLogger.fileSystem.info("Renamed document \(id) on disk (deferred): \(oldDiskPath) -> \(newDiskPath)")
+        }
     }
 
     // MARK: - Body & Summary
@@ -137,27 +280,24 @@ final class DocumentService {
             throw DocumentServiceError.documentNotFound
         }
 
-        let sourceDiskPath = try fileSystemService.createSourceFolder(
-            documentDiskPath: doc.diskPath,
-            sourceId: 0 // placeholder
-        )
-
+        // Insert source with placeholder diskPath to get ID
         let source = Source(
             documentId: documentId,
             sourceType: .recording,
             recordingId: recordingId,
-            diskPath: sourceDiskPath,
+            diskPath: "pending",
             displayName: displayName
         )
         let inserted = try await sourceRepository.insert(source)
 
-        // Recreate with correct ID-based path
+        // Create source folder using real ID
         let correctPath = try fileSystemService.createSourceFolder(
             documentDiskPath: doc.diskPath,
             sourceId: inserted.id
         )
-        var fixed = inserted
-        fixed.diskPath = correctPath
+
+        // Delete and re-insert with correct path
+        // (SourceRepository only has insert/delete, no update method)
         try await sourceRepository.delete(id: inserted.id)
         let final_ = try await sourceRepository.insert(Source(
             documentId: documentId,
@@ -167,6 +307,7 @@ final class DocumentService {
             displayName: displayName
         ))
 
+        AppLogger.fileSystem.info("Added source \(final_.id) to document \(documentId) at \(correctPath)")
         return final_
     }
 

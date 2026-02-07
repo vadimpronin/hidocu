@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import os
 
 @Observable
 @MainActor
@@ -92,7 +93,7 @@ final class DocumentDetailViewModel {
 
         do {
             if titleModified, document != nil {
-                try await documentService.renameDocument(id: doc.id, newTitle: titleText)
+                try await documentService.updateTitle(id: doc.id, newTitle: titleText)
                 loadedTitle = titleText
                 titleModified = false
             }
@@ -110,6 +111,21 @@ final class DocumentDetailViewModel {
             // Silently ignore save errors if document was cleared (e.g., deleted)
             guard document != nil else { return }
             errorMessage = "Failed to save: \(error.localizedDescription)"
+        }
+    }
+
+    /// Perform physical disk rename if title has changed since the last disk sync.
+    /// Call when switching documents or dismissing the view.
+    func flushDiskRename() async {
+        guard let doc = document else { return }
+        do {
+            try await documentService.renameDocumentOnDisk(id: doc.id)
+            // Refresh document to get updated diskPath
+            if let refreshed = try await documentService.fetchDocument(id: doc.id) {
+                document = refreshed
+            }
+        } catch {
+            AppLogger.fileSystem.error("Failed to rename document on disk: \(error.localizedDescription)")
         }
     }
 

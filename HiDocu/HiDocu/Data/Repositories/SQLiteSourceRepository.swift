@@ -46,4 +46,17 @@ final class SQLiteSourceRepository: SourceRepository, Sendable {
             try SourceDTO.deleteOne(database, key: id)
         }
     }
+
+    func updateDiskPathPrefix(oldPrefix: String, newPrefix: String) async throws {
+        try await db.asyncWrite { database in
+            try database.execute(
+                sql: """
+                UPDATE sources
+                SET disk_path = ? || substr(disk_path, ? + 1)
+                WHERE disk_path LIKE ? || '%'
+                """,
+                arguments: [newPrefix, oldPrefix.count, oldPrefix]
+            )
+        }
+    }
 }

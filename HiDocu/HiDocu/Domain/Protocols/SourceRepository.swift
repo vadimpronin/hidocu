@@ -12,4 +12,5 @@ protocol SourceRepository: Sendable {
     func fetchById(_ id: Int64) async throws -> Source?
     func insert(_ source: Source) async throws -> Source
     func delete(id: Int64) async throws
+    func updateDiskPathPrefix(oldPrefix: String, newPrefix: String) async throws
 }

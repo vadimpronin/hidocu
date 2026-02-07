@@ -27,6 +27,7 @@ def create_database(db_path: str):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             parent_id INTEGER REFERENCES folders(id) ON DELETE CASCADE,
             name TEXT NOT NULL,
+            disk_path TEXT,
             transcription_context TEXT,
             categorization_context TEXT,
             prefer_summary INTEGER NOT NULL DEFAULT 1,
@@ -153,7 +154,8 @@ def create_database(db_path: str):
         'v2_context_management',
         'v3_cleanup',
         'v4_fix_sources_fk',
-        'v5_deletion_log_timestamps'
+        'v5_deletion_log_timestamps',
+        'v6_hierarchical_paths'
     ]
 
     for migration in migrations:

@@ -12,15 +12,18 @@ final class TrashService {
 
     private let deletionLogRepository: any DeletionLogRepository
     private let documentRepository: any DocumentRepository
+    private let folderRepository: any FolderRepository
     private let fileSystemService: FileSystemService
 
     init(
         deletionLogRepository: any DeletionLogRepository,
         documentRepository: any DocumentRepository,
+        folderRepository: any FolderRepository,
         fileSystemService: FileSystemService
     ) {
         self.deletionLogRepository = deletionLogRepository
         self.documentRepository = documentRepository
+        self.folderRepository = folderRepository
         self.fileSystemService = fileSystemService
     }
 
@@ -33,8 +36,39 @@ final class TrashService {
     func restoreDocument(deletionLogId: Int64, toFolderId: Int64?) async throws {
         guard let entry = try await deletionLogRepository.fetchById(deletionLogId) else { return }
 
-        let diskPath = "\(entry.documentId).document"
-        try fileSystemService.restoreDocumentFromTrash(trashPath: entry.trashPath, targetPath: diskPath)
+        // Resolve target folder's disk path
+        let parentPath: String
+        if let toFolderId {
+            if let folder = try await folderRepository.fetchById(toFolderId) {
+                parentPath = folder.diskPath ?? ""
+            } else {
+                parentPath = ""
+            }
+        } else {
+            parentPath = ""
+        }
+
+        // Ensure parent directory exists on disk
+        if !parentPath.isEmpty {
+            try fileSystemService.ensureFolderDirectoryExists(relativePath: parentPath)
+        }
+
+        // Compute target disk path with conflict resolution
+        let docTitle = entry.documentTitle ?? "Restored Document"
+        let sanitizedTitle = PathSanitizer.sanitize(docTitle)
+        let docDirName = PathSanitizer.resolveConflict(
+            baseName: sanitizedTitle,
+            suffix: ".document"
+        ) { candidate in
+            let fullRelative = parentPath.isEmpty ? candidate : "\(parentPath)/\(candidate)"
+            return fileSystemService.directoryExists(relativePath: fullRelative)
+        }
+        let diskPath = parentPath.isEmpty ? docDirName : "\(parentPath)/\(docDirName)"
+
+        // Restore from trash to target location
+        try fileSystemService.restoreDocumentFromTrash(
+            trashPath: entry.trashPath, targetPath: diskPath
+        )
 
         // Re-insert document in DB with original timestamps
         let doc = Document(
@@ -49,7 +83,7 @@ final class TrashService {
         // Remove from deletion log
         try await deletionLogRepository.delete(id: deletionLogId)
 
-        AppLogger.fileSystem.info("Restored document from trash: \(entry.trashPath)")
+        AppLogger.fileSystem.info("Restored document from trash: \(entry.trashPath) -> \(diskPath)")
     }
 
     /// Permanently delete a trashed document

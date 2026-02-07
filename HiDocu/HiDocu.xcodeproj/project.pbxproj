@@ -30,6 +30,7 @@
 		6653E1E533CD3337CF17CEB4 /* FolderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42EB92A51DFBFEB3BE82AB4E /* FolderService.swift */; };
 		68054ABA82DDCF81977052B3 /* DeviceDashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14B1464F9B61FF0B4ED761F6 /* DeviceDashboardViewModel.swift */; };
 		6ED29A3CA24533D402F918DD /* TranscriptRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0D1580CF48C34D6AA476C3 /* TranscriptRepository.swift */; };
+		6FBDED703B6FC6EC14A8324E /* PathSanitizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF266F9B0F879544CB1FB848 /* PathSanitizer.swift */; };
 		7C544CC177A527E1114D7392 /* SourceDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBECEEA4D622EE030E4E9ED6 /* SourceDTO.swift */; };
 		7C9C910ECDD42858F96B2447 /* BatteryIndicatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07496990C2830BD1439D5351 /* BatteryIndicatorView.swift */; };
 		7FE08A5C64923C365769E369 /* Folder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA55DE2ACE96B64C6A54BE4E /* Folder.swift */; };
@@ -135,6 +136,7 @@
 		D69953C06FF92116AE18C2DE /* TrashService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TrashService.swift; path = TrashService.swift; sourceTree = "<group>"; };
 		DBA3562E4C531972E9D61F66 /* SourcesViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesViewModel.swift; sourceTree = "<group>"; };
 		DBECEEA4D622EE030E4E9ED6 /* SourceDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SourceDTO.swift; path = SourceDTO.swift; sourceTree = "<group>"; };
+		DF266F9B0F879544CB1FB848 /* PathSanitizer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PathSanitizer.swift; sourceTree = "<group>"; };
 		E4C310BB2F07F16244282199 /* Document.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Document.swift; path = Document.swift; sourceTree = "<group>"; };
 		F0000000F0000000 /* HiDocu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HiDocu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F0000011F0000011 /* HiDocuApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiDocuApp.swift; sourceTree = "<group>"; };
@@ -359,6 +361,7 @@
 				D69953C06FF92116AE18C2DE /* TrashService.swift */,
 				1982272C3186149C008392DB /* SettingsService.swift */,
 				368BA73F8C08D273FE2B21C8 /* RecordingImportServiceV2.swift */,
+				DF266F9B0F879544CB1FB848 /* PathSanitizer.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -671,6 +674,7 @@
 				63DB1BE9930DC98549A59509 /* TrashView.swift in Sources */,
 				310961DA68DD2E6085C77B8F /* SettingsViewV2.swift in Sources */,
 				7C9C910ECDD42858F96B2447 /* BatteryIndicatorView.swift in Sources */,
+				6FBDED703B6FC6EC14A8324E /* PathSanitizer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -828,7 +832,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
@@ -867,7 +871,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
