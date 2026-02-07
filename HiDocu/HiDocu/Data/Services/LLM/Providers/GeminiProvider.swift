@@ -3,6 +3,7 @@
 //  HiDocu
 //
 //  Google Gemini LLM provider implementation using OAuth2 authentication.
+//  Uses Cloud Code Assist API (cloudcode-pa.googleapis.com) with the Gemini CLI OAuth client.
 //
 
 import Foundation
@@ -13,12 +14,14 @@ private let logger = Logger(subsystem: "com.hidocu.app", category: "llm")
 /// Google Gemini LLM provider strategy.
 ///
 /// Implements OAuth2 authentication flow with client secret (not PKCE).
-/// Uses standard Google OAuth endpoints and the Generative Language API.
+/// Uses the Cloud Code Assist API endpoint which is accessible with the Gemini CLI OAuth client.
 ///
 /// Key differences from PKCE-based providers:
 /// - Uses client_secret instead of PKCE code_verifier
 /// - Client secret must be stored in OAuthTokenBundle for refresh operations
 /// - Fetches user email from Google userinfo API after token exchange
+/// - Requires project ID obtained via loadCodeAssist endpoint
+/// - Request body wraps standard Gemini payload in a `request` field with `project` and `model`
 final class GeminiProvider: LLMProviderStrategy, Sendable {
     // MARK: - OAuth Configuration
 
@@ -40,8 +43,14 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
 
     // MARK: - API Configuration
 
-    private static let apiBaseURL = "https://generativelanguage.googleapis.com/v1beta"
+    // Cloud Code Assist API (used by Gemini CLI, not the public generativelanguage API)
+    private static let apiBaseURL = "https://cloudcode-pa.googleapis.com/v1internal"
     private static let userinfoURL = "https://www.googleapis.com/oauth2/v1/userinfo?alt=json"
+
+    // Headers to match the Gemini CLI client identity
+    private static let cliUserAgent = "google-api-nodejs-client/9.15.1"
+    private static let cliApiClient = "gl-node/22.17.0"
+    private static let cliMetadata = "ideType=IDE_UNSPECIFIED,platform=PLATFORM_UNSPECIFIED,pluginType=GEMINI"
 
     // MARK: - Properties
 
@@ -63,8 +72,9 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
     /// 4. Open browser to authorization URL
     /// 5. Exchange authorization code for tokens using client_secret
     /// 6. Fetch user email from Google userinfo API
+    /// 7. Fetch project ID via loadCodeAssist endpoint
     ///
-    /// - Returns: Token bundle with access/refresh tokens and user email
+    /// - Returns: Token bundle with access/refresh tokens, user email, and project ID
     /// - Throws: `LLMError` if authentication fails
     func authenticate() async throws -> OAuthTokenBundle {
         logger.info("Starting Gemini OAuth authentication flow")
@@ -109,17 +119,31 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         // Exchange code for tokens
         let tokenBundle = try await exchangeCodeForTokens(code: result.code)
 
+        // Fetch project ID required for Cloud Code API
+        let projectId = try await fetchProjectId(accessToken: tokenBundle.accessToken)
+        logger.info("Obtained Cloud Code project ID: \(projectId)")
+
+        let bundleWithProject = OAuthTokenBundle(
+            accessToken: tokenBundle.accessToken,
+            refreshToken: tokenBundle.refreshToken,
+            expiresAt: tokenBundle.expiresAt,
+            email: tokenBundle.email,
+            projectId: projectId,
+            clientSecret: Self.clientSecret
+        )
+
         logger.info("Gemini authentication successful for user: \(tokenBundle.email)")
-        return tokenBundle
+        return bundleWithProject
     }
 
     /// Refreshes an expired access token using the refresh token.
     ///
     /// Note: Google may not return a new refresh_token in the response.
     /// If not present, we reuse the existing refresh token.
+    /// The project ID is re-fetched using the new access token.
     ///
     /// - Parameter refreshToken: Valid refresh token
-    /// - Returns: New token bundle with refreshed access token
+    /// - Returns: New token bundle with refreshed access token and project ID
     /// - Throws: `LLMError.tokenRefreshFailed` if refresh fails
     func refreshToken(_ refreshToken: String) async throws -> OAuthTokenBundle {
         logger.info("Refreshing Gemini access token")
@@ -193,11 +217,15 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         // Fetch user email (we need it for the token bundle)
         let email = try await fetchUserEmail(accessToken: accessToken)
 
+        // Re-fetch project ID with new access token
+        let projectId = try await fetchProjectId(accessToken: accessToken)
+
         return OAuthTokenBundle(
             accessToken: accessToken,
             refreshToken: newRefreshToken,
             expiresAt: expiresAt,
             email: email,
+            projectId: projectId,
             clientSecret: Self.clientSecret
         )
     }
@@ -222,30 +250,43 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         ]
     }
 
-    /// Sends a chat completion request to the Gemini API.
+    /// Sends a chat completion request to the Cloud Code Assist API.
     ///
     /// Converts messages to Gemini's format:
-    /// - `system` messages → `systemInstruction` field
-    /// - `user` messages → role `"user"`
-    /// - `assistant` messages → role `"model"`
+    /// - `system` messages -> `systemInstruction` field
+    /// - `user` messages -> role `"user"`
+    /// - `assistant` messages -> role `"model"`
+    ///
+    /// The request is wrapped in the Cloud Code format with `project`, `model`, and `request` fields.
     ///
     /// - Parameters:
     ///   - messages: Conversation history
     ///   - model: Model identifier (e.g., "gemini-2.5-flash")
     ///   - accessToken: Valid access token
     ///   - options: Request configuration (max tokens, temperature, system prompt)
+    ///   - tokenData: Token data containing the project ID required for Cloud Code API
     /// - Returns: Completed response with content and token usage
     /// - Throws: `LLMError` if request fails
     func chat(
         messages: [LLMMessage],
         model: String,
         accessToken: String,
-        options: LLMRequestOptions
+        options: LLMRequestOptions,
+        tokenData: TokenData? = nil
     ) async throws -> LLMResponse {
-        logger.info("Sending chat request to Gemini model: \(model)")
+        logger.info("Sending chat request to Gemini Cloud Code API, model: \(model)")
 
-        // Build request URL
-        let url = URL(string: "\(Self.apiBaseURL)/models/\(model):generateContent")!
+        // Project ID is required for Cloud Code API
+        guard let projectId = tokenData?.projectId, !projectId.isEmpty else {
+            throw LLMError.apiError(
+                provider: .gemini,
+                statusCode: 0,
+                message: "Project ID is missing. Please reconnect your Gemini account."
+            )
+        }
+
+        // Build Cloud Code API URL (RPC-style endpoint)
+        let url = URL(string: "\(Self.apiBaseURL):generateContent")!
 
         // Convert messages to Gemini format
         var contents: [[String: Any]] = []
@@ -268,8 +309,8 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
             }
         }
 
-        // Build request body
-        var requestBody: [String: Any] = [
+        // Build inner Gemini request
+        var geminiRequest: [String: Any] = [
             "contents": contents,
             "generationConfig": [
                 "maxOutputTokens": options.maxTokens
@@ -279,25 +320,36 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         // Add system instruction (prefer options.systemPrompt over message-based system prompts)
         let finalSystemPrompt = options.systemPrompt ?? systemInstructions.joined(separator: "\n\n")
         if !finalSystemPrompt.isEmpty {
-            requestBody["systemInstruction"] = [
+            geminiRequest["systemInstruction"] = [
                 "parts": [["text": finalSystemPrompt]]
             ]
         }
+
+        // Wrap in Cloud Code API format
+        let wrappedBody: [String: Any] = [
+            "project": projectId,
+            "model": model,
+            "request": geminiRequest
+        ]
 
         // Serialize to JSON
         let bodyData: Data
 
         do {
-            bodyData = try JSONSerialization.data(withJSONObject: requestBody)
+            bodyData = try JSONSerialization.data(withJSONObject: wrappedBody)
         } catch {
             throw LLMError.invalidResponse(detail: "Failed to serialize request body: \(error.localizedDescription)")
         }
 
-        // Create request
+        // Create request with Cloud Code headers
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue(Self.cliUserAgent, forHTTPHeaderField: "User-Agent")
+        request.setValue(Self.cliApiClient, forHTTPHeaderField: "X-Goog-Api-Client")
+        request.setValue(Self.cliMetadata, forHTTPHeaderField: "Client-Metadata")
         request.httpBody = bodyData
 
         // Execute request
@@ -338,8 +390,11 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
             throw LLMError.invalidResponse(detail: "Failed to parse JSON response")
         }
 
+        // Cloud Code API may wrap response in a "response" field
+        let actualResponse = (json["response"] as? [String: Any]) ?? json
+
         // Extract content from response
-        guard let candidates = json["candidates"] as? [[String: Any]],
+        guard let candidates = actualResponse["candidates"] as? [[String: Any]],
               let firstCandidate = candidates.first,
               let content = firstCandidate["content"] as? [String: Any],
               let parts = content["parts"] as? [[String: Any]],
@@ -350,7 +405,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         }
 
         // Extract usage metadata (optional)
-        let usageMetadata = json["usageMetadata"] as? [String: Any]
+        let usageMetadata = actualResponse["usageMetadata"] as? [String: Any]
         let inputTokens = usageMetadata?["promptTokenCount"] as? Int
         let outputTokens = usageMetadata?["candidatesTokenCount"] as? Int
 
@@ -370,6 +425,77 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
     }
 
     // MARK: - Private Helpers
+
+    /// Fetches the Google Cloud Project ID required for the Cloud Code API.
+    ///
+    /// Calls the `loadCodeAssist` endpoint to retrieve the user's project ID.
+    /// This is the same mechanism used by the Gemini CLI.
+    ///
+    /// - Parameter accessToken: Valid access token
+    /// - Returns: Cloud AI Companion project ID
+    /// - Throws: `LLMError` if fetch fails
+    private func fetchProjectId(accessToken: String) async throws -> String {
+        let url = URL(string: "\(Self.apiBaseURL):loadCodeAssist")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(Self.cliUserAgent, forHTTPHeaderField: "User-Agent")
+        request.setValue(Self.cliApiClient, forHTTPHeaderField: "X-Goog-Api-Client")
+        request.setValue(Self.cliMetadata, forHTTPHeaderField: "Client-Metadata")
+
+        let body: [String: Any] = [
+            "metadata": [
+                "ideType": "IDE_UNSPECIFIED",
+                "platform": "PLATFORM_UNSPECIFIED",
+                "pluginType": "GEMINI"
+            ]
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response): (Data, URLResponse)
+
+        do {
+            (data, response) = try await urlSession.data(for: request)
+        } catch {
+            logger.error("loadCodeAssist network error: \(error.localizedDescription)")
+            throw LLMError.networkError(underlying: error.localizedDescription)
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw LLMError.invalidResponse(detail: "Not an HTTP response")
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            let errorText = String(data: data, encoding: .utf8) ?? "Unknown"
+            logger.error("Failed to fetch project ID, status \(httpResponse.statusCode): \(errorText)")
+            throw LLMError.apiError(
+                provider: .gemini,
+                statusCode: httpResponse.statusCode,
+                message: "Failed to fetch Project ID: \(errorText)"
+            )
+        }
+
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw LLMError.invalidResponse(detail: "Failed to parse loadCodeAssist response")
+        }
+
+        // Extract project ID — can be a string or an object with "id" field
+        if let projectId = json["cloudaicompanionProject"] as? String, !projectId.isEmpty {
+            return projectId.trimmingCharacters(in: .whitespaces)
+        }
+
+        if let projectMap = json["cloudaicompanionProject"] as? [String: Any],
+           let projectId = projectMap["id"] as? String, !projectId.isEmpty {
+            return projectId.trimmingCharacters(in: .whitespaces)
+        }
+
+        throw LLMError.apiError(
+            provider: .gemini,
+            statusCode: 0,
+            message: "Project ID not found in loadCodeAssist response"
+        )
+    }
 
     /// Exchanges authorization code for access and refresh tokens.
     ///

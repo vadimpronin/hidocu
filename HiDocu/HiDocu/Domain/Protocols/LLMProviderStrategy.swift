@@ -43,12 +43,14 @@ protocol LLMProviderStrategy: Sendable {
     ///   - model: Model identifier (e.g., "claude-3-opus-20240229")
     ///   - accessToken: Valid access token
     ///   - options: Request configuration (max tokens, temperature, etc.)
+    ///   - tokenData: Optional token data with provider-specific metadata (e.g., projectId for Gemini)
     /// - Returns: Completed response with content and metadata
     /// - Throws: `LLMError` if request fails
     func chat(
         messages: [LLMMessage],
         model: String,
         accessToken: String,
-        options: LLMRequestOptions
+        options: LLMRequestOptions,
+        tokenData: TokenData?
     ) async throws -> LLMResponse
 }

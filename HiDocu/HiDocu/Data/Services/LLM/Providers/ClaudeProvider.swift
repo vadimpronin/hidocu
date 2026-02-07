@@ -137,7 +137,8 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
         messages: [LLMMessage],
         model: String,
         accessToken: String,
-        options: LLMRequestOptions
+        options: LLMRequestOptions,
+        tokenData: TokenData? = nil
     ) async throws -> LLMResponse {
         logger.info("Sending chat request to Claude API with model: \(model)")
 

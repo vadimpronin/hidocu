@@ -224,6 +224,9 @@ final class LLMService {
         // Get valid access token
         let accessToken = try await getValidAccessToken(for: account)
 
+        // Load token data (needed for provider-specific metadata like projectId)
+        let currentTokenData = try keychainService.loadToken(identifier: account.keychainIdentifier)
+
         guard let strategy = providers[provider] else {
             throw LLMError.authenticationFailed(provider: provider, detail: "Provider not supported")
         }
@@ -246,7 +249,8 @@ final class LLMService {
                 messages: messages,
                 model: model,
                 accessToken: accessToken,
-                options: options
+                options: options,
+                tokenData: currentTokenData
             )
         } catch let error as LLMError {
             // On rate limit, exclude account and rethrow
@@ -258,11 +262,13 @@ final class LLMService {
             if case .apiError(_, let statusCode, _) = error, statusCode == 401 {
                 AppLogger.llm.warning("Received 401, refreshing token and retrying")
                 let newAccessToken = try await refreshAndGetToken(for: account)
+                let refreshedTokenData = try keychainService.loadToken(identifier: account.keychainIdentifier)
                 response = try await strategy.chat(
                     messages: messages,
                     model: model,
                     accessToken: newAccessToken,
-                    options: options
+                    options: options,
+                    tokenData: refreshedTokenData
                 )
             } else {
                 throw error
