@@ -10,8 +10,10 @@ import SwiftUI
 
 struct DeviceDashboardView: View {
     var deviceController: DeviceController
-    var importService: RecordingImportService
+    var importService: RecordingImportServiceV2
     var viewModel: DeviceDashboardViewModel
+
+    @State private var filesToDelete: Set<String> = []
 
     var body: some View {
         Group {
@@ -160,9 +162,24 @@ struct DeviceDashboardView: View {
                     Divider()
 
                     Button("Delete from Device", role: .destructive) {
-                        Task { await viewModel.deleteFiles(selectedIds) }
+                        filesToDelete = selectedIds
                     }
                 }
+            }
+            .confirmationDialog(
+                "Delete from Device",
+                isPresented: Binding(
+                    get: { !filesToDelete.isEmpty },
+                    set: { if !$0 { filesToDelete = [] } }
+                )
+            ) {
+                Button("Delete \(filesToDelete.count) file\(filesToDelete.count == 1 ? "" : "s")", role: .destructive) {
+                    let ids = filesToDelete
+                    filesToDelete = []
+                    Task { await viewModel.deleteFiles(ids) }
+                }
+            } message: {
+                Text("This will permanently delete \(filesToDelete.count) file\(filesToDelete.count == 1 ? "" : "s") from the device. This cannot be undone.")
             }
         }
     }
@@ -207,7 +224,7 @@ struct DeviceDashboardView: View {
 
 private struct DeviceHeaderSection: View {
     var deviceController: DeviceController
-    var importService: RecordingImportService
+    var importService: RecordingImportServiceV2
     var session: ImportSession?
     var recordingsBytes: Int64
 
@@ -331,7 +348,7 @@ struct FinderStorageBar: View {
 
         let recFrac = Double(recordingsBytes) / total
         if recFrac > 0.005 {
-            result.append((.blue, recFrac, "Recordings", recordingsBytes))
+            result.append((.accentColor, recFrac, "Recordings", recordingsBytes))
         }
 
         let otherFrac = Double(otherBytes) / total
@@ -453,7 +470,7 @@ struct ImportProgressFooter: View {
 // MARK: - Import Button
 
 private struct ImportButton: View {
-    var importService: RecordingImportService
+    var importService: RecordingImportServiceV2
     var controller: DeviceController
     var session: ImportSession?
 

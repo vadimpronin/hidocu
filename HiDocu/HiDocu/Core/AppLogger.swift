@@ -35,4 +35,16 @@ enum AppLogger {
     
     /// Transcription operations (future BYOK AI integration)
     static let transcription = Logger(subsystem: subsystem, category: "transcription")
+
+    /// Document operations
+    static let document = Logger(subsystem: subsystem, category: "document")
+
+    /// Context building and management
+    static let context = Logger(subsystem: subsystem, category: "context")
+
+    /// Trash operations
+    static let trash = Logger(subsystem: subsystem, category: "trash")
+
+    /// Folder operations
+    static let folder = Logger(subsystem: subsystem, category: "folder")
 }

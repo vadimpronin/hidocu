@@ -28,33 +28,29 @@ final class AppDependencyContainer {
     /// Device manager - manages multiple device connections (MUST stay alive)
     let deviceManager: DeviceManager
     
-    /// Audio compatibility service - handles .hda format and validation
-    let audioService: AudioCompatibilityService
-
-    /// Waveform analyzer - extracts visualization data from audio files
-    let waveformAnalyzer: WaveformAnalyzer
-
-    /// Audio player service - manages playback (MUST stay alive)
-    let audioPlayerService: AudioPlayerService
-
     // MARK: - Repositories
 
-    /// Recording repository for data access
-    let recordingRepository: SQLiteRecordingRepository
+    let folderRepository: SQLiteFolderRepository
+    let documentRepository: SQLiteDocumentRepository
+    let sourceRepository: SQLiteSourceRepository
+    let transcriptRepository: SQLiteTranscriptRepository
+    let recordingRepositoryV2: SQLiteRecordingRepositoryV2
+    let deletionLogRepository: SQLiteDeletionLogRepository
 
-    /// Transcription repository for data access
-    let transcriptionRepository: SQLiteTranscriptionRepository
+    // MARK: - Services
 
-    // MARK: - Import Services
+    let documentService: DocumentService
+    let folderService: FolderService
+    let contextService: ContextService
+    let trashService: TrashService
+    let settingsService: SettingsService
+    let importServiceV2: RecordingImportServiceV2
 
-    /// Recording import service - handles device-to-local import
-    let importService: RecordingImportService
-    
     // MARK: - Initialization
-    
+
     init() {
         AppLogger.general.info("Initializing AppDependencyContainer...")
-        
+
         // Initialize database
         do {
             self.databaseManager = try DatabaseManager()
@@ -62,42 +58,55 @@ final class AppDependencyContainer {
             // Fatal error - app cannot function without database
             fatalError("Failed to initialize database: \(error.localizedDescription)")
         }
-        
+
         // Initialize file system service
         self.fileSystemService = FileSystemService()
-        
+
         // Initialize device manager (long-lived singleton)
         self.deviceManager = DeviceManager()
-        
-        // Initialize audio compatibility service
-        self.audioService = AudioCompatibilityService()
 
-        // Initialize waveform analyzer
-        self.waveformAnalyzer = WaveformAnalyzer(fileSystemService: fileSystemService)
+        // Initialize repositories
+        self.folderRepository = SQLiteFolderRepository(databaseManager: databaseManager)
+        self.documentRepository = SQLiteDocumentRepository(databaseManager: databaseManager)
+        self.sourceRepository = SQLiteSourceRepository(databaseManager: databaseManager)
+        self.transcriptRepository = SQLiteTranscriptRepository(databaseManager: databaseManager)
+        self.recordingRepositoryV2 = SQLiteRecordingRepositoryV2(databaseManager: databaseManager)
+        self.deletionLogRepository = SQLiteDeletionLogRepository(databaseManager: databaseManager)
 
-        // Initialize repositories (with FileSystemService for path mapping)
-        self.recordingRepository = SQLiteRecordingRepository(
-            databaseManager: databaseManager,
+        // Initialize services
+        self.settingsService = SettingsService()
+
+        self.folderService = FolderService(folderRepository: folderRepository)
+
+        self.documentService = DocumentService(
+            documentRepository: documentRepository,
+            sourceRepository: sourceRepository,
+            transcriptRepository: transcriptRepository,
+            deletionLogRepository: deletionLogRepository,
             fileSystemService: fileSystemService
         )
 
-        self.transcriptionRepository = SQLiteTranscriptionRepository(
-            databaseManager: databaseManager
+        self.contextService = ContextService(
+            folderRepository: folderRepository,
+            documentRepository: documentRepository,
+            folderService: folderService
         )
 
-        // Initialize audio player service (long-lived singleton)
-        self.audioPlayerService = AudioPlayerService(
-            audioService: audioService,
-            fileSystemService: fileSystemService,
-            repository: recordingRepository
+        self.trashService = TrashService(
+            deletionLogRepository: deletionLogRepository,
+            documentRepository: documentRepository,
+            fileSystemService: fileSystemService
         )
 
-        // Initialize import service
-        self.importService = RecordingImportService(
+        self.importServiceV2 = RecordingImportServiceV2(
             fileSystemService: fileSystemService,
-            audioService: audioService,
-            repository: recordingRepository
+            repository: recordingRepositoryV2
         )
+
+        // Apply settings to file system service
+        if let dataDir = settingsService.settings.general.dataDirectory {
+            fileSystemService.setDataDirectory(URL(fileURLWithPath: dataDir))
+        }
 
         AppLogger.general.info("AppDependencyContainer initialized successfully")
     }

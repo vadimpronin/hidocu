@@ -48,13 +48,13 @@ final class DeviceDashboardViewModel {
     // MARK: - Dependencies
 
     private let deviceController: DeviceController
-    private let repository: any RecordingRepository
+    private let repository: any RecordingRepositoryV2
 
     // MARK: - Initialization
 
     init(
         deviceController: DeviceController,
-        repository: any RecordingRepository
+        repository: any RecordingRepositoryV2
     ) {
         self.deviceController = deviceController
         self.repository = repository

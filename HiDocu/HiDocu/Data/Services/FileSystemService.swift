@@ -406,16 +406,223 @@ final class FileSystemService {
         let url = URL(fileURLWithPath: filename)
         let name = url.deletingPathExtension().lastPathComponent
         let ext = url.pathExtension
-        
+
         var counter = 1
         var backupName: String
-        
+
         repeat {
             backupName = "\(name)_backup_\(counter).\(ext)"
             counter += 1
         } while recordingExists(filename: backupName)
-        
+
         return backupName
+    }
+
+    // MARK: - Data Directory (Context Management)
+
+    /// The data directory for documents (default: ~/HiDocu)
+    var dataDirectory: URL {
+        if let custom = customDataDirectory {
+            return custom
+        }
+        return FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("HiDocu", isDirectory: true)
+    }
+
+    /// Custom data directory override (set via settings)
+    private(set) var customDataDirectory: URL?
+
+    /// Set a custom data directory
+    func setDataDirectory(_ url: URL) {
+        customDataDirectory = url
+        AppLogger.fileSystem.info("Data directory set to: \(url.path)")
+    }
+
+    /// Reset data directory to default ~/HiDocu
+    func resetDataDirectory() {
+        customDataDirectory = nil
+        AppLogger.fileSystem.info("Data directory reset to default")
+    }
+
+    /// Trash directory for deleted documents
+    var trashDirectory: URL {
+        let appSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first!
+        return appSupport
+            .appendingPathComponent("HiDocu", isDirectory: true)
+            .appendingPathComponent("trash", isDirectory: true)
+    }
+
+    /// Create a document folder on disk
+    /// Returns the relative disk path (e.g., "42.document")
+    func createDocumentFolder(documentId: Int64) throws -> String {
+        let folderName = "\(documentId).document"
+        let folderURL = dataDirectory.appendingPathComponent(folderName, isDirectory: true)
+
+        let fm = FileManager.default
+        try fm.createDirectory(at: folderURL, withIntermediateDirectories: true)
+        try fm.createDirectory(
+            at: folderURL.appendingPathComponent("sources", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+
+        // Create empty body.md and summary.md
+        let bodyURL = folderURL.appendingPathComponent("body.md")
+        let summaryURL = folderURL.appendingPathComponent("summary.md")
+        if !fm.fileExists(atPath: bodyURL.path) {
+            fm.createFile(atPath: bodyURL.path, contents: nil)
+        }
+        if !fm.fileExists(atPath: summaryURL.path) {
+            fm.createFile(atPath: summaryURL.path, contents: nil)
+        }
+
+        // Create metadata.yaml
+        let metadataURL = folderURL.appendingPathComponent("metadata.yaml")
+        if !fm.fileExists(atPath: metadataURL.path) {
+            let yaml = "title: Untitled\ncreated: \(ISO8601DateFormatter().string(from: Date()))\n"
+            try yaml.write(to: metadataURL, atomically: true, encoding: .utf8)
+        }
+
+        AppLogger.fileSystem.info("Created document folder: \(folderName)")
+        return folderName
+    }
+
+    /// Create a source folder inside a document's sources directory
+    /// Returns the relative disk path (e.g., "42.document/sources/7.source")
+    func createSourceFolder(documentDiskPath: String, sourceId: Int64) throws -> String {
+        let sourceFolderName = "\(sourceId).source"
+        let sourcesDir = dataDirectory
+            .appendingPathComponent(documentDiskPath, isDirectory: true)
+            .appendingPathComponent("sources", isDirectory: true)
+        let sourceFolder = sourcesDir.appendingPathComponent(sourceFolderName, isDirectory: true)
+
+        try FileManager.default.createDirectory(at: sourceFolder, withIntermediateDirectories: true)
+
+        let relativePath = "\(documentDiskPath)/sources/\(sourceFolderName)"
+        AppLogger.fileSystem.info("Created source folder: \(relativePath)")
+        return relativePath
+    }
+
+    /// Read document body from disk
+    func readDocumentBody(diskPath: String) throws -> String {
+        let bodyURL = dataDirectory
+            .appendingPathComponent(diskPath, isDirectory: true)
+            .appendingPathComponent("body.md")
+        guard FileManager.default.fileExists(atPath: bodyURL.path) else {
+            return ""
+        }
+        return try String(contentsOf: bodyURL, encoding: .utf8)
+    }
+
+    /// Read document summary from disk
+    func readDocumentSummary(diskPath: String) throws -> String {
+        let summaryURL = dataDirectory
+            .appendingPathComponent(diskPath, isDirectory: true)
+            .appendingPathComponent("summary.md")
+        guard FileManager.default.fileExists(atPath: summaryURL.path) else {
+            return ""
+        }
+        return try String(contentsOf: summaryURL, encoding: .utf8)
+    }
+
+    /// Write document body to disk
+    func writeDocumentBody(diskPath: String, content: String) throws {
+        let bodyURL = dataDirectory
+            .appendingPathComponent(diskPath, isDirectory: true)
+            .appendingPathComponent("body.md")
+        try content.write(to: bodyURL, atomically: true, encoding: .utf8)
+    }
+
+    /// Write document summary to disk
+    func writeDocumentSummary(diskPath: String, content: String) throws {
+        let summaryURL = dataDirectory
+            .appendingPathComponent(diskPath, isDirectory: true)
+            .appendingPathComponent("summary.md")
+        try content.write(to: summaryURL, atomically: true, encoding: .utf8)
+    }
+
+    /// Move a document folder to the trash directory
+    /// Returns the trash path
+    func moveDocumentToTrash(diskPath: String, documentId: Int64) throws -> String {
+        let fm = FileManager.default
+        try fm.createDirectory(at: trashDirectory, withIntermediateDirectories: true)
+
+        let sourceURL = dataDirectory.appendingPathComponent(diskPath, isDirectory: true)
+        let trashName = "\(documentId)_\(Int(Date().timeIntervalSince1970)).document"
+        let trashURL = trashDirectory.appendingPathComponent(trashName, isDirectory: true)
+
+        if fm.fileExists(atPath: sourceURL.path) {
+            try fm.moveItem(at: sourceURL, to: trashURL)
+        }
+
+        AppLogger.fileSystem.info("Moved document to trash: \(trashName)")
+        return trashName
+    }
+
+    /// Restore a document from trash back to data directory
+    func restoreDocumentFromTrash(trashPath: String, targetPath: String) throws {
+        let trashURL = trashDirectory.appendingPathComponent(trashPath, isDirectory: true)
+        let targetURL = dataDirectory.appendingPathComponent(targetPath, isDirectory: true)
+
+        let fm = FileManager.default
+        if fm.fileExists(atPath: trashURL.path) {
+            try fm.createDirectory(at: dataDirectory, withIntermediateDirectories: true)
+            try fm.moveItem(at: trashURL, to: targetURL)
+        }
+
+        AppLogger.fileSystem.info("Restored document from trash: \(trashPath) -> \(targetPath)")
+    }
+
+    /// Remove expired trash entries from disk
+    func cleanupExpiredTrash(trashPaths: [String]) {
+        let fm = FileManager.default
+        for path in trashPaths {
+            let url = trashDirectory.appendingPathComponent(path, isDirectory: true)
+            try? fm.removeItem(at: url)
+        }
+    }
+
+    /// Remove a specific trash entry from disk
+    func permanentlyDeleteTrash(trashPath: String) {
+        let url = trashDirectory.appendingPathComponent(trashPath, isDirectory: true)
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    /// Remove a source folder from disk
+    func removeSourceFolder(diskPath: String) {
+        let url = dataDirectory.appendingPathComponent(diskPath, isDirectory: true)
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    /// Ensure the data directory exists
+    func ensureDataDirectoryExists() throws {
+        try FileManager.default.createDirectory(at: dataDirectory, withIntermediateDirectories: true)
+    }
+
+    /// Write a transcript .md file to a source folder
+    func writeTranscriptFile(sourceDiskPath: String, filename: String, content: String) throws -> String {
+        let sourceURL = dataDirectory.appendingPathComponent(sourceDiskPath, isDirectory: true)
+        let fileURL = sourceURL.appendingPathComponent(filename)
+        try content.write(to: fileURL, atomically: true, encoding: .utf8)
+        return "\(sourceDiskPath)/\(filename)"
+    }
+
+    /// Read a transcript .md file from disk
+    func readTranscriptFile(path: String) throws -> String {
+        let fileURL = dataDirectory.appendingPathComponent(path)
+        guard FileManager.default.fileExists(atPath: fileURL.path) else { return "" }
+        return try String(contentsOf: fileURL, encoding: .utf8)
+    }
+
+    /// Update metadata.yaml title in a document folder
+    func updateDocumentMetadata(diskPath: String, title: String) throws {
+        let metadataURL = dataDirectory
+            .appendingPathComponent(diskPath, isDirectory: true)
+            .appendingPathComponent("metadata.yaml")
+        let yaml = "title: \(title)\ncreated: \(ISO8601DateFormatter().string(from: Date()))\n"
+        try yaml.write(to: metadataURL, atomically: true, encoding: .utf8)
     }
 }
 

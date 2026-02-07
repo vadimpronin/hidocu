@@ -206,7 +206,170 @@ final class DatabaseManager: Sendable {
             
             AppLogger.database.info("Migration v1_initial complete")
         }
-        
+
+        // v2: Context management system tables
+        migrator.registerMigration("v2_context_management") { db in
+            try db.execute(sql: """
+                CREATE TABLE folders (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    parent_id INTEGER REFERENCES folders(id) ON DELETE CASCADE,
+                    name TEXT NOT NULL,
+                    transcription_context TEXT,
+                    categorization_context TEXT,
+                    prefer_summary INTEGER NOT NULL DEFAULT 1,
+                    minimize_before_llm INTEGER NOT NULL DEFAULT 0,
+                    sort_order INTEGER NOT NULL DEFAULT 0,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """)
+
+            try db.execute(sql: """
+                CREATE TABLE documents (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL,
+                    title TEXT NOT NULL DEFAULT 'Untitled',
+                    document_type TEXT NOT NULL DEFAULT 'markdown',
+                    disk_path TEXT NOT NULL UNIQUE,
+                    body_preview TEXT,
+                    summary_text TEXT,
+                    body_hash TEXT,
+                    summary_hash TEXT,
+                    prefer_summary INTEGER NOT NULL DEFAULT 0,
+                    minimize_before_llm INTEGER NOT NULL DEFAULT 0,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """)
+
+            try db.execute(sql: """
+                CREATE TABLE recordings_v2 (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    filename TEXT UNIQUE NOT NULL,
+                    filepath TEXT NOT NULL,
+                    title TEXT,
+                    file_size_bytes INTEGER,
+                    duration_seconds INTEGER,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    device_serial TEXT,
+                    device_model TEXT,
+                    recording_mode TEXT
+                )
+                """)
+
+            try db.execute(sql: """
+                CREATE TABLE sources (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+                    source_type TEXT NOT NULL DEFAULT 'recording',
+                    recording_id INTEGER REFERENCES recordings_v2(id) ON DELETE SET NULL,
+                    disk_path TEXT NOT NULL,
+                    display_name TEXT,
+                    sort_order INTEGER NOT NULL DEFAULT 0,
+                    added_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """)
+
+            try db.execute(sql: """
+                CREATE TABLE transcripts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    source_id INTEGER NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+                    title TEXT,
+                    full_text TEXT,
+                    md_file_path TEXT,
+                    is_primary INTEGER NOT NULL DEFAULT 0,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """)
+            try db.execute(sql: """
+                CREATE UNIQUE INDEX idx_transcripts_single_primary
+                    ON transcripts(source_id) WHERE is_primary = 1
+                """)
+
+            try db.execute(sql: """
+                CREATE TABLE deletion_log (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    document_id INTEGER NOT NULL,
+                    document_title TEXT,
+                    folder_path TEXT,
+                    deleted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    trash_path TEXT NOT NULL,
+                    expires_at DATETIME NOT NULL
+                )
+                """)
+
+            try db.execute(sql: """
+                CREATE TABLE document_token_cache (
+                    document_id INTEGER PRIMARY KEY REFERENCES documents(id) ON DELETE CASCADE,
+                    body_bytes INTEGER NOT NULL DEFAULT 0,
+                    summary_bytes INTEGER NOT NULL DEFAULT 0,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """)
+
+            try db.execute(sql: """
+                CREATE TABLE folder_token_cache (
+                    folder_id INTEGER PRIMARY KEY REFERENCES folders(id) ON DELETE CASCADE,
+                    total_bytes INTEGER NOT NULL DEFAULT 0,
+                    document_count INTEGER NOT NULL DEFAULT 0,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """)
+
+            AppLogger.database.info("Migration v2_context_management complete")
+        }
+
+        // v3: Drop old tables, rename recordings_v2 → recordings
+        migrator.registerMigration("v3_cleanup") { db in
+            try db.execute(sql: "DROP TABLE IF EXISTS segments")
+            try db.execute(sql: "DROP TABLE IF EXISTS transcriptions")
+            try db.execute(sql: "DROP TABLE IF EXISTS api_logs")
+            try db.execute(sql: "DROP TABLE IF EXISTS settings")
+            try db.execute(sql: "DROP TABLE IF EXISTS recordings")
+            try db.execute(sql: "ALTER TABLE recordings_v2 RENAME TO recordings")
+
+            AppLogger.database.info("Migration v3_cleanup complete")
+        }
+
+        // v4: Recreate sources table with correct FK (recordings_v2 → recordings)
+        migrator.registerMigration("v4_fix_sources_fk") { db in
+            // Disable FK checks during table rebuild
+            try db.execute(sql: "PRAGMA foreign_keys = OFF")
+
+            try db.execute(sql: """
+                CREATE TABLE sources_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+                    source_type TEXT NOT NULL DEFAULT 'recording',
+                    recording_id INTEGER REFERENCES recordings(id) ON DELETE SET NULL,
+                    disk_path TEXT NOT NULL,
+                    display_name TEXT,
+                    sort_order INTEGER NOT NULL DEFAULT 0,
+                    added_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """)
+            try db.execute(sql: """
+                INSERT INTO sources_new (id, document_id, source_type, recording_id, disk_path, display_name, sort_order, added_at)
+                SELECT id, document_id, source_type, recording_id, disk_path, display_name, sort_order, added_at
+                FROM sources
+                """)
+            try db.execute(sql: "DROP TABLE sources")
+            try db.execute(sql: "ALTER TABLE sources_new RENAME TO sources")
+
+            try db.execute(sql: "PRAGMA foreign_keys = ON")
+
+            AppLogger.database.info("Migration v4_fix_sources_fk complete")
+        }
+
+        // v5: Add original timestamps to deletion_log for proper restore
+        migrator.registerMigration("v5_deletion_log_timestamps") { db in
+            try db.execute(sql: "ALTER TABLE deletion_log ADD COLUMN original_created_at DATETIME")
+            try db.execute(sql: "ALTER TABLE deletion_log ADD COLUMN original_modified_at DATETIME")
+            AppLogger.database.info("Migration v5_deletion_log_timestamps complete")
+        }
+
         return migrator
     }
     

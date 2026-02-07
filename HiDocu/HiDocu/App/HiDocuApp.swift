@@ -8,29 +8,42 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Main application entry point.
-/// Initializes the dependency container and provides it to all views.
 @main
 struct HiDocuApp: App {
 
-    /// The app's dependency container (initialized once, lives for app lifetime)
     @State private var container = AppDependencyContainer()
+    @State private var navigationVM = NavigationViewModelV2()
     @State private var importError: String?
     @State private var showImportError = false
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentViewV2(container: container, navigationVM: navigationVM)
                 .withDependencies(container)
+                .task {
+                    await container.trashService.autoCleanup()
+                }
                 .alert("Import Failed", isPresented: $showImportError) {
                     Button("OK") {}
                 } message: {
                     Text(importError ?? "An unknown error occurred.")
                 }
         }
+        .windowToolbarStyle(.unified(showsTitle: false))
         .commands {
-            // Replace "New" with Import
             CommandGroup(replacing: .newItem) {
+                Button("New Document") {
+                    newDocument()
+                }
+                .keyboardShortcut("n")
+
+                Button("New Folder") {
+                    newFolder()
+                }
+                .keyboardShortcut("n", modifiers: [.command, .shift])
+
+                Divider()
+
                 Button("Import Audio Files...") {
                     importFiles()
                 }
@@ -38,7 +51,6 @@ struct HiDocuApp: App {
             }
 
             #if DEBUG
-            // Debug menu for testing connection behavior
             CommandMenu("Debug") {
                 Button("Simulate Device Connection") {
                     Task { @MainActor in
@@ -50,14 +62,47 @@ struct HiDocuApp: App {
             #endif
         }
 
-        // Settings window (Cmd+,)
         Settings {
-            SettingsView()
+            SettingsViewV2()
                 .withDependencies(container)
         }
     }
 
     // MARK: - Menu Actions
+
+    private func newDocument() {
+        Task { @MainActor in
+            do {
+                let folderId: Int64?
+                if case .folder(let id) = navigationVM.selectedSidebarItem {
+                    folderId = id
+                } else {
+                    folderId = nil
+                }
+                let doc = try await container.documentService.createDocument(
+                    title: "Untitled",
+                    folderId: folderId
+                )
+                navigationVM.selectedDocumentId = doc.id
+            } catch {
+                AppLogger.ui.error("Failed to create document: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func newFolder() {
+        Task { @MainActor in
+            do {
+                let folder = try await container.folderService.createFolder(
+                    name: "New Folder",
+                    parentId: nil
+                )
+                navigationVM.selectedSidebarItem = .folder(id: folder.id)
+            } catch {
+                AppLogger.ui.error("Failed to create folder: \(error.localizedDescription)")
+            }
+        }
+    }
 
     private func importFiles() {
         let panel = NSOpenPanel()
@@ -81,7 +126,7 @@ struct HiDocuApp: App {
 
         Task {
             do {
-                let recordings = try await container.importService.importFiles(urls)
+                let recordings = try await container.importServiceV2.importFiles(urls)
                 AppLogger.ui.info("Imported \(recordings.count) files via menu")
             } catch {
                 AppLogger.ui.error("Import failed: \(error.localizedDescription)")

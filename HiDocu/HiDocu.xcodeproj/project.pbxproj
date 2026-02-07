@@ -8,54 +8,74 @@
 
 /* Begin PBXBuildFile section */
 		0119A84E4F2840779DA2E2B3 /* TimeInterval+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86F8B131B8884602A9CF022F /* TimeInterval+Extensions.swift */; };
+		022D1B3252A0A87CE530C60B /* RecordingV2DTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9D040E8C768C4EB7680B474 /* RecordingV2DTO.swift */; };
+		04DE6A3CDE2453D7D214B2CF /* SQLiteRecordingRepositoryV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = A29A4A2521C6F0977A6C729F /* SQLiteRecordingRepositoryV2.swift */; };
 		099ED2A72F348EBA00905EA4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 099ED2A52F348BBA00905EA4 /* Assets.xcassets */; };
-		0A00F6148A494D6993BC603C /* RecordingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D94AC78A25E4E2BB61D52CE /* RecordingDetailView.swift */; };
-		5144798C75A74F938E8BE58F /* WaveformAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A89E47CB68BC4872B206B230 /* WaveformAnalyzer.swift */; };
+		0AF8675E8C569156DCE9CD4B /* ContentViewV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A200194A4444435072733F /* ContentViewV2.swift */; };
+		0EC792C8A6BE261D6C07D17F /* TrashService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D69953C06FF92116AE18C2DE /* TrashService.swift */; };
+		126303CB56D1092A093FF1D6 /* SourcesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBA3562E4C531972E9D61F66 /* SourcesViewModel.swift */; };
+		1B98078D788AC5018EB55EB5 /* SourcesSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 107105922C3DEAA5D62BDD99 /* SourcesSectionView.swift */; };
+		20B7797FB09248004C7B5DF8 /* DocumentDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4937DF72E8C1DB57768B0B94 /* DocumentDTO.swift */; };
+		2D4B4E272B97C1411E75FA0C /* SQLiteDeletionLogRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA3834F987CA973FCD8506B /* SQLiteDeletionLogRepository.swift */; };
+		310961DA68DD2E6085C77B8F /* SettingsViewV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC12039CA327089CC1010027 /* SettingsViewV2.swift */; };
+		32C7299902FF667CC690A02A /* SQLiteTranscriptRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A04E6ED12F76D8DF4867E7 /* SQLiteTranscriptRepository.swift */; };
+		336926BF123BAFF582F6F777 /* TranscriptEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1CC8A49FA6E93D18AFEC001 /* TranscriptEditorView.swift */; };
+		3664B05D38E1AED300889576 /* Document.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4C310BB2F07F16244282199 /* Document.swift */; };
+		3D6B099B9A5D77F71AADE23C /* FolderDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BE26D22ECF04CC038346BDC /* FolderDTO.swift */; };
+		53438D90B497848BD250352E /* FolderTreeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEF1499B052B6ECD6B8CCF60 /* FolderTreeViewModel.swift */; };
+		5364D32C7080B14CCE496046 /* ContextService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C0838C39A86F5F4DC084A98 /* ContextService.swift */; };
+		5454FE8644F05C68769CE2B3 /* DeletionLogDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37BFD95EBB1B504ED68E3980 /* DeletionLogDTO.swift */; };
+		57CCCAE7FE29385655121C19 /* SourceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A98CB705C2B0017E531544B6 /* SourceRepository.swift */; };
+		63DB1BE9930DC98549A59509 /* TrashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F542AE3F2464304DFD5DEFD6 /* TrashView.swift */; };
+		6653E1E533CD3337CF17CEB4 /* FolderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42EB92A51DFBFEB3BE82AB4E /* FolderService.swift */; };
 		68054ABA82DDCF81977052B3 /* DeviceDashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14B1464F9B61FF0B4ED761F6 /* DeviceDashboardViewModel.swift */; };
+		6ED29A3CA24533D402F918DD /* TranscriptRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0D1580CF48C34D6AA476C3 /* TranscriptRepository.swift */; };
+		7C544CC177A527E1114D7392 /* SourceDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBECEEA4D622EE030E4E9ED6 /* SourceDTO.swift */; };
+		7C9C910ECDD42858F96B2447 /* BatteryIndicatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07496990C2830BD1439D5351 /* BatteryIndicatorView.swift */; };
+		7FE08A5C64923C365769E369 /* Folder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA55DE2ACE96B64C6A54BE4E /* Folder.swift */; };
+		826884BB9C56944CC45A4128 /* DocumentRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12A960990416284D3F0FFA9C /* DocumentRepository.swift */; };
 		87474A9B92E8EEC01F279E7F /* DeviceDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09134FD2A3C89DFB7EA7BB0F /* DeviceDashboardView.swift */; };
-		BC4EA7F4581C465AA4D4DD27 /* AudioPlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEAA5B6EF8BD448A951ED65A /* AudioPlayerService.swift */; };
-		C74E3B38C1704D5DB058DD1B /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37EBA1836F0C4065A5595AFC /* WaveformView.swift */; };
-		E30FDC8F82064C09BC26710D /* RecordingDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79432DA08D5943A38BE62137 /* RecordingDetailViewModel.swift */; };
+		8C1F7AFE2BA73F51196C0CE6 /* RecordingRepositoryV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93F40903E763C5CAAA849A16 /* RecordingRepositoryV2.swift */; };
+		8FC3622F4017BD0964C8FA82 /* FolderSettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114150E40F24A3004A2DF620 /* FolderSettingsSheet.swift */; };
+		9DDDA0CC7D5FA306672B6EE7 /* SettingsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1982272C3186149C008392DB /* SettingsService.swift */; };
+		A2626B02BDE9315C6B921544 /* DocumentListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CF5D0788A026355A829DC46 /* DocumentListViewModel.swift */; };
+		A42DC75AA8AEA317B8C3AF98 /* RecordingPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 627C906DFCEFBC8B5814A44A /* RecordingPickerView.swift */; };
+		A5B176A9AEBF7C402C7342DA /* SQLiteSourceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 438E368ED96312AD4F772D25 /* SQLiteSourceRepository.swift */; };
+		A6B8973348B1B36D7C152E9F /* FolderRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDA413EE9305C427988A7439 /* FolderRepository.swift */; };
+		A7E80828A8F4FECF9047CDEE /* SQLiteDocumentRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58E73F682433820EF6C487A9 /* SQLiteDocumentRepository.swift */; };
+		AFA436901852E6303785837D /* NavigationViewModelV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = B89857DC3BCEF88B833F5CEF /* NavigationViewModelV2.swift */; };
+		B0FBD0073DA6FED0C951D973 /* Source.swift in Sources */ = {isa = PBXBuildFile; fileRef = 371F17CB8D6ADADD5D3AD590 /* Source.swift */; };
+		B748C5428CCF2AE46CDC0CDD /* SidebarViewV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A63BCA40C34F1107B6A60 /* SidebarViewV2.swift */; };
+		BE6ECC1B25F71F50417558E0 /* RecordingImportServiceV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368BA73F8C08D273FE2B21C8 /* RecordingImportServiceV2.swift */; };
+		BFC601E7D452D90CD990621E /* DocumentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6226CD68D273A20A4EBB9B65 /* DocumentService.swift */; };
+		C5C630A403A97F0B29ABD83C /* DocumentListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F5287EBB0531F111E6E01E6 /* DocumentListView.swift */; };
+		C614C88D8F7EA4968EB1C148 /* DocumentDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAADD95ECAC7FF3C0B18B887 /* DocumentDetailViewModel.swift */; };
+		CE4EB2D09509DEC4A3A562E1 /* TranscriptDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = B930F1D2F342C5D58BD7B889 /* TranscriptDTO.swift */; };
+		D29B81C7FF9C622845D2E888 /* DeletionLogRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47BF7D3168C144CED0C36ED9 /* DeletionLogRepository.swift */; };
+		DE3B51E4417F4918F5022E40 /* RecordingV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB033465FB3E12E0BB749B1 /* RecordingV2.swift */; };
+		DF3313BAB7828D8D8AB8304A /* DeletionLogEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1358CE1110F0A9D6089071F3 /* DeletionLogEntry.swift */; };
+		E6BB1D6635FBEC8625C57A77 /* DocumentDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDC92D8AF4F6028806551C10 /* DocumentDetailView.swift */; };
 		F0000001F0000001 /* HiDocuApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000011F0000011 /* HiDocuApp.swift */; };
 		F0000002F0000002 /* AppDependencyContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000012F0000012 /* AppDependencyContainer.swift */; };
 		F0000003F0000003 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000013F0000013 /* AppLogger.swift */; };
 		F0000004F0000004 /* Date+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000014F0000014 /* Date+Extensions.swift */; };
 		F0000005F0000005 /* Int+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000015F0000015 /* Int+Extensions.swift */; };
 		F0000006F0000006 /* Recording.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000016F0000016 /* Recording.swift */; };
-		F0000007F0000007 /* Transcription.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000017F0000017 /* Transcription.swift */; };
-		F0000008F0000008 /* Segment.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000018F0000018 /* Segment.swift */; };
-		F0000009F0000009 /* RecordingRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000019F0000019 /* RecordingRepository.swift */; };
-		F000000AF000000A /* TranscriptionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000001AF000001A /* TranscriptionRepository.swift */; };
 		F000000BF000000B /* DeviceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000001BF000001B /* DeviceRepository.swift */; };
 		F000000CF000000C /* DatabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000001CF000001C /* DatabaseManager.swift */; };
-		F000000DF000000D /* RecordingDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000001DF000001D /* RecordingDTO.swift */; };
-		F000000EF000000E /* TranscriptionDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000001EF000001E /* TranscriptionDTO.swift */; };
-		F000000FF000000F /* SegmentDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000001FF000001F /* SegmentDTO.swift */; };
 		F0000020F0000020 /* DeviceConnectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000030F0000030 /* DeviceConnectionService.swift */; };
 		F0000021F0000021 /* FileSystemService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000031F0000031 /* FileSystemService.swift */; };
-		F0000022F0000022 /* SQLiteRecordingRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000032F0000032 /* SQLiteRecordingRepository.swift */; };
-		F0000023F0000023 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000033F0000033 /* ContentView.swift */; };
-		F0000024F0000024 /* AudioCompatibilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000034F0000034 /* AudioCompatibilityService.swift */; };
-		F0000025F0000025 /* RecordingImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000035F0000035 /* RecordingImportService.swift */; };
 		F0000026F0000026 /* JensenActor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000036F0000036 /* JensenActor.swift */; };
 		F0000050F0000050 /* JensenUSB in Frameworks */ = {isa = PBXBuildFile; productRef = F0000051F0000051 /* JensenUSB */; };
 		F0000052F0000052 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = F0000053F0000053 /* GRDB */; };
+		F0429AD0CCB220B79569960F /* Transcript.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120ABFADCBA34F60024F6346 /* Transcript.swift */; };
 		F0A00001F0A00001 /* HiDocuTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A00011F0A00011 /* HiDocuTests.swift */; };
 		F0A00002F0A00002 /* DatabaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A00012F0A00012 /* DatabaseTests.swift */; };
 		F0A00003F0A00003 /* ImportLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A00013F0A00013 /* ImportLogicTests.swift */; };
 		F0A00052F0A00052 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = F0A00053F0A00053 /* GRDB */; };
-		F3000060F3000060 /* NavigationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000050F3000050 /* NavigationViewModel.swift */; };
-		F3000061F3000061 /* RecordingsListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000051F3000051 /* RecordingsListViewModel.swift */; };
-		F3000062F3000062 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000052F3000052 /* SidebarView.swift */; };
-		F3000063F3000063 /* RecordingsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000053F3000053 /* RecordingsListView.swift */; };
-		F3000064F3000064 /* RecordingRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000054F3000054 /* RecordingRowView.swift */; };
-		F5000001F5000001 /* SQLiteTranscriptionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5000011F5000011 /* SQLiteTranscriptionRepository.swift */; };
-		F5000002F5000002 /* TranscriptionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5000012F5000012 /* TranscriptionViewModel.swift */; };
-		F5000003F5000003 /* TranscriptionSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5000013F5000013 /* TranscriptionSectionView.swift */; };
+		F21116180C58EFA51A7A7459 /* SQLiteFolderRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 366665D1CFE1F75AFAAD9DF4 /* SQLiteFolderRepository.swift */; };
 		F5A00001F5A00001 /* TranscriptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A00011F5A00011 /* TranscriptionTests.swift */; };
 		F8000020F8000020 /* ErrorBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8000010F8000010 /* ErrorBannerView.swift */; };
-		F8000021F8000021 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8000011F8000011 /* SettingsView.swift */; };
-		F8000022F8000022 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8000012F8000012 /* OnboardingView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -69,14 +89,53 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		07496990C2830BD1439D5351 /* BatteryIndicatorView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BatteryIndicatorView.swift; sourceTree = "<group>"; };
 		09134FD2A3C89DFB7EA7BB0F /* DeviceDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DeviceDashboardView.swift; path = HiDocu/Presentation/Views/Device/DeviceDashboardView.swift; sourceTree = SOURCE_ROOT; };
 		099ED2A52F348BBA00905EA4 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		107105922C3DEAA5D62BDD99 /* SourcesSectionView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesSectionView.swift; sourceTree = "<group>"; };
+		114150E40F24A3004A2DF620 /* FolderSettingsSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FolderSettingsSheet.swift; sourceTree = "<group>"; };
+		120ABFADCBA34F60024F6346 /* Transcript.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Transcript.swift; path = Transcript.swift; sourceTree = "<group>"; };
+		12A960990416284D3F0FFA9C /* DocumentRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DocumentRepository.swift; path = DocumentRepository.swift; sourceTree = "<group>"; };
+		1358CE1110F0A9D6089071F3 /* DeletionLogEntry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeletionLogEntry.swift; path = DeletionLogEntry.swift; sourceTree = "<group>"; };
 		14B1464F9B61FF0B4ED761F6 /* DeviceDashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DeviceDashboardViewModel.swift; path = HiDocu/Presentation/ViewModels/DeviceDashboardViewModel.swift; sourceTree = SOURCE_ROOT; };
-		37EBA1836F0C4065A5595AFC /* WaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformView.swift; sourceTree = "<group>"; };
-		79432DA08D5943A38BE62137 /* RecordingDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingDetailViewModel.swift; sourceTree = "<group>"; };
+		1982272C3186149C008392DB /* SettingsService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsService.swift; path = SettingsService.swift; sourceTree = "<group>"; };
+		2B0D1580CF48C34D6AA476C3 /* TranscriptRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TranscriptRepository.swift; path = TranscriptRepository.swift; sourceTree = "<group>"; };
+		364A63BCA40C34F1107B6A60 /* SidebarViewV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SidebarViewV2.swift; sourceTree = "<group>"; };
+		366665D1CFE1F75AFAAD9DF4 /* SQLiteFolderRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SQLiteFolderRepository.swift; path = SQLiteFolderRepository.swift; sourceTree = "<group>"; };
+		368BA73F8C08D273FE2B21C8 /* RecordingImportServiceV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RecordingImportServiceV2.swift; path = RecordingImportServiceV2.swift; sourceTree = "<group>"; };
+		371F17CB8D6ADADD5D3AD590 /* Source.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Source.swift; path = Source.swift; sourceTree = "<group>"; };
+		37A04E6ED12F76D8DF4867E7 /* SQLiteTranscriptRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SQLiteTranscriptRepository.swift; path = SQLiteTranscriptRepository.swift; sourceTree = "<group>"; };
+		37BFD95EBB1B504ED68E3980 /* DeletionLogDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeletionLogDTO.swift; path = DeletionLogDTO.swift; sourceTree = "<group>"; };
+		3F5287EBB0531F111E6E01E6 /* DocumentListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentListView.swift; sourceTree = "<group>"; };
+		42EB92A51DFBFEB3BE82AB4E /* FolderService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FolderService.swift; path = FolderService.swift; sourceTree = "<group>"; };
+		438E368ED96312AD4F772D25 /* SQLiteSourceRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SQLiteSourceRepository.swift; path = SQLiteSourceRepository.swift; sourceTree = "<group>"; };
+		47BF7D3168C144CED0C36ED9 /* DeletionLogRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeletionLogRepository.swift; path = DeletionLogRepository.swift; sourceTree = "<group>"; };
+		4937DF72E8C1DB57768B0B94 /* DocumentDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DocumentDTO.swift; path = DocumentDTO.swift; sourceTree = "<group>"; };
+		58E73F682433820EF6C487A9 /* SQLiteDocumentRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SQLiteDocumentRepository.swift; path = SQLiteDocumentRepository.swift; sourceTree = "<group>"; };
+		5CF5D0788A026355A829DC46 /* DocumentListViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentListViewModel.swift; sourceTree = "<group>"; };
+		6226CD68D273A20A4EBB9B65 /* DocumentService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DocumentService.swift; path = DocumentService.swift; sourceTree = "<group>"; };
+		627C906DFCEFBC8B5814A44A /* RecordingPickerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingPickerView.swift; sourceTree = "<group>"; };
+		6BE26D22ECF04CC038346BDC /* FolderDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FolderDTO.swift; path = FolderDTO.swift; sourceTree = "<group>"; };
 		86F8B131B8884602A9CF022F /* TimeInterval+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimeInterval+Extensions.swift"; sourceTree = "<group>"; };
-		9D94AC78A25E4E2BB61D52CE /* RecordingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingDetailView.swift; sourceTree = "<group>"; };
-		A89E47CB68BC4872B206B230 /* WaveformAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformAnalyzer.swift; sourceTree = "<group>"; };
+		8C0838C39A86F5F4DC084A98 /* ContextService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ContextService.swift; path = ContextService.swift; sourceTree = "<group>"; };
+		93F40903E763C5CAAA849A16 /* RecordingRepositoryV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RecordingRepositoryV2.swift; path = RecordingRepositoryV2.swift; sourceTree = "<group>"; };
+		9CB033465FB3E12E0BB749B1 /* RecordingV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RecordingV2.swift; path = RecordingV2.swift; sourceTree = "<group>"; };
+		A1CC8A49FA6E93D18AFEC001 /* TranscriptEditorView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TranscriptEditorView.swift; sourceTree = "<group>"; };
+		A29A4A2521C6F0977A6C729F /* SQLiteRecordingRepositoryV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SQLiteRecordingRepositoryV2.swift; path = SQLiteRecordingRepositoryV2.swift; sourceTree = "<group>"; };
+		A98CB705C2B0017E531544B6 /* SourceRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SourceRepository.swift; path = SourceRepository.swift; sourceTree = "<group>"; };
+		A9D040E8C768C4EB7680B474 /* RecordingV2DTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RecordingV2DTO.swift; path = RecordingV2DTO.swift; sourceTree = "<group>"; };
+		AAA3834F987CA973FCD8506B /* SQLiteDeletionLogRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SQLiteDeletionLogRepository.swift; path = SQLiteDeletionLogRepository.swift; sourceTree = "<group>"; };
+		AAADD95ECAC7FF3C0B18B887 /* DocumentDetailViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentDetailViewModel.swift; sourceTree = "<group>"; };
+		AEF1499B052B6ECD6B8CCF60 /* FolderTreeViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FolderTreeViewModel.swift; sourceTree = "<group>"; };
+		B89857DC3BCEF88B833F5CEF /* NavigationViewModelV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NavigationViewModelV2.swift; sourceTree = "<group>"; };
+		B930F1D2F342C5D58BD7B889 /* TranscriptDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TranscriptDTO.swift; path = TranscriptDTO.swift; sourceTree = "<group>"; };
+		BC12039CA327089CC1010027 /* SettingsViewV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsViewV2.swift; sourceTree = "<group>"; };
+		BDA413EE9305C427988A7439 /* FolderRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FolderRepository.swift; path = FolderRepository.swift; sourceTree = "<group>"; };
+		D0A200194A4444435072733F /* ContentViewV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContentViewV2.swift; sourceTree = "<group>"; };
+		D69953C06FF92116AE18C2DE /* TrashService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TrashService.swift; path = TrashService.swift; sourceTree = "<group>"; };
+		DBA3562E4C531972E9D61F66 /* SourcesViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesViewModel.swift; sourceTree = "<group>"; };
+		DBECEEA4D622EE030E4E9ED6 /* SourceDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SourceDTO.swift; path = SourceDTO.swift; sourceTree = "<group>"; };
+		E4C310BB2F07F16244282199 /* Document.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Document.swift; path = Document.swift; sourceTree = "<group>"; };
 		F0000000F0000000 /* HiDocu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HiDocu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F0000011F0000011 /* HiDocuApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiDocuApp.swift; sourceTree = "<group>"; };
 		F0000012F0000012 /* AppDependencyContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencyContainer.swift; sourceTree = "<group>"; };
@@ -84,21 +143,10 @@
 		F0000014F0000014 /* Date+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Extensions.swift"; sourceTree = "<group>"; };
 		F0000015F0000015 /* Int+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Int+Extensions.swift"; sourceTree = "<group>"; };
 		F0000016F0000016 /* Recording.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recording.swift; sourceTree = "<group>"; };
-		F0000017F0000017 /* Transcription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transcription.swift; sourceTree = "<group>"; };
-		F0000018F0000018 /* Segment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Segment.swift; sourceTree = "<group>"; };
-		F0000019F0000019 /* RecordingRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingRepository.swift; sourceTree = "<group>"; };
-		F000001AF000001A /* TranscriptionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionRepository.swift; sourceTree = "<group>"; };
 		F000001BF000001B /* DeviceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceRepository.swift; sourceTree = "<group>"; };
 		F000001CF000001C /* DatabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseManager.swift; sourceTree = "<group>"; };
-		F000001DF000001D /* RecordingDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingDTO.swift; sourceTree = "<group>"; };
-		F000001EF000001E /* TranscriptionDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionDTO.swift; sourceTree = "<group>"; };
-		F000001FF000001F /* SegmentDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmentDTO.swift; sourceTree = "<group>"; };
 		F0000030F0000030 /* DeviceConnectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceConnectionService.swift; sourceTree = "<group>"; };
 		F0000031F0000031 /* FileSystemService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSystemService.swift; sourceTree = "<group>"; };
-		F0000032F0000032 /* SQLiteRecordingRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteRecordingRepository.swift; sourceTree = "<group>"; };
-		F0000033F0000033 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		F0000034F0000034 /* AudioCompatibilityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCompatibilityService.swift; sourceTree = "<group>"; };
-		F0000035F0000035 /* RecordingImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingImportService.swift; sourceTree = "<group>"; };
 		F0000036F0000036 /* JensenActor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JensenActor.swift; sourceTree = "<group>"; };
 		F0000040F0000040 /* HiDocu.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HiDocu.entitlements; sourceTree = "<group>"; };
 		F0000041F0000041 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -106,19 +154,11 @@
 		F0A00011F0A00011 /* HiDocuTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiDocuTests.swift; sourceTree = "<group>"; };
 		F0A00012F0A00012 /* DatabaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseTests.swift; sourceTree = "<group>"; };
 		F0A00013F0A00013 /* ImportLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportLogicTests.swift; sourceTree = "<group>"; };
-		F3000050F3000050 /* NavigationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationViewModel.swift; sourceTree = "<group>"; };
-		F3000051F3000051 /* RecordingsListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingsListViewModel.swift; sourceTree = "<group>"; };
-		F3000052F3000052 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
-		F3000053F3000053 /* RecordingsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingsListView.swift; sourceTree = "<group>"; };
-		F3000054F3000054 /* RecordingRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingRowView.swift; sourceTree = "<group>"; };
-		F5000011F5000011 /* SQLiteTranscriptionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteTranscriptionRepository.swift; sourceTree = "<group>"; };
-		F5000012F5000012 /* TranscriptionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionViewModel.swift; sourceTree = "<group>"; };
-		F5000013F5000013 /* TranscriptionSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionSectionView.swift; sourceTree = "<group>"; };
+		F542AE3F2464304DFD5DEFD6 /* TrashView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TrashView.swift; sourceTree = "<group>"; };
 		F5A00011F5A00011 /* TranscriptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionTests.swift; sourceTree = "<group>"; };
 		F8000010F8000010 /* ErrorBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBannerView.swift; sourceTree = "<group>"; };
-		F8000011F8000011 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		F8000012F8000012 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
-		FEAA5B6EF8BD448A951ED65A /* AudioPlayerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayerService.swift; sourceTree = "<group>"; };
+		FA55DE2ACE96B64C6A54BE4E /* Folder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Folder.swift; path = Folder.swift; sourceTree = "<group>"; };
+		FDC92D8AF4F6028806551C10 /* DocumentDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentDetailView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -150,11 +190,33 @@
 			path = Device;
 			sourceTree = "<group>";
 		};
+		4BE3B9C61F7EC32C4CA2E163 /* Documents */ = {
+			isa = PBXGroup;
+			children = (
+				3F5287EBB0531F111E6E01E6 /* DocumentListView.swift */,
+				FDC92D8AF4F6028806551C10 /* DocumentDetailView.swift */,
+				107105922C3DEAA5D62BDD99 /* SourcesSectionView.swift */,
+				627C906DFCEFBC8B5814A44A /* RecordingPickerView.swift */,
+				A1CC8A49FA6E93D18AFEC001 /* TranscriptEditorView.swift */,
+			);
+			name = Documents;
+			path = Documents;
+			sourceTree = "<group>";
+		};
+		6631DDC458171CC9C7062A5D /* Trash */ = {
+			isa = PBXGroup;
+			children = (
+				F542AE3F2464304DFD5DEFD6 /* TrashView.swift */,
+			);
+			name = Trash;
+			path = Trash;
+			sourceTree = "<group>";
+		};
 		D8402727206E439A8869D212 /* Components */ = {
 			isa = PBXGroup;
 			children = (
-				37EBA1836F0C4065A5595AFC /* WaveformView.swift */,
 				F8000010F8000010 /* ErrorBannerView.swift */,
+				07496990C2830BD1439D5351 /* BatteryIndicatorView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -244,8 +306,12 @@
 			isa = PBXGroup;
 			children = (
 				F0000016F0000016 /* Recording.swift */,
-				F0000017F0000017 /* Transcription.swift */,
-				F0000018F0000018 /* Segment.swift */,
+				FA55DE2ACE96B64C6A54BE4E /* Folder.swift */,
+				E4C310BB2F07F16244282199 /* Document.swift */,
+				371F17CB8D6ADADD5D3AD590 /* Source.swift */,
+				120ABFADCBA34F60024F6346 /* Transcript.swift */,
+				1358CE1110F0A9D6089071F3 /* DeletionLogEntry.swift */,
+				9CB033465FB3E12E0BB749B1 /* RecordingV2.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -253,9 +319,13 @@
 		F2000009F2000009 /* Protocols */ = {
 			isa = PBXGroup;
 			children = (
-				F0000019F0000019 /* RecordingRepository.swift */,
-				F000001AF000001A /* TranscriptionRepository.swift */,
 				F000001BF000001B /* DeviceRepository.swift */,
+				BDA413EE9305C427988A7439 /* FolderRepository.swift */,
+				12A960990416284D3F0FFA9C /* DocumentRepository.swift */,
+				A98CB705C2B0017E531544B6 /* SourceRepository.swift */,
+				2B0D1580CF48C34D6AA476C3 /* TranscriptRepository.swift */,
+				93F40903E763C5CAAA849A16 /* RecordingRepositoryV2.swift */,
+				47BF7D3168C144CED0C36ED9 /* DeletionLogRepository.swift */,
 			);
 			path = Protocols;
 			sourceTree = "<group>";
@@ -280,13 +350,15 @@
 		F200000CF200000C /* Services */ = {
 			isa = PBXGroup;
 			children = (
-				FEAA5B6EF8BD448A951ED65A /* AudioPlayerService.swift */,
-				A89E47CB68BC4872B206B230 /* WaveformAnalyzer.swift */,
 				F0000030F0000030 /* DeviceConnectionService.swift */,
 				F0000031F0000031 /* FileSystemService.swift */,
-				F0000034F0000034 /* AudioCompatibilityService.swift */,
-				F0000035F0000035 /* RecordingImportService.swift */,
 				F0000036F0000036 /* JensenActor.swift */,
+				6226CD68D273A20A4EBB9B65 /* DocumentService.swift */,
+				42EB92A51DFBFEB3BE82AB4E /* FolderService.swift */,
+				8C0838C39A86F5F4DC084A98 /* ContextService.swift */,
+				D69953C06FF92116AE18C2DE /* TrashService.swift */,
+				1982272C3186149C008392DB /* SettingsService.swift */,
+				368BA73F8C08D273FE2B21C8 /* RecordingImportServiceV2.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -294,8 +366,12 @@
 		F200000DF200000D /* Repositories */ = {
 			isa = PBXGroup;
 			children = (
-				F0000032F0000032 /* SQLiteRecordingRepository.swift */,
-				F5000011F5000011 /* SQLiteTranscriptionRepository.swift */,
+				366665D1CFE1F75AFAAD9DF4 /* SQLiteFolderRepository.swift */,
+				58E73F682433820EF6C487A9 /* SQLiteDocumentRepository.swift */,
+				438E368ED96312AD4F772D25 /* SQLiteSourceRepository.swift */,
+				37A04E6ED12F76D8DF4867E7 /* SQLiteTranscriptRepository.swift */,
+				A29A4A2521C6F0977A6C729F /* SQLiteRecordingRepositoryV2.swift */,
+				AAA3834F987CA973FCD8506B /* SQLiteDeletionLogRepository.swift */,
 			);
 			path = Repositories;
 			sourceTree = "<group>";
@@ -303,9 +379,12 @@
 		F200000EF200000E /* DTOs */ = {
 			isa = PBXGroup;
 			children = (
-				F000001DF000001D /* RecordingDTO.swift */,
-				F000001EF000001E /* TranscriptionDTO.swift */,
-				F000001FF000001F /* SegmentDTO.swift */,
+				6BE26D22ECF04CC038346BDC /* FolderDTO.swift */,
+				4937DF72E8C1DB57768B0B94 /* DocumentDTO.swift */,
+				DBECEEA4D622EE030E4E9ED6 /* SourceDTO.swift */,
+				B930F1D2F342C5D58BD7B889 /* TranscriptDTO.swift */,
+				37BFD95EBB1B504ED68E3980 /* DeletionLogDTO.swift */,
+				A9D040E8C768C4EB7680B474 /* RecordingV2DTO.swift */,
 			);
 			path = DTOs;
 			sourceTree = "<group>";
@@ -326,7 +405,10 @@
 				D8402727206E439A8869D212 /* Components */,
 				F8000030F8000030 /* Settings */,
 				F8000031F8000031 /* Onboarding */,
-				F0000033F0000033 /* ContentView.swift */,
+				4BE3B9C61F7EC32C4CA2E163 /* Documents */,
+				D0A200194A4444435072733F /* ContentViewV2.swift */,
+				FB454B08628CE5A75BC6ED32 /* Folders */,
+				6631DDC458171CC9C7062A5D /* Trash */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -335,10 +417,11 @@
 			isa = PBXGroup;
 			children = (
 				14B1464F9B61FF0B4ED761F6 /* DeviceDashboardViewModel.swift */,
-				79432DA08D5943A38BE62137 /* RecordingDetailViewModel.swift */,
-				F3000050F3000050 /* NavigationViewModel.swift */,
-				F3000051F3000051 /* RecordingsListViewModel.swift */,
-				F5000012F5000012 /* TranscriptionViewModel.swift */,
+				B89857DC3BCEF88B833F5CEF /* NavigationViewModelV2.swift */,
+				AEF1499B052B6ECD6B8CCF60 /* FolderTreeViewModel.swift */,
+				5CF5D0788A026355A829DC46 /* DocumentListViewModel.swift */,
+				AAADD95ECAC7FF3C0B18B887 /* DocumentDetailViewModel.swift */,
+				DBA3562E4C531972E9D61F66 /* SourcesViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -366,7 +449,7 @@
 		F3000070F3000070 /* Sidebar */ = {
 			isa = PBXGroup;
 			children = (
-				F3000052F3000052 /* SidebarView.swift */,
+				364A63BCA40C34F1107B6A60 /* SidebarViewV2.swift */,
 			);
 			path = Sidebar;
 			sourceTree = "<group>";
@@ -374,10 +457,6 @@
 		F3000071F3000071 /* Library */ = {
 			isa = PBXGroup;
 			children = (
-				9D94AC78A25E4E2BB61D52CE /* RecordingDetailView.swift */,
-				F3000053F3000053 /* RecordingsListView.swift */,
-				F3000054F3000054 /* RecordingRowView.swift */,
-				F5000013F5000013 /* TranscriptionSectionView.swift */,
 			);
 			path = Library;
 			sourceTree = "<group>";
@@ -385,7 +464,7 @@
 		F8000030F8000030 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
-				F8000011F8000011 /* SettingsView.swift */,
+				BC12039CA327089CC1010027 /* SettingsViewV2.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -393,9 +472,17 @@
 		F8000031F8000031 /* Onboarding */ = {
 			isa = PBXGroup;
 			children = (
-				F8000012F8000012 /* OnboardingView.swift */,
 			);
 			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		FB454B08628CE5A75BC6ED32 /* Folders */ = {
+			isa = PBXGroup;
+			children = (
+				114150E40F24A3004A2DF620 /* FolderSettingsSheet.swift */,
+			);
+			name = Folders;
+			path = Folders;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -472,8 +559,8 @@
 			);
 			mainGroup = F2000000F2000000;
 			packageReferences = (
-				F6000000F6000000 /* XCLocalSwiftPackageReference "../JensenUSB" */,
-				F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB" */,
+				F6000000F6000000 /* XCLocalSwiftPackageReference "JensenUSB" */,
+				F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
 			);
 			productRefGroup = F2000099F2000099 /* Products */;
 			projectDirPath = "";
@@ -524,46 +611,66 @@
 			buildActionMask = 2147483647;
 			files = (
 				0119A84E4F2840779DA2E2B3 /* TimeInterval+Extensions.swift in Sources */,
-				BC4EA7F4581C465AA4D4DD27 /* AudioPlayerService.swift in Sources */,
-				5144798C75A74F938E8BE58F /* WaveformAnalyzer.swift in Sources */,
-				C74E3B38C1704D5DB058DD1B /* WaveformView.swift in Sources */,
-				E30FDC8F82064C09BC26710D /* RecordingDetailViewModel.swift in Sources */,
-				0A00F6148A494D6993BC603C /* RecordingDetailView.swift in Sources */,
 				F0000001F0000001 /* HiDocuApp.swift in Sources */,
 				F0000002F0000002 /* AppDependencyContainer.swift in Sources */,
 				F0000003F0000003 /* AppLogger.swift in Sources */,
 				F0000004F0000004 /* Date+Extensions.swift in Sources */,
 				F0000005F0000005 /* Int+Extensions.swift in Sources */,
 				F0000006F0000006 /* Recording.swift in Sources */,
-				F0000007F0000007 /* Transcription.swift in Sources */,
-				F0000008F0000008 /* Segment.swift in Sources */,
-				F0000009F0000009 /* RecordingRepository.swift in Sources */,
-				F000000AF000000A /* TranscriptionRepository.swift in Sources */,
 				F000000BF000000B /* DeviceRepository.swift in Sources */,
 				F000000CF000000C /* DatabaseManager.swift in Sources */,
-				F000000DF000000D /* RecordingDTO.swift in Sources */,
-				F000000EF000000E /* TranscriptionDTO.swift in Sources */,
-				F000000FF000000F /* SegmentDTO.swift in Sources */,
 				F0000020F0000020 /* DeviceConnectionService.swift in Sources */,
 				F0000021F0000021 /* FileSystemService.swift in Sources */,
-				F0000022F0000022 /* SQLiteRecordingRepository.swift in Sources */,
-				F0000023F0000023 /* ContentView.swift in Sources */,
-				F0000024F0000024 /* AudioCompatibilityService.swift in Sources */,
-				F0000025F0000025 /* RecordingImportService.swift in Sources */,
 				F0000026F0000026 /* JensenActor.swift in Sources */,
-				F3000060F3000060 /* NavigationViewModel.swift in Sources */,
-				F3000061F3000061 /* RecordingsListViewModel.swift in Sources */,
-				F3000062F3000062 /* SidebarView.swift in Sources */,
-				F3000063F3000063 /* RecordingsListView.swift in Sources */,
-				F3000064F3000064 /* RecordingRowView.swift in Sources */,
-				F5000001F5000001 /* SQLiteTranscriptionRepository.swift in Sources */,
-				F5000002F5000002 /* TranscriptionViewModel.swift in Sources */,
-				F5000003F5000003 /* TranscriptionSectionView.swift in Sources */,
 				F8000020F8000020 /* ErrorBannerView.swift in Sources */,
-				F8000021F8000021 /* SettingsView.swift in Sources */,
-				F8000022F8000022 /* OnboardingView.swift in Sources */,
 				68054ABA82DDCF81977052B3 /* DeviceDashboardViewModel.swift in Sources */,
 				87474A9B92E8EEC01F279E7F /* DeviceDashboardView.swift in Sources */,
+				7FE08A5C64923C365769E369 /* Folder.swift in Sources */,
+				3664B05D38E1AED300889576 /* Document.swift in Sources */,
+				B0FBD0073DA6FED0C951D973 /* Source.swift in Sources */,
+				F0429AD0CCB220B79569960F /* Transcript.swift in Sources */,
+				DF3313BAB7828D8D8AB8304A /* DeletionLogEntry.swift in Sources */,
+				DE3B51E4417F4918F5022E40 /* RecordingV2.swift in Sources */,
+				3D6B099B9A5D77F71AADE23C /* FolderDTO.swift in Sources */,
+				20B7797FB09248004C7B5DF8 /* DocumentDTO.swift in Sources */,
+				7C544CC177A527E1114D7392 /* SourceDTO.swift in Sources */,
+				CE4EB2D09509DEC4A3A562E1 /* TranscriptDTO.swift in Sources */,
+				5454FE8644F05C68769CE2B3 /* DeletionLogDTO.swift in Sources */,
+				022D1B3252A0A87CE530C60B /* RecordingV2DTO.swift in Sources */,
+				A6B8973348B1B36D7C152E9F /* FolderRepository.swift in Sources */,
+				826884BB9C56944CC45A4128 /* DocumentRepository.swift in Sources */,
+				57CCCAE7FE29385655121C19 /* SourceRepository.swift in Sources */,
+				6ED29A3CA24533D402F918DD /* TranscriptRepository.swift in Sources */,
+				8C1F7AFE2BA73F51196C0CE6 /* RecordingRepositoryV2.swift in Sources */,
+				D29B81C7FF9C622845D2E888 /* DeletionLogRepository.swift in Sources */,
+				F21116180C58EFA51A7A7459 /* SQLiteFolderRepository.swift in Sources */,
+				A7E80828A8F4FECF9047CDEE /* SQLiteDocumentRepository.swift in Sources */,
+				A5B176A9AEBF7C402C7342DA /* SQLiteSourceRepository.swift in Sources */,
+				32C7299902FF667CC690A02A /* SQLiteTranscriptRepository.swift in Sources */,
+				04DE6A3CDE2453D7D214B2CF /* SQLiteRecordingRepositoryV2.swift in Sources */,
+				2D4B4E272B97C1411E75FA0C /* SQLiteDeletionLogRepository.swift in Sources */,
+				BFC601E7D452D90CD990621E /* DocumentService.swift in Sources */,
+				6653E1E533CD3337CF17CEB4 /* FolderService.swift in Sources */,
+				5364D32C7080B14CCE496046 /* ContextService.swift in Sources */,
+				0EC792C8A6BE261D6C07D17F /* TrashService.swift in Sources */,
+				9DDDA0CC7D5FA306672B6EE7 /* SettingsService.swift in Sources */,
+				BE6ECC1B25F71F50417558E0 /* RecordingImportServiceV2.swift in Sources */,
+				AFA436901852E6303785837D /* NavigationViewModelV2.swift in Sources */,
+				53438D90B497848BD250352E /* FolderTreeViewModel.swift in Sources */,
+				A2626B02BDE9315C6B921544 /* DocumentListViewModel.swift in Sources */,
+				C614C88D8F7EA4968EB1C148 /* DocumentDetailViewModel.swift in Sources */,
+				B748C5428CCF2AE46CDC0CDD /* SidebarViewV2.swift in Sources */,
+				0AF8675E8C569156DCE9CD4B /* ContentViewV2.swift in Sources */,
+				C5C630A403A97F0B29ABD83C /* DocumentListView.swift in Sources */,
+				E6BB1D6635FBEC8625C57A77 /* DocumentDetailView.swift in Sources */,
+				126303CB56D1092A093FF1D6 /* SourcesViewModel.swift in Sources */,
+				1B98078D788AC5018EB55EB5 /* SourcesSectionView.swift in Sources */,
+				A42DC75AA8AEA317B8C3AF98 /* RecordingPickerView.swift in Sources */,
+				336926BF123BAFF582F6F777 /* TranscriptEditorView.swift in Sources */,
+				8FC3622F4017BD0964C8FA82 /* FolderSettingsSheet.swift in Sources */,
+				63DB1BE9930DC98549A59509 /* TrashView.swift in Sources */,
+				310961DA68DD2E6085C77B8F /* SettingsViewV2.swift in Sources */,
+				7C9C910ECDD42858F96B2447 /* BatteryIndicatorView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -864,14 +971,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		F6000000F6000000 /* XCLocalSwiftPackageReference "../JensenUSB" */ = {
+		F6000000F6000000 /* XCLocalSwiftPackageReference "JensenUSB" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../JensenUSB;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB" */ = {
+		F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/groue/GRDB.swift";
 			requirement = {
@@ -888,12 +995,12 @@
 		};
 		F0000053F0000053 /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB" */;
+			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
 			productName = GRDB;
 		};
 		F0A00053F0A00053 /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB" */;
+			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
 			productName = GRDB;
 		};
 /* End XCSwiftPackageProductDependency section */

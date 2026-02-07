@@ -33,11 +33,12 @@ struct ErrorBannerView: View {
                     .foregroundStyle(.white.opacity(0.8))
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Dismiss error")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(Color.red.opacity(0.9))
-        .cornerRadius(8)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
         .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
         .padding(.horizontal, 16)
         .padding(.bottom, 12)
