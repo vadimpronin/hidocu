@@ -18,4 +18,5 @@ protocol FolderRepository: Sendable {
     func fetchDescendantIds(rootId: Int64) async throws -> [Int64]
     func observeAll() -> AsyncThrowingStream<[Folder], Error>
     func updateDiskPathPrefix(oldPrefix: String, newPrefix: String) async throws
+    func updateSortOrders(_ updates: [(id: Int64, sortOrder: Int)]) async throws
 }

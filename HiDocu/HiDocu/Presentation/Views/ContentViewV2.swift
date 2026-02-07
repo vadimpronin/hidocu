@@ -34,13 +34,13 @@ struct ContentViewV2: View {
         .onChange(of: container.deviceManager.connectedDevices) { _, newDevices in
             handleDeviceListChange(newDevices)
         }
-        .onChange(of: navigationVM.selectedDocumentId) { _, newId in
+        .onChange(of: navigationVM.activeDocumentId) { _, newId in
             handleDocumentSelection(newId)
         }
         .background {
             // Cmd+Backspace: delete selected document
             Button("") {
-                if navigationVM.selectedDocumentId != nil {
+                if navigationVM.activeDocumentId != nil {
                     showDeleteConfirmation = true
                 }
             }
@@ -62,11 +62,11 @@ struct ContentViewV2: View {
             "Delete Document",
             isPresented: $showDeleteConfirmation
         ) {
-            if let docId = navigationVM.selectedDocumentId,
+            if let docId = navigationVM.activeDocumentId,
                let doc = documentListVM?.documents.first(where: { $0.id == docId }) {
                 Button("Delete \"\(doc.title)\"", role: .destructive) {
                     documentDetailVM?.cancelPendingSave()
-                    navigationVM.selectedDocumentId = nil
+                    navigationVM.selectedDocumentIds = []
                     Task { try? await container.documentService.deleteDocument(id: docId) }
                 }
             }
@@ -102,13 +102,14 @@ struct ContentViewV2: View {
             if let documentListVM {
                 DocumentListView(
                     viewModel: documentListVM,
-                    selectedDocumentId: $navigationVM.selectedDocumentId,
+                    selectedDocumentIds: $navigationVM.selectedDocumentIds,
                     documentService: container.documentService,
                     fileSystemService: container.fileSystemService,
                     folderId: currentFolderId,
                     folders: folderTreeVM?.allFolders ?? [],
                     folderNodes: folderTreeVM?.roots ?? [],
-                    folderName: currentFolderName
+                    folderName: currentFolderName,
+                    isAllDocumentsView: navigationVM.selectedSidebarItem == .allDocuments
                 )
                 .navigationSplitViewColumnWidth(min: 220, ideal: 280, max: 400)
             } else {
@@ -141,7 +142,7 @@ struct ContentViewV2: View {
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-        } else if let documentDetailVM, navigationVM.selectedDocumentId != nil {
+        } else if let documentDetailVM, navigationVM.activeDocumentId != nil {
             DocumentDetailView(viewModel: documentDetailVM, container: container)
         } else if case .folder(let id) = navigationVM.selectedSidebarItem {
             FolderSummaryView(
@@ -190,7 +191,7 @@ struct ContentViewV2: View {
         ftvm.startObserving()
         folderTreeVM = ftvm
 
-        let dlvm = DocumentListViewModel(documentRepository: container.documentRepository)
+        let dlvm = DocumentListViewModel(documentRepository: container.documentRepository, documentService: container.documentService)
         dlvm.observeAllDocuments()
         documentListVM = dlvm
 
@@ -207,7 +208,7 @@ struct ContentViewV2: View {
     }
 
     private func handleSidebarChange(_ newValue: SidebarItemV2?) {
-        navigationVM.selectedDocumentId = nil
+        navigationVM.selectedDocumentIds = []
 
         switch newValue {
         case .folder(let id):

@@ -51,7 +51,12 @@ final class SQLiteFolderRepository: FolderRepository, Sendable {
 
     func insert(_ folder: Folder) async throws -> Folder {
         try await db.asyncWrite { database in
+            let maxOrder = try Int.fetchOne(database,
+                sql: "SELECT COALESCE(MAX(sort_order), -1) FROM folders WHERE parent_id IS ?",
+                arguments: [folder.parentId]
+            ) ?? -1
             var dto = FolderDTO(from: folder)
+            dto.sortOrder = maxOrder + 1
             try dto.insert(database)
             dto.id = database.lastInsertedRowID
             return dto.toDomain()
@@ -127,6 +132,18 @@ final class SQLiteFolderRepository: FolderRepository, Sendable {
                 """,
                 arguments: [newPrefix, oldPrefix.count, Date(), oldPrefix]
             )
+        }
+    }
+
+    func updateSortOrders(_ updates: [(id: Int64, sortOrder: Int)]) async throws {
+        guard !updates.isEmpty else { return }
+        let cases = updates.map { "WHEN \($0.id) THEN \($0.sortOrder)" }.joined(separator: " ")
+        let placeholders = updates.map { "\($0.id)" }.joined(separator: ", ")
+        try await db.asyncWrite { database in
+            try database.execute(sql: """
+                UPDATE folders SET sort_order = CASE id \(cases) ELSE sort_order END,
+                modified_at = ? WHERE id IN (\(placeholders))
+                """, arguments: [Date()])
         }
     }
 }

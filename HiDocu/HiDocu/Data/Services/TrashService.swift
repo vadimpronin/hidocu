@@ -78,7 +78,11 @@ final class TrashService {
             createdAt: entry.originalCreatedAt ?? entry.deletedAt,
             modifiedAt: entry.originalModifiedAt ?? entry.deletedAt
         )
-        _ = try await documentRepository.insert(doc)
+        let restored = try await documentRepository.insert(doc)
+
+        // Write metadata for restored document
+        do { try fileSystemService.writeDocumentMetadata(restored) }
+        catch { AppLogger.fileSystem.warning("Failed to write metadata for restored document: \(error.localizedDescription)") }
 
         // Remove from deletion log
         try await deletionLogRepository.delete(id: deletionLogId)

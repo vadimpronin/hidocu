@@ -73,6 +73,8 @@ final class FolderService {
         folder.diskPath = diskPath
 
         let inserted = try await folderRepository.insert(folder)
+        do { try fileSystemService.writeFolderMetadata(inserted) }
+        catch { AppLogger.fileSystem.warning("Failed to write metadata for new folder \(inserted.id): \(error.localizedDescription)") }
         AppLogger.fileSystem.info("Created folder '\(name)' id=\(inserted.id) diskPath=\(diskPath)")
         return inserted
     }
@@ -115,6 +117,10 @@ final class FolderService {
         folder.diskPath = newDiskPath
         folder.modifiedAt = Date()
         try await folderRepository.update(folder)
+
+        // Write updated metadata
+        do { try fileSystemService.writeFolderMetadata(folder) }
+        catch { AppLogger.fileSystem.warning("Failed to write metadata after rename for folder \(id): \(error.localizedDescription)") }
 
         // Cascade update descendant paths if paths differ
         if oldDiskPath != newDiskPath {
@@ -187,6 +193,17 @@ final class FolderService {
         } else {
             AppLogger.fileSystem.info("Moved folder id=\(id) (diskPath unchanged)")
         }
+
+        // Place moved folder at bottom of target parent
+        let siblings = try await folderRepository.fetchChildren(parentId: toParentId)
+        let maxOrder = siblings.map(\.sortOrder).max() ?? -1
+        try await folderRepository.updateSortOrders([(id: id, sortOrder: maxOrder + 1)])
+
+        // Write updated metadata
+        if let finalFolder = try await folderRepository.fetchById(id) {
+            do { try fileSystemService.writeFolderMetadata(finalFolder) }
+            catch { AppLogger.fileSystem.warning("Failed to write metadata after move for folder \(id): \(error.localizedDescription)") }
+        }
     }
 
     func deleteFolder(id: Int64) async throws {
@@ -233,6 +250,27 @@ final class FolderService {
         if let cc = categorizationContext { folder.categorizationContext = cc }
         folder.modifiedAt = Date()
         try await folderRepository.update(folder)
+
+        // Write updated metadata
+        do { try fileSystemService.writeFolderMetadata(folder) }
+        catch { AppLogger.fileSystem.warning("Failed to write metadata after settings update for folder \(id): \(error.localizedDescription)") }
+    }
+
+    // MARK: - Sorting
+
+    func reorderFolders(_ orderedIds: [Int64]) async throws {
+        let updates = orderedIds.enumerated().map { (index, id) in
+            (id: id, sortOrder: index)
+        }
+        try await folderRepository.updateSortOrders(updates)
+
+        // Write metadata for each reordered folder
+        for folderId in orderedIds {
+            if let folder = try await folderRepository.fetchById(folderId) {
+                do { try fileSystemService.writeFolderMetadata(folder) }
+                catch { AppLogger.fileSystem.warning("Failed to write metadata after reorder for folder \(folderId): \(error.localizedDescription)") }
+            }
+        }
     }
 
     /// Resolve preferSummary setting for a folder.

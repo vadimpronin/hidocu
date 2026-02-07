@@ -376,6 +376,38 @@ final class DatabaseManager: Sendable {
             AppLogger.database.info("Migration v6_hierarchical_paths complete")
         }
 
+        // v7: Add sort_order to documents for manual sorting
+        migrator.registerMigration("v7_document_sort_order") { db in
+            try db.execute(sql: "ALTER TABLE documents ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0")
+
+            // Backfill documents: oldest first within each folder
+            try db.execute(sql: """
+                UPDATE documents SET sort_order = (
+                    SELECT cnt - 1 FROM (
+                        SELECT id, ROW_NUMBER() OVER (
+                            PARTITION BY folder_id ORDER BY created_at ASC
+                        ) AS cnt FROM documents
+                    ) AS ranked WHERE ranked.id = documents.id
+                )
+                """)
+
+            // Backfill folders: oldest first within each parent
+            try db.execute(sql: """
+                UPDATE folders SET sort_order = (
+                    SELECT cnt - 1 FROM (
+                        SELECT id, ROW_NUMBER() OVER (
+                            PARTITION BY parent_id ORDER BY created_at ASC
+                        ) AS cnt FROM folders
+                    ) AS ranked WHERE ranked.id = folders.id
+                )
+                """)
+
+            // Index for efficient sort queries
+            try db.execute(sql: "CREATE INDEX idx_documents_folder_sort ON documents(folder_id, sort_order)")
+
+            AppLogger.database.info("Migration v7_document_sort_order complete")
+        }
+
         return migrator
     }
     

@@ -19,7 +19,12 @@ enum SidebarItemV2: Hashable {
 @MainActor
 final class NavigationViewModelV2 {
     var selectedSidebarItem: SidebarItemV2? = .allDocuments
-    var selectedDocumentId: Int64?
+    var selectedDocumentIds: Set<Int64> = []
+
+    /// The document shown in detail pane (only when exactly one is selected)
+    var activeDocumentId: Int64? {
+        selectedDocumentIds.count == 1 ? selectedDocumentIds.first : nil
+    }
 
     /// Persist selection across relaunches
     @ObservationIgnored

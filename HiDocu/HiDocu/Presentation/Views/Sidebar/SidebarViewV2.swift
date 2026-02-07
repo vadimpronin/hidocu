@@ -59,8 +59,14 @@ struct SidebarViewV2: View {
                                 do { try await folderTreeVM.deleteFolder(id: id) }
                                 catch { errorMessage = error.localizedDescription }
                             }
+                        },
+                        onReorderChildren: { parentId, source, destination in
+                            folderTreeVM.reorderChildFolders(parentId: parentId, from: source, to: destination)
                         }
                     )
+                }
+                .onMove { source, destination in
+                    folderTreeVM.reorderRootFolders(from: source, to: destination)
                 }
             }
 
@@ -158,6 +164,7 @@ private struct FolderTreeRow: View {
     let onCreateRootFolder: () -> Void
     let onRename: (Int64, String) -> Void
     let onDelete: (Int64) -> Void
+    let onReorderChildren: (Int64, IndexSet, Int) -> Void
 
     @State private var isExpanded = true
     @State private var isRenaming = false
@@ -202,8 +209,12 @@ private struct FolderTreeRow: View {
                         onCreateSubfolder: onCreateSubfolder,
                         onCreateRootFolder: onCreateRootFolder,
                         onRename: onRename,
-                        onDelete: onDelete
+                        onDelete: onDelete,
+                        onReorderChildren: onReorderChildren
                     )
+                }
+                .onMove { source, destination in
+                    onReorderChildren(node.id, source, destination)
                 }
             } label: {
                 labelSection

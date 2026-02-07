@@ -67,8 +67,8 @@ final class DocumentService {
         )
         let inserted = try await documentRepository.insert(doc)
 
-        // Write metadata with document id
-        try fileSystemService.updateDocumentMetadata(diskPath: diskPath, title: title, documentId: inserted.id)
+        // Write full metadata
+        try fileSystemService.writeDocumentMetadata(inserted)
 
         AppLogger.fileSystem.info("Created document '\(title)' id=\(inserted.id) at \(diskPath)")
         return inserted
@@ -87,8 +87,9 @@ final class DocumentService {
         doc.modifiedAt = Date()
         try await documentRepository.update(doc)
 
-        // Update metadata.yaml with new title and document id
-        try fileSystemService.updateDocumentMetadata(diskPath: newDiskPath, title: newTitle, documentId: id)
+        // Write updated metadata
+        do { try fileSystemService.writeDocumentMetadata(doc) }
+        catch { AppLogger.fileSystem.warning("Failed to write metadata after rename for document \(id): \(error.localizedDescription)") }
 
         // Cascade path updates if paths changed (append / for correct prefix matching)
         if oldDiskPath != newDiskPath {
@@ -203,6 +204,17 @@ final class DocumentService {
             // No physical move needed, just update folderId
             try await documentRepository.moveDocument(id: id, toFolderId: toFolderId)
         }
+
+        // Place moved document at bottom of target folder
+        let targetDocs = try await documentRepository.fetchAll(folderId: toFolderId)
+        let maxOrder = targetDocs.map(\.sortOrder).max() ?? -1
+        try await documentRepository.updateSortOrders([(id: id, sortOrder: maxOrder + 1)])
+
+        // Write updated metadata
+        if let movedDoc = try await documentRepository.fetchById(id) {
+            do { try fileSystemService.writeDocumentMetadata(movedDoc) }
+            catch { AppLogger.fileSystem.warning("Failed to write metadata after move for document \(id): \(error.localizedDescription)") }
+        }
     }
 
     func fetchDocument(id: Int64) async throws -> Document? {
@@ -214,7 +226,8 @@ final class DocumentService {
         doc.title = newTitle
         doc.modifiedAt = Date()
         try await documentRepository.update(doc)
-        try fileSystemService.updateDocumentMetadata(diskPath: doc.diskPath, title: newTitle, documentId: id)
+        do { try fileSystemService.writeDocumentMetadata(doc) }
+        catch { AppLogger.fileSystem.warning("Failed to write metadata after title update for document \(id): \(error.localizedDescription)") }
     }
 
     func renameDocumentOnDisk(id: Int64) async throws {
@@ -226,7 +239,8 @@ final class DocumentService {
             doc.diskPath = newDiskPath
             doc.modifiedAt = Date()
             try await documentRepository.update(doc)
-            try fileSystemService.updateDocumentMetadata(diskPath: newDiskPath, title: doc.title, documentId: id)
+            do { try fileSystemService.writeDocumentMetadata(doc) }
+            catch { AppLogger.fileSystem.warning("Failed to write metadata after disk rename for document \(id): \(error.localizedDescription)") }
             let oldCascadePrefix = oldDiskPath + "/"
             let newCascadePrefix = newDiskPath + "/"
             try await sourceRepository.updateDiskPathPrefix(oldPrefix: oldCascadePrefix, newPrefix: newCascadePrefix)
@@ -250,6 +264,8 @@ final class DocumentService {
         doc.bodyHash = sha256(content)
         doc.modifiedAt = Date()
         try await documentRepository.update(doc)
+        do { try fileSystemService.writeDocumentMetadata(doc) }
+        catch { AppLogger.fileSystem.warning("Failed to write metadata after body update for document \(documentId): \(error.localizedDescription)") }
     }
 
     func readSummary(diskPath: String) throws -> String {
@@ -264,6 +280,8 @@ final class DocumentService {
         doc.summaryHash = sha256(content)
         doc.modifiedAt = Date()
         try await documentRepository.update(doc)
+        do { try fileSystemService.writeDocumentMetadata(doc) }
+        catch { AppLogger.fileSystem.warning("Failed to write metadata after summary update for document \(documentId): \(error.localizedDescription)") }
     }
 
     func writeBodyById(documentId: Int64, content: String) async throws {
@@ -317,6 +335,36 @@ final class DocumentService {
         try await sourceRepository.delete(id: id)
     }
 
+    // MARK: - Sorting
+
+    func reorderDocuments(_ orderedIds: [Int64]) async throws {
+        let updates = orderedIds.enumerated().map { (index, id) in
+            (id: id, sortOrder: index)
+        }
+        try await documentRepository.updateSortOrders(updates)
+
+        // Write metadata for each reordered document
+        for docId in orderedIds {
+            if let doc = try await documentRepository.fetchById(docId) {
+                do { try fileSystemService.writeDocumentMetadata(doc) }
+                catch { AppLogger.fileSystem.warning("Failed to write metadata after reorder for document \(docId): \(error.localizedDescription)") }
+            }
+        }
+    }
+
+    func sortDocuments(folderId: Int64?, by criterion: DocumentSortCriterion) async throws {
+        let docs = try await documentRepository.fetchAll(folderId: folderId)
+        let sorted: [Document] = switch criterion {
+        case .nameAscending:
+            docs.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        case .dateCreatedAscending:
+            docs.sorted { $0.createdAt < $1.createdAt }
+        case .dateCreatedDescending:
+            docs.sorted { $0.createdAt > $1.createdAt }
+        }
+        try await reorderDocuments(sorted.map(\.id))
+    }
+
     // MARK: - Helpers
 
     private func sha256(_ string: String) -> String {
@@ -324,6 +372,12 @@ final class DocumentService {
         let hash = SHA256.hash(data: data)
         return hash.map { String(format: "%02x", $0) }.joined()
     }
+}
+
+enum DocumentSortCriterion {
+    case nameAscending
+    case dateCreatedAscending
+    case dateCreatedDescending
 }
 
 enum DocumentServiceError: LocalizedError {

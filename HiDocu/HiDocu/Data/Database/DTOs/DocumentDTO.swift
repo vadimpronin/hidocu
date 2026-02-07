@@ -22,6 +22,7 @@ struct DocumentDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
     var summaryHash: String?
     var preferSummary: Bool
     var minimizeBeforeLLM: Bool
+    var sortOrder: Int
     var createdAt: Date
     var modifiedAt: Date
 
@@ -37,6 +38,7 @@ struct DocumentDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         static let summaryHash = Column(CodingKeys.summaryHash)
         static let preferSummary = Column(CodingKeys.preferSummary)
         static let minimizeBeforeLLM = Column(CodingKeys.minimizeBeforeLLM)
+        static let sortOrder = Column(CodingKeys.sortOrder)
         static let createdAt = Column(CodingKeys.createdAt)
         static let modifiedAt = Column(CodingKeys.modifiedAt)
     }
@@ -53,6 +55,7 @@ struct DocumentDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         case summaryHash = "summary_hash"
         case preferSummary = "prefer_summary"
         case minimizeBeforeLLM = "minimize_before_llm"
+        case sortOrder = "sort_order"
         case createdAt = "created_at"
         case modifiedAt = "modified_at"
     }
@@ -69,6 +72,7 @@ struct DocumentDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         self.summaryHash = domain.summaryHash
         self.preferSummary = domain.preferSummary
         self.minimizeBeforeLLM = domain.minimizeBeforeLLM
+        self.sortOrder = domain.sortOrder
         self.createdAt = domain.createdAt
         self.modifiedAt = domain.modifiedAt
     }
@@ -86,6 +90,7 @@ struct DocumentDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
             summaryHash: summaryHash,
             preferSummary: preferSummary,
             minimizeBeforeLLM: minimizeBeforeLLM,
+            sortOrder: sortOrder,
             createdAt: createdAt,
             modifiedAt: modifiedAt
         )

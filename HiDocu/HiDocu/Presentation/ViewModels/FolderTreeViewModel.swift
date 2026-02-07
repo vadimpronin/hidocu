@@ -15,6 +15,8 @@ struct FolderNode: Identifiable, Hashable {
 
     static func == (lhs: FolderNode, rhs: FolderNode) -> Bool {
         lhs.id == rhs.id
+        && lhs.folder.sortOrder == rhs.folder.sortOrder
+        && lhs.children.map(\.id) == rhs.children.map(\.id)
     }
 
     func hash(into hasher: inout Hasher) {
@@ -84,6 +86,57 @@ final class FolderTreeViewModel {
         try await folderService.deleteFolder(id: id)
     }
 
+    // MARK: - Sorting
+
+    func reorderRootFolders(from source: IndexSet, to destination: Int) {
+        var reordered = roots
+        reordered.move(fromOffsets: source, toOffset: destination)
+        roots = reordered  // Optimistic update
+        let orderedIds = reordered.map(\.id)
+        Task {
+            do { try await folderService.reorderFolders(orderedIds) }
+            catch { AppLogger.general.error("Failed to reorder folders: \(error.localizedDescription)") }
+        }
+    }
+
+    func reorderChildFolders(parentId: Int64, from source: IndexSet, to destination: Int) {
+        // Optimistic update: mutate tree in-place
+        var updatedRoots = roots
+        if mutateChildren(ofParentId: parentId, in: &updatedRoots, source: source, destination: destination) {
+            roots = updatedRoots
+        }
+
+        // Compute new order from the (possibly updated) children
+        guard let children = findChildren(ofParentId: parentId, in: roots) else { return }
+        let orderedIds = children.map(\.id)
+        Task {
+            do { try await folderService.reorderFolders(orderedIds) }
+            catch { AppLogger.general.error("Failed to reorder child folders: \(error.localizedDescription)") }
+        }
+    }
+
+    private func findChildren(ofParentId parentId: Int64, in nodes: [FolderNode]) -> [FolderNode]? {
+        for node in nodes {
+            if node.id == parentId { return node.children }
+            if let found = findChildren(ofParentId: parentId, in: node.children) { return found }
+        }
+        return nil
+    }
+
+    @discardableResult
+    private func mutateChildren(ofParentId parentId: Int64, in nodes: inout [FolderNode], source: IndexSet, destination: Int) -> Bool {
+        for i in nodes.indices {
+            if nodes[i].id == parentId {
+                nodes[i].children.move(fromOffsets: source, toOffset: destination)
+                return true
+            }
+            if mutateChildren(ofParentId: parentId, in: &nodes[i].children, source: source, destination: destination) {
+                return true
+            }
+        }
+        return false
+    }
+
     // MARK: - Tree Building
 
     private static func buildTree(from folders: [Folder]) -> [FolderNode] {
@@ -91,7 +144,7 @@ final class FolderTreeViewModel {
 
         func buildNodes(parentId: Int64?) -> [FolderNode] {
             guard let children = byParent[parentId] else { return [] }
-            return children.map { folder in
+            return children.sorted(by: { $0.sortOrder < $1.sortOrder }).map { folder in
                 FolderNode(
                     id: folder.id,
                     folder: folder,

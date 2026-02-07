@@ -22,12 +22,12 @@ final class SQLiteDocumentRepository: DocumentRepository, Sendable {
             if let folderId {
                 dtos = try DocumentDTO
                     .filter(DocumentDTO.Columns.folderId == folderId)
-                    .order(DocumentDTO.Columns.createdAt.desc)
+                    .order(DocumentDTO.Columns.sortOrder.asc, DocumentDTO.Columns.createdAt.asc)
                     .fetchAll(database)
             } else {
                 dtos = try DocumentDTO
                     .filter(DocumentDTO.Columns.folderId == nil)
-                    .order(DocumentDTO.Columns.createdAt.desc)
+                    .order(DocumentDTO.Columns.sortOrder.asc, DocumentDTO.Columns.createdAt.asc)
                     .fetchAll(database)
             }
             return dtos.map { $0.toDomain() }
@@ -39,7 +39,7 @@ final class SQLiteDocumentRepository: DocumentRepository, Sendable {
         return try await db.asyncRead { database in
             let dtos = try DocumentDTO
                 .filter(folderIds.contains(DocumentDTO.Columns.folderId))
-                .order(DocumentDTO.Columns.createdAt.desc)
+                .order(DocumentDTO.Columns.sortOrder.asc, DocumentDTO.Columns.createdAt.asc)
                 .fetchAll(database)
             return dtos.map { $0.toDomain() }
         }
@@ -62,7 +62,12 @@ final class SQLiteDocumentRepository: DocumentRepository, Sendable {
 
     func insert(_ document: Document) async throws -> Document {
         try await db.asyncWrite { database in
+            let maxOrder = try Int.fetchOne(database,
+                sql: "SELECT COALESCE(MAX(sort_order), -1) FROM documents WHERE folder_id IS ?",
+                arguments: [document.folderId]
+            ) ?? -1
             var dto = DocumentDTO(from: document)
+            dto.sortOrder = maxOrder + 1
             try dto.insert(database)
             dto.id = database.lastInsertedRowID
             return dto.toDomain()
@@ -97,12 +102,12 @@ final class SQLiteDocumentRepository: DocumentRepository, Sendable {
                 if let folderId {
                     return try DocumentDTO
                         .filter(DocumentDTO.Columns.folderId == folderId)
-                        .order(DocumentDTO.Columns.createdAt.desc)
+                        .order(DocumentDTO.Columns.sortOrder.asc, DocumentDTO.Columns.createdAt.asc)
                         .fetchAll(database)
                 } else {
                     return try DocumentDTO
                         .filter(DocumentDTO.Columns.folderId == nil)
-                        .order(DocumentDTO.Columns.createdAt.desc)
+                        .order(DocumentDTO.Columns.sortOrder.asc, DocumentDTO.Columns.createdAt.asc)
                         .fetchAll(database)
                 }
             }
@@ -150,6 +155,18 @@ final class SQLiteDocumentRepository: DocumentRepository, Sendable {
                 """,
                 arguments: [newPrefix, oldPrefix.count, Date(), oldPrefix]
             )
+        }
+    }
+
+    func updateSortOrders(_ updates: [(id: Int64, sortOrder: Int)]) async throws {
+        guard !updates.isEmpty else { return }
+        let cases = updates.map { "WHEN \($0.id) THEN \($0.sortOrder)" }.joined(separator: " ")
+        let placeholders = updates.map { "\($0.id)" }.joined(separator: ", ")
+        try await db.asyncWrite { database in
+            try database.execute(sql: """
+                UPDATE documents SET sort_order = CASE id \(cases) ELSE sort_order END,
+                modified_at = ? WHERE id IN (\(placeholders))
+                """, arguments: [Date()])
         }
     }
 }

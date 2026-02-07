@@ -9,13 +9,14 @@ import SwiftUI
 
 struct DocumentListView: View {
     var viewModel: DocumentListViewModel
-    @Binding var selectedDocumentId: Int64?
+    @Binding var selectedDocumentIds: Set<Int64>
     var documentService: DocumentService
     var fileSystemService: FileSystemService
     var folderId: Int64?
     var folders: [Folder] = []
     var folderNodes: [FolderNode] = []
     var folderName: String?
+    var isAllDocumentsView: Bool = false
 
     @State private var documentToDelete: Document?
     @State private var documentToRename: Document?
@@ -24,7 +25,7 @@ struct DocumentListView: View {
     @State private var errorMessage: String?
 
     var body: some View {
-        List(selection: $selectedDocumentId) {
+        List(selection: $selectedDocumentIds) {
             ForEach(viewModel.documents) { doc in
                 DocumentRowView(document: doc)
                     .tag(doc.id)
@@ -48,6 +49,9 @@ struct DocumentListView: View {
                         }
                     }
             }
+            .onMove(perform: isAllDocumentsView ? nil : { source, destination in
+                viewModel.moveDocuments(from: source, to: destination)
+            })
         }
         .confirmationDialog(
             "Delete Document",
@@ -118,11 +122,29 @@ struct DocumentListView: View {
                             folderId: folderId
                         )
                         if let doc {
-                            selectedDocumentId = doc.id
+                            selectedDocumentIds = [doc.id]
                         }
                     }
                 } label: {
                     Label("New Document", systemImage: "plus")
+                }
+            }
+            if !isAllDocumentsView {
+                ToolbarItem(placement: .secondaryAction) {
+                    Menu {
+                        Button("Name (A-Z)") {
+                            viewModel.sortDocuments(folderId: folderId, by: .nameAscending)
+                        }
+                        Divider()
+                        Button("Date Created (Oldest First)") {
+                            viewModel.sortDocuments(folderId: folderId, by: .dateCreatedAscending)
+                        }
+                        Button("Date Created (Newest First)") {
+                            viewModel.sortDocuments(folderId: folderId, by: .dateCreatedDescending)
+                        }
+                    } label: {
+                        Label("Sort By", systemImage: "arrow.up.arrow.down")
+                    }
                 }
             }
         }

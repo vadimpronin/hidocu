@@ -19,6 +19,7 @@ struct Document: Identifiable, Sendable, Equatable, Hashable {
     var summaryHash: String?
     var preferSummary: Bool
     var minimizeBeforeLLM: Bool
+    var sortOrder: Int
     var createdAt: Date
     var modifiedAt: Date
 
@@ -34,6 +35,7 @@ struct Document: Identifiable, Sendable, Equatable, Hashable {
         summaryHash: String? = nil,
         preferSummary: Bool = false,
         minimizeBeforeLLM: Bool = false,
+        sortOrder: Int = 0,
         createdAt: Date = Date(),
         modifiedAt: Date = Date()
     ) {
@@ -48,6 +50,7 @@ struct Document: Identifiable, Sendable, Equatable, Hashable {
         self.summaryHash = summaryHash
         self.preferSummary = preferSummary
         self.minimizeBeforeLLM = minimizeBeforeLLM
+        self.sortOrder = sortOrder
         self.createdAt = createdAt
         self.modifiedAt = modifiedAt
     }

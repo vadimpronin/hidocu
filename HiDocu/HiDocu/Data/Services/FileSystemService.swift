@@ -620,6 +620,7 @@ final class FileSystemService {
     }
 
     /// Update metadata.yaml title in a document folder
+    @available(*, deprecated, message: "Use writeDocumentMetadata(_:) instead")
     func updateDocumentMetadata(diskPath: String, title: String) throws {
         let metadataURL = dataDirectory
             .appendingPathComponent(diskPath, isDirectory: true)
@@ -630,6 +631,7 @@ final class FileSystemService {
     }
 
     /// Update metadata.yaml with document id for identity across renames.
+    @available(*, deprecated, message: "Use writeDocumentMetadata(_:) instead")
     func updateDocumentMetadata(diskPath: String, title: String, documentId: Int64) throws {
         let metadataURL = dataDirectory
             .appendingPathComponent(diskPath, isDirectory: true)
@@ -637,6 +639,73 @@ final class FileSystemService {
         let escapedTitle = title.replacingOccurrences(of: "\"", with: "\\\"")
         let yaml = "id: \(documentId)\ntitle: \"\(escapedTitle)\"\ncreated: \(ISO8601DateFormatter().string(from: Date()))\n"
         try yaml.write(to: metadataURL, atomically: true, encoding: .utf8)
+    }
+
+    // MARK: - YAML Metadata Persistence
+
+    /// Write complete document metadata.yaml from a Document domain model.
+    func writeDocumentMetadata(_ document: Document) throws {
+        let metadataURL = dataDirectory
+            .appendingPathComponent(document.diskPath, isDirectory: true)
+            .appendingPathComponent("metadata.yaml")
+        let yaml = documentMetadataYAML(document)
+        try yaml.write(to: metadataURL, atomically: true, encoding: .utf8)
+    }
+
+    /// Write folder metadata.yaml from a Folder domain model.
+    func writeFolderMetadata(_ folder: Folder) throws {
+        guard let diskPath = folder.diskPath, !diskPath.isEmpty else { return }
+        let metadataURL = dataDirectory
+            .appendingPathComponent(diskPath, isDirectory: true)
+            .appendingPathComponent("metadata.yaml")
+        let yaml = folderMetadataYAML(folder)
+        try yaml.write(to: metadataURL, atomically: true, encoding: .utf8)
+    }
+
+    private static let isoFormatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        return f
+    }()
+
+    private func documentMetadataYAML(_ doc: Document) -> String {
+        var lines: [String] = []
+        lines.append("id: \(doc.id)")
+        lines.append("title: \(yamlQuoted(doc.title))")
+        lines.append("document_type: \(doc.documentType)")
+        lines.append("sort_order: \(doc.sortOrder)")
+        lines.append("prefer_summary: \(doc.preferSummary)")
+        lines.append("minimize_before_llm: \(doc.minimizeBeforeLLM)")
+        lines.append("created_at: \(Self.isoFormatter.string(from: doc.createdAt))")
+        lines.append("modified_at: \(Self.isoFormatter.string(from: doc.modifiedAt))")
+        return lines.joined(separator: "\n") + "\n"
+    }
+
+    private func folderMetadataYAML(_ folder: Folder) -> String {
+        var lines: [String] = []
+        lines.append("id: \(folder.id)")
+        lines.append("name: \(yamlQuoted(folder.name))")
+        lines.append("sort_order: \(folder.sortOrder)")
+        lines.append("prefer_summary: \(folder.preferSummary)")
+        lines.append("minimize_before_llm: \(folder.minimizeBeforeLLM)")
+        if let tc = folder.transcriptionContext, !tc.isEmpty {
+            lines.append("transcription_context: \(yamlQuoted(tc))")
+        }
+        if let cc = folder.categorizationContext, !cc.isEmpty {
+            lines.append("categorization_context: \(yamlQuoted(cc))")
+        }
+        lines.append("created_at: \(Self.isoFormatter.string(from: folder.createdAt))")
+        lines.append("modified_at: \(Self.isoFormatter.string(from: folder.modifiedAt))")
+        return lines.joined(separator: "\n") + "\n"
+    }
+
+    private func yamlQuoted(_ value: String) -> String {
+        let escaped = value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+            .replacingOccurrences(of: "\n", with: "\\n")
+            .replacingOccurrences(of: "\r", with: "\\r")
+            .replacingOccurrences(of: "\t", with: "\\t")
+        return "\"\(escaped)\""
     }
 
     // MARK: - Hierarchical File System
