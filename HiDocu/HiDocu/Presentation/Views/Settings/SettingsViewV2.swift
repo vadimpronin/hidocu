@@ -26,8 +26,13 @@ struct SettingsViewV2: View {
                 .tabItem {
                     Label("Context", systemImage: "text.alignleft")
                 }
+
+            LLMSettingsTab()
+                .tabItem {
+                    Label("AI / LLM", systemImage: "cpu")
+                }
         }
-        .frame(width: 500, height: 350)
+        .frame(width: 550, height: 480)
     }
 }
 

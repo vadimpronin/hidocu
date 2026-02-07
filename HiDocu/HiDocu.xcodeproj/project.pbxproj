@@ -77,6 +77,28 @@
 		F21116180C58EFA51A7A7459 /* SQLiteFolderRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 366665D1CFE1F75AFAAD9DF4 /* SQLiteFolderRepository.swift */; };
 		F5A00001F5A00001 /* TranscriptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A00011F5A00011 /* TranscriptionTests.swift */; };
 		F8000020F8000020 /* ErrorBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8000010F8000010 /* ErrorBannerView.swift */; };
+		BB00000100000001 /* LLMProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000100000001 /* LLMProvider.swift */; };
+		BB00000200000002 /* LLMAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000200000002 /* LLMAccount.swift */; };
+		BB00000300000003 /* LLMMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000300000003 /* LLMMessage.swift */; };
+		BB00000400000004 /* APILogEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000400000004 /* APILogEntry.swift */; };
+		BB00000500000005 /* LLMError.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000500000005 /* LLMError.swift */; };
+		BB00000600000006 /* LLMProviderStrategy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000600000006 /* LLMProviderStrategy.swift */; };
+		BB00000700000007 /* LLMAccountRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000700000007 /* LLMAccountRepository.swift */; };
+		BB00000800000008 /* APILogRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000800000008 /* APILogRepository.swift */; };
+		BB00000900000009 /* PKCEHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000900000009 /* PKCEHelper.swift */; };
+		BB0000100000000A /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000100000000A /* KeychainService.swift */; };
+		BB0000110000000B /* OAuthCallbackServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000110000000B /* OAuthCallbackServer.swift */; };
+		BB0000120000000C /* SSEParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000120000000C /* SSEParser.swift */; };
+		EE00000100000001 /* LLMAccountDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000100000001 /* LLMAccountDTO.swift */; };
+		EE00000200000002 /* APILogDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000002 /* APILogDTO.swift */; };
+		EE00000300000003 /* SQLiteLLMAccountRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000300000003 /* SQLiteLLMAccountRepository.swift */; };
+		EE00000400000004 /* SQLiteAPILogRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000400000004 /* SQLiteAPILogRepository.swift */; };
+		FF10000100000001 /* ClaudeProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000100000001 /* ClaudeProvider.swift */; };
+		FF10000200000002 /* CodexProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000200000002 /* CodexProvider.swift */; };
+		FF10000300000003 /* GeminiProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000300000003 /* GeminiProvider.swift */; };
+		FF10000400000004 /* LLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000400000004 /* LLMService.swift */; };
+		FF10000500000005 /* LLMSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000500000005 /* LLMSettingsViewModel.swift */; };
+		FF10000600000006 /* LLMSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000600000006 /* LLMSettingsTab.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -161,6 +183,28 @@
 		F8000010F8000010 /* ErrorBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBannerView.swift; sourceTree = "<group>"; };
 		FA55DE2ACE96B64C6A54BE4E /* Folder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Folder.swift; path = Folder.swift; sourceTree = "<group>"; };
 		FDC92D8AF4F6028806551C10 /* DocumentDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentDetailView.swift; sourceTree = "<group>"; };
+		AA00000100000001 /* LLMProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMProvider.swift; path = LLMProvider.swift; sourceTree = "<group>"; };
+		AA00000200000002 /* LLMAccount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMAccount.swift; path = LLMAccount.swift; sourceTree = "<group>"; };
+		AA00000300000003 /* LLMMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMMessage.swift; path = LLMMessage.swift; sourceTree = "<group>"; };
+		AA00000400000004 /* APILogEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APILogEntry.swift; path = APILogEntry.swift; sourceTree = "<group>"; };
+		AA00000500000005 /* LLMError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMError.swift; path = LLMError.swift; sourceTree = "<group>"; };
+		AA00000600000006 /* LLMProviderStrategy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMProviderStrategy.swift; path = LLMProviderStrategy.swift; sourceTree = "<group>"; };
+		AA00000700000007 /* LLMAccountRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMAccountRepository.swift; path = LLMAccountRepository.swift; sourceTree = "<group>"; };
+		AA00000800000008 /* APILogRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APILogRepository.swift; path = APILogRepository.swift; sourceTree = "<group>"; };
+		AA00000900000009 /* PKCEHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PKCEHelper.swift; path = PKCEHelper.swift; sourceTree = "<group>"; };
+		AA0000100000000A /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeychainService.swift; path = KeychainService.swift; sourceTree = "<group>"; };
+		AA0000110000000B /* OAuthCallbackServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OAuthCallbackServer.swift; path = OAuthCallbackServer.swift; sourceTree = "<group>"; };
+		AA0000120000000C /* SSEParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SSEParser.swift; path = SSEParser.swift; sourceTree = "<group>"; };
+		DD00000100000001 /* LLMAccountDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMAccountDTO.swift; path = LLMAccountDTO.swift; sourceTree = "<group>"; };
+		DD00000200000002 /* APILogDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APILogDTO.swift; path = APILogDTO.swift; sourceTree = "<group>"; };
+		DD00000300000003 /* SQLiteLLMAccountRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SQLiteLLMAccountRepository.swift; path = SQLiteLLMAccountRepository.swift; sourceTree = "<group>"; };
+		DD00000400000004 /* SQLiteAPILogRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SQLiteAPILogRepository.swift; path = SQLiteAPILogRepository.swift; sourceTree = "<group>"; };
+		FF00000100000001 /* ClaudeProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ClaudeProvider.swift; path = ClaudeProvider.swift; sourceTree = "<group>"; };
+		FF00000200000002 /* CodexProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CodexProvider.swift; path = CodexProvider.swift; sourceTree = "<group>"; };
+		FF00000300000003 /* GeminiProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GeminiProvider.swift; path = GeminiProvider.swift; sourceTree = "<group>"; };
+		FF00000400000004 /* LLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMService.swift; path = LLMService.swift; sourceTree = "<group>"; };
+		FF00000500000005 /* LLMSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMSettingsViewModel.swift; path = LLMSettingsViewModel.swift; sourceTree = "<group>"; };
+		FF00000600000006 /* LLMSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMSettingsTab.swift; path = LLMSettingsTab.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -314,6 +358,11 @@
 				120ABFADCBA34F60024F6346 /* Transcript.swift */,
 				1358CE1110F0A9D6089071F3 /* DeletionLogEntry.swift */,
 				9CB033465FB3E12E0BB749B1 /* RecordingV2.swift */,
+				AA00000100000001 /* LLMProvider.swift */,
+				AA00000200000002 /* LLMAccount.swift */,
+				AA00000300000003 /* LLMMessage.swift */,
+				AA00000400000004 /* APILogEntry.swift */,
+				AA00000500000005 /* LLMError.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -328,6 +377,9 @@
 				2B0D1580CF48C34D6AA476C3 /* TranscriptRepository.swift */,
 				93F40903E763C5CAAA849A16 /* RecordingRepositoryV2.swift */,
 				47BF7D3168C144CED0C36ED9 /* DeletionLogRepository.swift */,
+				AA00000600000006 /* LLMProviderStrategy.swift */,
+				AA00000700000007 /* LLMAccountRepository.swift */,
+				AA00000800000008 /* APILogRepository.swift */,
 			);
 			path = Protocols;
 			sourceTree = "<group>";
@@ -362,6 +414,7 @@
 				1982272C3186149C008392DB /* SettingsService.swift */,
 				368BA73F8C08D273FE2B21C8 /* RecordingImportServiceV2.swift */,
 				DF266F9B0F879544CB1FB848 /* PathSanitizer.swift */,
+				CC00000100000001 /* LLM */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -375,6 +428,8 @@
 				37A04E6ED12F76D8DF4867E7 /* SQLiteTranscriptRepository.swift */,
 				A29A4A2521C6F0977A6C729F /* SQLiteRecordingRepositoryV2.swift */,
 				AAA3834F987CA973FCD8506B /* SQLiteDeletionLogRepository.swift */,
+				DD00000300000003 /* SQLiteLLMAccountRepository.swift */,
+				DD00000400000004 /* SQLiteAPILogRepository.swift */,
 			);
 			path = Repositories;
 			sourceTree = "<group>";
@@ -388,6 +443,8 @@
 				B930F1D2F342C5D58BD7B889 /* TranscriptDTO.swift */,
 				37BFD95EBB1B504ED68E3980 /* DeletionLogDTO.swift */,
 				A9D040E8C768C4EB7680B474 /* RecordingV2DTO.swift */,
+				DD00000100000001 /* LLMAccountDTO.swift */,
+				DD00000200000002 /* APILogDTO.swift */,
 			);
 			path = DTOs;
 			sourceTree = "<group>";
@@ -425,6 +482,7 @@
 				5CF5D0788A026355A829DC46 /* DocumentListViewModel.swift */,
 				AAADD95ECAC7FF3C0B18B887 /* DocumentDetailViewModel.swift */,
 				DBA3562E4C531972E9D61F66 /* SourcesViewModel.swift */,
+				FF00000500000005 /* LLMSettingsViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -468,6 +526,7 @@
 			isa = PBXGroup;
 			children = (
 				BC12039CA327089CC1010027 /* SettingsViewV2.swift */,
+				FF00000600000006 /* LLMSettingsTab.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -486,6 +545,29 @@
 			);
 			name = Folders;
 			path = Folders;
+			sourceTree = "<group>";
+		};
+		CC00000100000001 /* LLM */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000900000009 /* PKCEHelper.swift */,
+				AA0000100000000A /* KeychainService.swift */,
+				AA0000110000000B /* OAuthCallbackServer.swift */,
+				AA0000120000000C /* SSEParser.swift */,
+				FF00000400000004 /* LLMService.swift */,
+				FF20000100000001 /* Providers */,
+			);
+			path = LLM;
+			sourceTree = "<group>";
+		};
+		FF20000100000001 /* Providers */ = {
+			isa = PBXGroup;
+			children = (
+				FF00000100000001 /* ClaudeProvider.swift */,
+				FF00000200000002 /* CodexProvider.swift */,
+				FF00000300000003 /* GeminiProvider.swift */,
+			);
+			path = Providers;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -675,6 +757,28 @@
 				310961DA68DD2E6085C77B8F /* SettingsViewV2.swift in Sources */,
 				7C9C910ECDD42858F96B2447 /* BatteryIndicatorView.swift in Sources */,
 				6FBDED703B6FC6EC14A8324E /* PathSanitizer.swift in Sources */,
+				BB00000100000001 /* LLMProvider.swift in Sources */,
+				BB00000200000002 /* LLMAccount.swift in Sources */,
+				BB00000300000003 /* LLMMessage.swift in Sources */,
+				BB00000400000004 /* APILogEntry.swift in Sources */,
+				BB00000500000005 /* LLMError.swift in Sources */,
+				BB00000600000006 /* LLMProviderStrategy.swift in Sources */,
+				BB00000700000007 /* LLMAccountRepository.swift in Sources */,
+				BB00000800000008 /* APILogRepository.swift in Sources */,
+				BB00000900000009 /* PKCEHelper.swift in Sources */,
+				BB0000100000000A /* KeychainService.swift in Sources */,
+				BB0000110000000B /* OAuthCallbackServer.swift in Sources */,
+				BB0000120000000C /* SSEParser.swift in Sources */,
+				EE00000100000001 /* LLMAccountDTO.swift in Sources */,
+				EE00000200000002 /* APILogDTO.swift in Sources */,
+				EE00000300000003 /* SQLiteLLMAccountRepository.swift in Sources */,
+				EE00000400000004 /* SQLiteAPILogRepository.swift in Sources */,
+				FF10000100000001 /* ClaudeProvider.swift in Sources */,
+				FF10000200000002 /* CodexProvider.swift in Sources */,
+				FF10000300000003 /* GeminiProvider.swift in Sources */,
+				FF10000400000004 /* LLMService.swift in Sources */,
+				FF10000500000005 /* LLMSettingsViewModel.swift in Sources */,
+				FF10000600000006 /* LLMSettingsTab.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

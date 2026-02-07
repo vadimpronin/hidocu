@@ -408,6 +408,45 @@ final class DatabaseManager: Sendable {
             AppLogger.database.info("Migration v7_document_sort_order complete")
         }
 
+        // v8: LLM integration tables
+        migrator.registerMigration("v8_llm_integration") { db in
+            try db.execute(sql: """
+                CREATE TABLE llm_accounts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    provider TEXT NOT NULL,
+                    email TEXT NOT NULL,
+                    display_name TEXT NOT NULL DEFAULT '',
+                    is_active INTEGER NOT NULL DEFAULT 1,
+                    last_used_at DATETIME,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """)
+            try db.execute(sql: "CREATE UNIQUE INDEX idx_llm_accounts_provider_email ON llm_accounts(provider, email)")
+
+            try db.execute(sql: """
+                CREATE TABLE api_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    provider TEXT NOT NULL,
+                    llm_account_id INTEGER REFERENCES llm_accounts(id) ON DELETE SET NULL,
+                    model TEXT NOT NULL,
+                    request_payload TEXT,
+                    response_payload TEXT,
+                    timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    document_id INTEGER REFERENCES documents(id) ON DELETE SET NULL,
+                    source_id INTEGER REFERENCES sources(id) ON DELETE SET NULL,
+                    status TEXT NOT NULL DEFAULT 'pending',
+                    error TEXT,
+                    input_tokens INTEGER,
+                    output_tokens INTEGER,
+                    duration_ms INTEGER
+                )
+                """)
+            try db.execute(sql: "CREATE INDEX idx_api_logs_timestamp ON api_logs(timestamp)")
+            try db.execute(sql: "CREATE INDEX idx_api_logs_document ON api_logs(document_id)")
+
+            AppLogger.database.info("Migration v8_llm_integration complete")
+        }
+
         return migrator
     }
     

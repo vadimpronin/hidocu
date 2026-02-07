@@ -11,11 +11,21 @@ struct AppSettings: Codable, Sendable {
     var general: GeneralSettings
     var audioImport: AudioImportSettings
     var context: ContextSettings
+    var llm: LLMSettings
 
     init() {
         self.general = GeneralSettings()
         self.audioImport = AudioImportSettings()
         self.context = ContextSettings()
+        self.llm = LLMSettings()
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.general = try container.decode(GeneralSettings.self, forKey: .general)
+        self.audioImport = try container.decode(AudioImportSettings.self, forKey: .audioImport)
+        self.context = try container.decode(ContextSettings.self, forKey: .context)
+        self.llm = try container.decodeIfPresent(LLMSettings.self, forKey: .llm) ?? LLMSettings()
     }
 
     struct GeneralSettings: Codable, Sendable {
@@ -28,6 +38,21 @@ struct AppSettings: Codable, Sendable {
 
     struct ContextSettings: Codable, Sendable {
         var defaultPreferSummary: Bool = true
+    }
+
+    struct LLMSettings: Codable, Sendable {
+        var defaultProvider: String = "claude"
+        var defaultModel: String = ""
+        var summaryPromptTemplate: String = Self.defaultPromptTemplate
+
+        static let defaultPromptTemplate: String = """
+            You are an expert summarizer. Given the following document, produce a concise summary \
+            that captures the key points, decisions, and action items. Use markdown formatting. \
+            Keep the summary under 500 words.
+
+            Document:
+            {{body}}
+            """
     }
 }
 
@@ -81,6 +106,21 @@ final class SettingsService {
 
     func updateDefaultPreferSummary(_ prefer: Bool) {
         settings.context.defaultPreferSummary = prefer
+        save()
+    }
+
+    func updateLLMProvider(_ provider: String) {
+        settings.llm.defaultProvider = provider
+        save()
+    }
+
+    func updateLLMModel(_ model: String) {
+        settings.llm.defaultModel = model
+        save()
+    }
+
+    func updateSummaryPromptTemplate(_ template: String) {
+        settings.llm.summaryPromptTemplate = template
         save()
     }
 }

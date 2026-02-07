@@ -15,6 +15,7 @@ import SwiftUI
 /// - Important: `DeviceConnectionService` is a singleton that must remain alive
 ///   for the app's lifetime to maintain USB connection.
 @Observable
+@MainActor
 final class AppDependencyContainer {
     
     // MARK: - Services (Long-lived Singletons)
@@ -36,6 +37,8 @@ final class AppDependencyContainer {
     let transcriptRepository: SQLiteTranscriptRepository
     let recordingRepositoryV2: SQLiteRecordingRepositoryV2
     let deletionLogRepository: SQLiteDeletionLogRepository
+    let llmAccountRepository: SQLiteLLMAccountRepository
+    let apiLogRepository: SQLiteAPILogRepository
 
     // MARK: - Services
 
@@ -45,6 +48,8 @@ final class AppDependencyContainer {
     let trashService: TrashService
     let settingsService: SettingsService
     let importServiceV2: RecordingImportServiceV2
+    let keychainService: KeychainService
+    let llmService: LLMService
 
     // MARK: - Initialization
 
@@ -72,9 +77,12 @@ final class AppDependencyContainer {
         self.transcriptRepository = SQLiteTranscriptRepository(databaseManager: databaseManager)
         self.recordingRepositoryV2 = SQLiteRecordingRepositoryV2(databaseManager: databaseManager)
         self.deletionLogRepository = SQLiteDeletionLogRepository(databaseManager: databaseManager)
+        self.llmAccountRepository = SQLiteLLMAccountRepository(databaseManager: databaseManager)
+        self.apiLogRepository = SQLiteAPILogRepository(databaseManager: databaseManager)
 
         // Initialize services
         self.settingsService = SettingsService()
+        self.keychainService = KeychainService()
 
         self.folderService = FolderService(
             folderRepository: folderRepository,
@@ -109,6 +117,17 @@ final class AppDependencyContainer {
         self.importServiceV2 = RecordingImportServiceV2(
             fileSystemService: fileSystemService,
             repository: recordingRepositoryV2
+        )
+
+        self.llmService = LLMService(
+            keychainService: keychainService,
+            accountRepository: llmAccountRepository,
+            apiLogRepository: apiLogRepository,
+            documentService: documentService,
+            settingsService: settingsService,
+            claudeProvider: ClaudeProvider(),
+            codexProvider: CodexProvider(),
+            geminiProvider: GeminiProvider()
         )
 
         // Apply settings to file system service

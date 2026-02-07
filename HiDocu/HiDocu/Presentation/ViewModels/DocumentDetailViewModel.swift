@@ -25,6 +25,8 @@ final class DocumentDetailViewModel {
     var bodyBytes: Int = 0
     var summaryBytes: Int = 0
     var errorMessage: String?
+    var summaryGenerationState: SummaryGenerationState = .idle
+    var isSummaryEditing: Bool = false
 
     enum DetailTab: String, CaseIterable {
         case body = "Body"
@@ -33,7 +35,14 @@ final class DocumentDetailViewModel {
         case info = "Info"
     }
 
+    enum SummaryGenerationState: Equatable {
+        case idle
+        case generating
+        case error(String)
+    }
+
     private let documentService: DocumentService
+    private let llmService: LLMService?
     @ObservationIgnored
     private var loadedTitle = ""
     @ObservationIgnored
@@ -42,9 +51,12 @@ final class DocumentDetailViewModel {
     private var loadedSummary = ""
     @ObservationIgnored
     nonisolated(unsafe) private var saveTimer: Timer?
+    @ObservationIgnored
+    private var generationTask: Task<Void, Never>?
 
-    init(documentService: DocumentService) {
+    init(documentService: DocumentService, llmService: LLMService? = nil) {
         self.documentService = documentService
+        self.llmService = llmService
     }
 
     func loadDocument(_ doc: Document) {
@@ -154,7 +166,41 @@ final class DocumentDetailViewModel {
         summaryBytes = summaryText.utf8.count
     }
 
+    // MARK: - Summary Generation
+
+    var hasSummary: Bool {
+        !summaryText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    func generateSummary() {
+        guard let doc = document, let llmService else { return }
+        summaryGenerationState = .generating
+
+        generationTask = Task {
+            do {
+                let response = try await llmService.generateSummary(for: doc)
+                summaryText = response.content
+                loadedSummary = response.content
+                summaryModified = false
+                summaryGenerationState = .idle
+                isSummaryEditing = false
+                updateByteCounts()
+            } catch is CancellationError {
+                summaryGenerationState = .idle
+            } catch {
+                summaryGenerationState = .error(error.localizedDescription)
+            }
+        }
+    }
+
+    func cancelGeneration() {
+        generationTask?.cancel()
+        generationTask = nil
+        summaryGenerationState = .idle
+    }
+
     deinit {
         saveTimer?.invalidate()
+        generationTask?.cancel()
     }
 }

@@ -47,4 +47,7 @@ enum AppLogger {
 
     /// Folder operations
     static let folder = Logger(subsystem: subsystem, category: "folder")
+
+    /// LLM operations (OAuth, API calls, token management)
+    static let llm = Logger(subsystem: subsystem, category: "llm")
 }

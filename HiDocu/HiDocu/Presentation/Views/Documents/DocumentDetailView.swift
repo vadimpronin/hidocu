@@ -105,12 +105,82 @@ struct DocumentDetailView: View {
                 }
 
         case .summary:
-            TextEditor(text: $viewModel.summaryText)
-                .font(.system(.body, design: .monospaced))
-                .padding(.horizontal, 12)
-                .onChange(of: viewModel.summaryText) { _, _ in
-                    viewModel.summaryDidChange()
+            VStack(spacing: 0) {
+                // Action Bar
+                HStack {
+                    if case .generating = viewModel.summaryGenerationState {
+                        Button("Cancel", systemImage: "xmark") {
+                            viewModel.cancelGeneration()
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    } else if viewModel.hasSummary {
+                        Button("Regenerate", systemImage: "arrow.triangle.2.circlepath") {
+                            viewModel.generateSummary()
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    } else {
+                        Button("Generate Summary", systemImage: "sparkles") {
+                            viewModel.generateSummary()
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+
+                    Spacer()
+
+                    if case .error(let message) = viewModel.summaryGenerationState {
+                        HStack(spacing: 4) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.yellow)
+                            Text(message)
+                                .font(.caption)
+                                .lineLimit(1)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
+
+                    if viewModel.hasSummary {
+                        Button(viewModel.isSummaryEditing ? "Done" : "Edit") {
+                            viewModel.isSummaryEditing.toggle()
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
                 }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(.bar)
+
+                Divider()
+
+                // Content
+                if case .generating = viewModel.summaryGenerationState {
+                    VStack(spacing: 8) {
+                        ProgressView()
+                        Text("Generating summary...")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if viewModel.isSummaryEditing || !viewModel.hasSummary {
+                    TextEditor(text: $viewModel.summaryText)
+                        .font(.system(.body, design: .monospaced))
+                        .padding(.horizontal, 12)
+                        .onChange(of: viewModel.summaryText) { _, _ in
+                            viewModel.summaryDidChange()
+                        }
+                } else {
+                    ScrollView {
+                        Text(viewModel.summaryText)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(12)
+                    }
+                }
+            }
 
         case .sources:
             if let doc = viewModel.document, let sourcesVM = sourcesViewModel {
