@@ -21,10 +21,16 @@ struct TokenData: Codable, Sendable {
 }
 
 /// Service for storing and retrieving LLM tokens from macOS Keychain.
-final class KeychainService: Sendable {
+///
+/// Maintains an in-memory cache to avoid repeated `SecItemCopyMatching` calls,
+/// which trigger macOS keychain password prompts when the keychain is locked.
+final class KeychainService: @unchecked Sendable {
     private static let service = "com.hidocu.llm"
 
-    /// Saves token data to Keychain.
+    private let lock = NSLock()
+    private var cache: [String: TokenData] = [:]
+
+    /// Saves token data to Keychain and updates the in-memory cache.
     ///
     /// - Parameters:
     ///   - token: Token data to store
@@ -51,14 +57,26 @@ final class KeychainService: Sendable {
         guard status == errSecSuccess else {
             throw KeychainError.saveFailed(status: status)
         }
+
+        lock.lock()
+        cache[identifier] = token
+        lock.unlock()
     }
 
-    /// Loads token data from Keychain.
+    /// Loads token data, returning a cached value if available.
+    /// Only hits the keychain once per identifier per app session.
     ///
     /// - Parameter identifier: Account identifier
     /// - Returns: Token data if found, nil otherwise
     /// - Throws: Keychain operation errors
     func loadToken(identifier: String) throws -> TokenData? {
+        lock.lock()
+        if let cached = cache[identifier] {
+            lock.unlock()
+            return cached
+        }
+        lock.unlock()
+
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: Self.service,
@@ -84,10 +102,16 @@ final class KeychainService: Sendable {
 
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(TokenData.self, from: tokenData)
+        let token = try decoder.decode(TokenData.self, from: tokenData)
+
+        lock.lock()
+        cache[identifier] = token
+        lock.unlock()
+
+        return token
     }
 
-    /// Deletes token data from Keychain.
+    /// Deletes token data from Keychain and removes it from cache.
     ///
     /// - Parameter identifier: Account identifier
     /// - Throws: Keychain operation errors (errSecItemNotFound is not thrown)
@@ -102,6 +126,10 @@ final class KeychainService: Sendable {
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw KeychainError.deleteFailed(status: status)
         }
+
+        lock.lock()
+        cache.removeValue(forKey: identifier)
+        lock.unlock()
     }
 }
 
