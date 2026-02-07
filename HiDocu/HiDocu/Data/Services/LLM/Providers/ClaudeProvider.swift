@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import Security
 import os
 
 private let logger = Logger(subsystem: "com.hidocu.app", category: "llm")
@@ -27,7 +28,8 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
 
     private static let apiBaseURL = "https://api.anthropic.com"
     private static let apiVersion = "2023-06-01"
-    private static let betaHeader = "oauth-2025-04-20"
+    private static let betaHeader = "claude-code-20250219,oauth-2025-04-20,interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14,prompt-caching-2024-07-31"
+    private static let userAgent = "claude-cli/1.0.83 (external, cli)"
 
     // MARK: - Properties
 
@@ -157,11 +159,14 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
             }
         }
 
-        // Build request body
+        // Build request body — matches Go reference (ConvertOpenAIRequestToClaude + applyCloaking)
         var requestBody: [String: Any] = [
             "model": model,
-            "max_tokens": options.maxTokens,
-            "messages": conversationMessages
+            "max_tokens": 32000,
+            "messages": conversationMessages,
+            "metadata": [
+                "user_id": generateFakeUserID()
+            ]
         ]
 
         // Add system prompt (prioritize options.systemPrompt, then collected system messages)
@@ -178,14 +183,27 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
 
         let jsonData = try JSONSerialization.data(withJSONObject: requestBody)
 
-        // Build request
+        // Build request — headers match Go reference (applyClaudeHeaders)
         var request = URLRequest(url: URL(string: "\(Self.apiBaseURL)/v1/messages?beta=true")!)
         request.httpMethod = "POST"
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue(Self.apiVersion, forHTTPHeaderField: "Anthropic-Version")
         request.setValue(Self.betaHeader, forHTTPHeaderField: "Anthropic-Beta")
         request.setValue("true", forHTTPHeaderField: "Anthropic-Dangerous-Direct-Browser-Access")
+        request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
+        request.setValue("cli", forHTTPHeaderField: "X-App")
+        request.setValue("stream", forHTTPHeaderField: "X-Stainless-Helper-Method")
+        request.setValue("0", forHTTPHeaderField: "X-Stainless-Retry-Count")
+        request.setValue("v24.3.0", forHTTPHeaderField: "X-Stainless-Runtime-Version")
+        request.setValue("0.55.1", forHTTPHeaderField: "X-Stainless-Package-Version")
+        request.setValue("node", forHTTPHeaderField: "X-Stainless-Runtime")
+        request.setValue("js", forHTTPHeaderField: "X-Stainless-Lang")
+        request.setValue("arm64", forHTTPHeaderField: "X-Stainless-Arch")
+        request.setValue("MacOS", forHTTPHeaderField: "X-Stainless-Os")
+        request.setValue("60", forHTTPHeaderField: "X-Stainless-Timeout")
+        request.setValue("keep-alive", forHTTPHeaderField: "Connection")
         request.httpBody = jsonData
 
         logger.debug("Sending request to \(request.url?.absoluteString ?? "unknown")")
@@ -233,6 +251,16 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
     }
 
     // MARK: - Private Helpers
+
+    /// Generates a fake user ID for request metadata.
+    /// Format: user_{64-hex-chars}_account__session_{UUID-v4}
+    private func generateFakeUserID() -> String {
+        var bytes = [UInt8](repeating: 0, count: 32)
+        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        let hexPart = bytes.map { String(format: "%02x", $0) }.joined()
+        let uuidPart = UUID().uuidString.lowercased()
+        return "user_\(hexPart)_account__session_\(uuidPart)"
+    }
 
     /// Exchanges authorization code for access and refresh tokens.
     private func exchangeCodeForTokens(
