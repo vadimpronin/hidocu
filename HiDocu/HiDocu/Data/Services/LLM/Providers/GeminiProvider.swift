@@ -214,7 +214,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
     ///
     /// - Parameter accessToken: Valid access token (unused, kept for protocol conformance)
     /// - Returns: Array of model identifiers
-    func fetchModels(accessToken: String) async throws -> [String] {
+    func fetchModels(accessToken: String, accountId: String?) async throws -> [String] {
         [
             "gemini-2.5-flash",
             "gemini-2.5-pro",

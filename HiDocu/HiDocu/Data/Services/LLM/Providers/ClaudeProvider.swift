@@ -123,7 +123,7 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
         expiresAt.timeIntervalSinceNow < 300
     }
 
-    func fetchModels(accessToken: String) async throws -> [String] {
+    func fetchModels(accessToken: String, accountId: String?) async throws -> [String] {
         // Claude OAuth tokens have a fixed set of models
         logger.debug("Returning hardcoded Claude model list")
         return [

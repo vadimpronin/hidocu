@@ -166,7 +166,12 @@ final class LLMService {
             throw LLMError.noAccountsConfigured(provider)
         }
 
-        // Get valid access token
+        // Load token data (for access token + provider-specific metadata like accountId)
+        guard let tokenData = try keychainService.loadToken(identifier: account.keychainIdentifier) else {
+            throw LLMError.authenticationFailed(provider: provider, detail: "No token found in keychain")
+        }
+
+        // Get valid access token (may refresh if expired)
         let accessToken = try await getValidAccessToken(for: account)
 
         guard let strategy = providers[provider] else {
@@ -174,7 +179,7 @@ final class LLMService {
         }
 
         // Fetch models from provider
-        let models = try await strategy.fetchModels(accessToken: accessToken)
+        let models = try await strategy.fetchModels(accessToken: accessToken, accountId: tokenData.accountId)
         AppLogger.llm.info("Fetched \(models.count) models for \(provider.rawValue)")
         return models
     }

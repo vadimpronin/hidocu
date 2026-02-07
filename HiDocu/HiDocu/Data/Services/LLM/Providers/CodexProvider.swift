@@ -26,8 +26,8 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
     // MARK: - API Constants
 
     private static let apiBaseURL = "https://chatgpt.com/backend-api/codex"
-    private static let userAgent = "codex_cli_rs/0.98.0 (Mac OS 26.0.1; arm64) Apple_Terminal/464"
-    private static let clientVersion = "0.98.0"
+    private static let userAgent = "codex_cli_rs/99.99.99 (Mac OS 26.0.1; arm64) Apple_Terminal/464"
+    private static let clientVersion = "99.99.99"
 
     // MARK: - Properties
 
@@ -127,15 +127,49 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
         expiresAt.timeIntervalSinceNow < 300
     }
 
-    func fetchModels(accessToken: String) async throws -> [String] {
-        // Codex API models (hardcoded as per Go implementation)
-        logger.debug("Returning hardcoded Codex model list")
-        return [
-            "gpt-4.1",
-            "o3",
-            "o4-mini",
-            "gpt-4o"
-        ]
+    func fetchModels(accessToken: String, accountId: String?) async throws -> [String] {
+        logger.info("Fetching Codex models from API")
+
+        var request = URLRequest(url: URL(string: "\(Self.apiBaseURL)/models?client_version=\(Self.clientVersion)")!)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
+        request.setValue(Self.clientVersion, forHTTPHeaderField: "Version")
+        request.setValue("codex_cli_rs", forHTTPHeaderField: "Originator")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let accountId {
+            request.setValue(accountId, forHTTPHeaderField: "Chatgpt-Account-Id")
+        }
+
+        let (data, response) = try await urlSession.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw LLMError.invalidResponse(detail: "Response is not HTTP")
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            let message = String(data: data, encoding: .utf8) ?? "Unknown error"
+            logger.error("Codex models fetch failed with status \(httpResponse.statusCode): \(message)")
+            throw LLMError.apiError(
+                provider: .codex,
+                statusCode: httpResponse.statusCode,
+                message: message
+            )
+        }
+
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let models = json["models"] as? [[String: Any]] else {
+            throw LLMError.invalidResponse(detail: "Invalid models response format")
+        }
+
+        // Filter to visible models and sort by priority (lower = higher priority)
+        let visibleModels = models
+            .filter { ($0["visibility"] as? String) == "list" }
+            .sorted { ($0["priority"] as? Int ?? Int.max) < ($1["priority"] as? Int ?? Int.max) }
+            .compactMap { $0["slug"] as? String }
+
+        logger.info("Fetched \(visibleModels.count) visible Codex models")
+        return visibleModels
     }
 
     func chat(

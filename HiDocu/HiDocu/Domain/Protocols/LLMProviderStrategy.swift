@@ -30,10 +30,12 @@ protocol LLMProviderStrategy: Sendable {
     func isTokenExpired(_ expiresAt: Date) -> Bool
 
     /// Fetches available models for the authenticated account.
-    /// - Parameter accessToken: Valid access token
+    /// - Parameters:
+    ///   - accessToken: Valid access token
+    ///   - accountId: Optional provider-specific account ID (e.g., chatgpt_account_id for Codex)
     /// - Returns: Array of model identifiers
     /// - Throws: `LLMError` if fetch fails
-    func fetchModels(accessToken: String) async throws -> [String]
+    func fetchModels(accessToken: String, accountId: String?) async throws -> [String]
 
     /// Sends a chat completion request to the provider's API.
     /// - Parameters:
