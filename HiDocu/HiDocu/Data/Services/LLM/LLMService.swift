@@ -166,13 +166,8 @@ final class LLMService {
             throw LLMError.noAccountsConfigured(provider)
         }
 
-        // Load token data (for access token + provider-specific metadata like accountId)
-        guard let tokenData = try keychainService.loadToken(identifier: account.keychainIdentifier) else {
-            throw LLMError.authenticationFailed(provider: provider, detail: "No token found in keychain")
-        }
-
-        // Get valid access token (may refresh if expired)
-        let accessToken = try await getValidAccessToken(for: account)
+        // Get valid access token and token data (single keychain load)
+        let (accessToken, tokenData) = try await getValidAccessToken(for: account)
 
         guard let strategy = providers[provider] else {
             throw LLMError.authenticationFailed(provider: provider, detail: "Provider not supported")
@@ -227,11 +222,8 @@ final class LLMService {
         // Select account
         let account = try await selectAccount(provider: provider)
 
-        // Get valid access token
-        let accessToken = try await getValidAccessToken(for: account)
-
-        // Load token data (needed for provider-specific metadata like projectId)
-        let currentTokenData = try keychainService.loadToken(identifier: account.keychainIdentifier)
+        // Get valid access token and token data (single keychain load)
+        let (accessToken, currentTokenData) = try await getValidAccessToken(for: account)
 
         guard let strategy = providers[provider] else {
             throw LLMError.authenticationFailed(provider: provider, detail: "Provider not supported")
@@ -267,8 +259,7 @@ final class LLMService {
             // On 401, refresh token once and retry
             if case .apiError(_, let statusCode, _) = error, statusCode == 401 {
                 AppLogger.llm.warning("Received 401, refreshing token and retrying")
-                let newAccessToken = try await refreshAndGetToken(for: account)
-                let refreshedTokenData = try keychainService.loadToken(identifier: account.keychainIdentifier)
+                let (newAccessToken, refreshedTokenData) = try await refreshAndGetToken(for: account)
                 response = try await strategy.chat(
                     messages: messages,
                     model: model,
@@ -322,11 +313,11 @@ final class LLMService {
 
     // MARK: - Token Management (Private)
 
-    /// Gets a valid access token for an account, refreshing if expired.
+    /// Gets a valid access token and token data for an account, refreshing if expired.
     /// - Parameter account: Account to get token for
-    /// - Returns: Valid access token
+    /// - Returns: Tuple of valid access token and token data
     /// - Throws: `LLMError` if token refresh fails
-    private func getValidAccessToken(for account: LLMAccount) async throws -> String {
+    private func getValidAccessToken(for account: LLMAccount) async throws -> (accessToken: String, tokenData: TokenData) {
         // Load token from keychain
         guard let tokenData = try keychainService.loadToken(identifier: account.keychainIdentifier) else {
             throw LLMError.authenticationFailed(
@@ -348,14 +339,14 @@ final class LLMService {
             return try await refreshAndGetToken(for: account)
         }
 
-        return tokenData.accessToken
+        return (tokenData.accessToken, tokenData)
     }
 
     /// Refreshes an account's access token and saves to keychain.
     /// - Parameter account: Account to refresh token for
-    /// - Returns: New access token
+    /// - Returns: Tuple of new access token and token data
     /// - Throws: `LLMError` if refresh fails
-    private func refreshAndGetToken(for account: LLMAccount) async throws -> String {
+    private func refreshAndGetToken(for account: LLMAccount) async throws -> (accessToken: String, tokenData: TokenData) {
         // Load current token
         guard let currentToken = try keychainService.loadToken(identifier: account.keychainIdentifier) else {
             throw LLMError.tokenRefreshFailed(
@@ -391,7 +382,7 @@ final class LLMService {
         try await accountRepository.updateLastUsed(id: account.id)
 
         AppLogger.llm.info("Token refreshed for account id=\(account.id)")
-        return newBundle.accessToken
+        return (newBundle.accessToken, newTokenData)
     }
 
     // MARK: - Account Selection (Private)
