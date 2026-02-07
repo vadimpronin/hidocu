@@ -164,8 +164,14 @@ private struct LLMSettingsContent: View {
             LabeledContent("Default Model") {
                 HStack(spacing: 4) {
                     Picker("", selection: $viewModel.selectedModelId) {
-                        if viewModel.availableModels.isEmpty {
+                        if viewModel.availableModels.isEmpty && viewModel.selectedModelId.isEmpty {
                             Text("No models available").tag("")
+                        }
+                        // Placeholder tag for the persisted selection while models load
+                        // (or if the saved model was removed from the provider)
+                        if !viewModel.selectedModelId.isEmpty,
+                           !viewModel.availableModels.contains(where: { $0.id == viewModel.selectedModelId }) {
+                            Text(viewModel.selectedModelId).tag(viewModel.selectedModelId)
                         }
                         ForEach(viewModel.availableModels) { model in
                             Text(model.displayName).tag(model.id)
