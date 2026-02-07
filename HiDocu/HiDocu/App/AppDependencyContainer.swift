@@ -127,7 +127,8 @@ final class AppDependencyContainer {
             settingsService: settingsService,
             claudeProvider: ClaudeProvider(),
             codexProvider: CodexProvider(),
-            geminiProvider: GeminiProvider()
+            geminiProvider: GeminiProvider(),
+            antigravityProvider: AntigravityProvider()
         )
 
         // Apply settings to file system service

@@ -96,6 +96,7 @@
 		FF10000100000001 /* ClaudeProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000100000001 /* ClaudeProvider.swift */; };
 		FF10000200000002 /* CodexProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000200000002 /* CodexProvider.swift */; };
 		FF10000300000003 /* GeminiProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000300000003 /* GeminiProvider.swift */; };
+		FF10000700000007 /* AntigravityProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000700000007 /* AntigravityProvider.swift */; };
 		FF10000400000004 /* LLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000400000004 /* LLMService.swift */; };
 		FF10000500000005 /* LLMSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000500000005 /* LLMSettingsViewModel.swift */; };
 		FF10000600000006 /* LLMSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000600000006 /* LLMSettingsTab.swift */; };
@@ -202,6 +203,7 @@
 		FF00000100000001 /* ClaudeProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ClaudeProvider.swift; path = ClaudeProvider.swift; sourceTree = "<group>"; };
 		FF00000200000002 /* CodexProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CodexProvider.swift; path = CodexProvider.swift; sourceTree = "<group>"; };
 		FF00000300000003 /* GeminiProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GeminiProvider.swift; path = GeminiProvider.swift; sourceTree = "<group>"; };
+		FF00000700000007 /* AntigravityProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AntigravityProvider.swift; path = AntigravityProvider.swift; sourceTree = "<group>"; };
 		FF00000400000004 /* LLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMService.swift; path = LLMService.swift; sourceTree = "<group>"; };
 		FF00000500000005 /* LLMSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMSettingsViewModel.swift; path = LLMSettingsViewModel.swift; sourceTree = "<group>"; };
 		FF00000600000006 /* LLMSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMSettingsTab.swift; path = LLMSettingsTab.swift; sourceTree = "<group>"; };
@@ -563,6 +565,7 @@
 		FF20000100000001 /* Providers */ = {
 			isa = PBXGroup;
 			children = (
+				FF00000700000007 /* AntigravityProvider.swift */,
 				FF00000100000001 /* ClaudeProvider.swift */,
 				FF00000200000002 /* CodexProvider.swift */,
 				FF00000300000003 /* GeminiProvider.swift */,
@@ -773,6 +776,7 @@
 				EE00000200000002 /* APILogDTO.swift in Sources */,
 				EE00000300000003 /* SQLiteLLMAccountRepository.swift in Sources */,
 				EE00000400000004 /* SQLiteAPILogRepository.swift in Sources */,
+				FF10000700000007 /* AntigravityProvider.swift in Sources */,
 				FF10000100000001 /* ClaudeProvider.swift in Sources */,
 				FF10000200000002 /* CodexProvider.swift in Sources */,
 				FF10000300000003 /* GeminiProvider.swift in Sources */,

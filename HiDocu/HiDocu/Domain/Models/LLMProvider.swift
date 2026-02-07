@@ -13,6 +13,7 @@ enum LLMProvider: String, Codable, CaseIterable, Sendable {
     case claude
     case codex
     case gemini
+    case antigravity
 
     /// Human-readable provider name.
     var displayName: String {
@@ -23,6 +24,8 @@ enum LLMProvider: String, Codable, CaseIterable, Sendable {
             return "OpenAI"
         case .gemini:
             return "Gemini"
+        case .antigravity:
+            return "Antigravity"
         }
     }
 
@@ -35,6 +38,8 @@ enum LLMProvider: String, Codable, CaseIterable, Sendable {
             return "O"
         case .gemini:
             return "G"
+        case .antigravity:
+            return "AG"
         }
     }
 
@@ -47,6 +52,8 @@ enum LLMProvider: String, Codable, CaseIterable, Sendable {
             return Color(red: 0.2, green: 0.7, blue: 0.7) // OpenAI teal
         case .gemini:
             return Color(red: 0.26, green: 0.52, blue: 0.96) // Google blue
+        case .antigravity:
+            return Color(red: 0.95, green: 0.3, blue: 0.3) // Red
         }
     }
 }

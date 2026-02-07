@@ -40,7 +40,8 @@ final class LLMService {
         settingsService: SettingsService,
         claudeProvider: any LLMProviderStrategy,
         codexProvider: any LLMProviderStrategy,
-        geminiProvider: any LLMProviderStrategy
+        geminiProvider: any LLMProviderStrategy,
+        antigravityProvider: any LLMProviderStrategy
     ) {
         self.keychainService = keychainService
         self.accountRepository = accountRepository
@@ -51,7 +52,8 @@ final class LLMService {
         self.providers = [
             .claude: claudeProvider,
             .codex: codexProvider,
-            .gemini: geminiProvider
+            .gemini: geminiProvider,
+            .antigravity: antigravityProvider
         ]
     }
 

@@ -187,6 +187,7 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
         var request = URLRequest(url: URL(string: "\(Self.apiBaseURL)/v1/messages?beta=true")!)
         request.httpMethod = "POST"
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.timeoutInterval = 300
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue(Self.apiVersion, forHTTPHeaderField: "Anthropic-Version")

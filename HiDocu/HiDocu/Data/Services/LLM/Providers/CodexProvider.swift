@@ -194,6 +194,7 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
         // Build request
         var request = URLRequest(url: URL(string: "\(Self.apiBaseURL)/responses")!)
         request.httpMethod = "POST"
+        request.timeoutInterval = 300
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")

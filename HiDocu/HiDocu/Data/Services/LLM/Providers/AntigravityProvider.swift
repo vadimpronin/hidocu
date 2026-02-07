@@ -1,60 +1,56 @@
 //
-//  GeminiProvider.swift
+//  AntigravityProvider.swift
 //  HiDocu
 //
-//  Google Gemini LLM provider implementation using OAuth2 authentication.
-//  Uses Cloud Code Assist API (cloudcode-pa.googleapis.com) with the Gemini CLI OAuth client.
+//  Antigravity LLM provider implementation using Google OAuth2 authentication.
+//  Uses Cloud Code Assist API (cloudcode-pa.googleapis.com) with the Antigravity OAuth client.
 //
 
 import Foundation
+import CommonCrypto
 import os
 
-private let logger = Logger(subsystem: "com.hidocu.app", category: "llm")
+private let logger = Logger(subsystem: "com.hidocu.app", category: "llm.antigravity")
 
-/// Google Gemini LLM provider strategy.
+/// Antigravity LLM provider strategy.
 ///
-/// Implements OAuth2 authentication flow with client secret (not PKCE).
-/// Uses the Cloud Code Assist API endpoint which is accessible with the Gemini CLI OAuth client.
-///
-/// Key differences from PKCE-based providers:
-/// - Uses client_secret instead of PKCE code_verifier
-/// - Client secret must be stored in OAuthTokenBundle for refresh operations
-/// - Fetches user email from Google userinfo API after token exchange
-/// - Requires project ID obtained via loadCodeAssist endpoint
-/// - Request body wraps standard Gemini payload in a `request` field with `project` and `model`
-final class GeminiProvider: LLMProviderStrategy, Sendable {
+/// Uses Google OAuth2 with client_secret (same pattern as Gemini CLI) but with
+/// different credentials and additional OAuth scopes for Antigravity.
+/// Communicates via the Cloud Code Assist API (daily endpoint).
+final class AntigravityProvider: LLMProviderStrategy, Sendable {
     // MARK: - OAuth Configuration
 
-    // Note: Client secret is from the public Google CLI OAuth client (same as Gemini CLI).
-    // This is standard practice for installed/native app OAuth flows where the secret
-    // cannot be kept confidential (see Google OAuth docs for "installed applications").
-    private static let clientID = "681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com"
-    private static let clientSecret = "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"
-    private static let authURL = "https://accounts.google.com/o/oauth2/auth"
+    private static let clientID = "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com"
+    private static let clientSecret = "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"
+    private static let authURL = "https://accounts.google.com/o/oauth2/v2/auth"
     private static let tokenURL = "https://oauth2.googleapis.com/token"
-    private static let redirectURI = "http://localhost:8085/oauth2callback"
+    private static let redirectURI = "http://localhost:51121/oauth-callback"
     private static let scopes = [
         "https://www.googleapis.com/auth/cloud-platform",
         "https://www.googleapis.com/auth/userinfo.email",
-        "https://www.googleapis.com/auth/userinfo.profile"
+        "https://www.googleapis.com/auth/userinfo.profile",
+        "https://www.googleapis.com/auth/cclog",
+        "https://www.googleapis.com/auth/experimentsandconfigs"
     ]
-    private static let callbackPort: UInt16 = 8085
-    private static let callbackPath = "/oauth2callback"
+    private static let callbackPort: UInt16 = 51121
+    private static let callbackPath = "/oauth-callback"
 
     // MARK: - API Configuration
 
-    // Cloud Code Assist API (used by Gemini CLI, not the public generativelanguage API)
-    private static let apiBaseURL = "https://cloudcode-pa.googleapis.com/v1internal"
+    private static let apiBaseURL = "https://daily-cloudcode-pa.googleapis.com/v1internal"
     private static let userinfoURL = "https://www.googleapis.com/oauth2/v1/userinfo?alt=json"
 
-    // Headers to match the Gemini CLI client identity
-    private static let cliUserAgent = "google-api-nodejs-client/9.15.1"
-    private static let cliApiClient = "gl-node/22.17.0"
-    private static let cliMetadata = "ideType=IDE_UNSPECIFIED,platform=PLATFORM_UNSPECIFIED,pluginType=GEMINI"
+    // Headers for loadCodeAssist (auth flow) — match constants.go
+    private static let authUserAgent = "google-api-nodejs-client/9.15.1"
+    private static let authApiClient = "google-cloud-sdk vscode_cloudshelleditor/0.1"
+    private static let authClientMetadata = #"{"ideType":"IDE_UNSPECIFIED","platform":"PLATFORM_UNSPECIFIED","pluginType":"GEMINI"}"#
+
+    // User-Agent for API calls (chat, models) — match executor defaultAntigravityAgent
+    private static let apiUserAgent = "antigravity/1.104.0 darwin/arm64"
 
     // MARK: - Properties
 
-    let provider: LLMProvider = .gemini
+    let provider: LLMProvider = .antigravity
     private let urlSession: URLSession
 
     // MARK: - Initialization
@@ -63,65 +59,48 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         self.urlSession = urlSession
     }
 
-    /// Initiates OAuth2 authentication flow without PKCE.
-    ///
-    /// Steps:
-    /// 1. Generate random state for CSRF protection
-    /// 2. Build authorization URL with client_id, scopes, and state
-    /// 3. Start local callback server on port 8085
-    /// 4. Open browser to authorization URL
-    /// 5. Exchange authorization code for tokens using client_secret
-    /// 6. Fetch user email from Google userinfo API
-    /// 7. Fetch project ID via loadCodeAssist endpoint
-    ///
-    /// - Returns: Token bundle with access/refresh tokens, user email, and project ID
-    /// - Throws: `LLMError` if authentication fails
-    func authenticate() async throws -> OAuthTokenBundle {
-        logger.info("Starting Gemini OAuth authentication flow")
+    // MARK: - LLMProviderStrategy
 
-        // Generate state
+    func authenticate() async throws -> OAuthTokenBundle {
+        logger.info("Starting Antigravity OAuth authentication flow")
+
         let state = try PKCEHelper.generateState()
 
-        // Build authorization URL
         var components = URLComponents(string: Self.authURL)!
         components.queryItems = [
-            URLQueryItem(name: "client_id", value: Self.clientID),
-            URLQueryItem(name: "response_type", value: "code"),
-            URLQueryItem(name: "redirect_uri", value: Self.redirectURI),
-            URLQueryItem(name: "scope", value: Self.scopes.joined(separator: " ")),
-            URLQueryItem(name: "state", value: state),
             URLQueryItem(name: "access_type", value: "offline"),
-            URLQueryItem(name: "prompt", value: "consent")
+            URLQueryItem(name: "client_id", value: Self.clientID),
+            URLQueryItem(name: "prompt", value: "consent"),
+            URLQueryItem(name: "redirect_uri", value: Self.redirectURI),
+            URLQueryItem(name: "response_type", value: "code"),
+            URLQueryItem(name: "scope", value: Self.scopes.joined(separator: " ")),
+            URLQueryItem(name: "state", value: state)
         ]
 
         guard let authURL = components.url else {
-            throw LLMError.authenticationFailed(provider: .gemini, detail: "Failed to construct authorization URL")
+            throw LLMError.authenticationFailed(provider: .antigravity, detail: "Failed to construct authorization URL")
         }
 
-        // Start callback server and await authorization code
-        let server = OAuthCallbackServer(port: Self.callbackPort, callbackPath: Self.callbackPath, provider: .gemini)
+        let server = OAuthCallbackServer(port: Self.callbackPort, callbackPath: Self.callbackPath, provider: .antigravity)
         let result: OAuthResult
 
         do {
             result = try await server.awaitCallback(authorizationURL: authURL)
         } catch {
             logger.error("OAuth callback failed: \(error.localizedDescription)")
-            throw LLMError.authenticationFailed(provider: .gemini, detail: error.localizedDescription)
+            throw LLMError.authenticationFailed(provider: .antigravity, detail: error.localizedDescription)
         }
 
-        // Verify state matches
         guard result.state == state else {
-            throw LLMError.authenticationFailed(provider: .gemini, detail: "State parameter mismatch (CSRF protection)")
+            throw LLMError.authenticationFailed(provider: .antigravity, detail: "State parameter mismatch (CSRF protection)")
         }
 
         logger.debug("Received authorization code, exchanging for tokens")
 
-        // Exchange code for tokens
         let tokenBundle = try await exchangeCodeForTokens(code: result.code)
 
-        // Fetch project ID required for Cloud Code API
         let projectId = try await fetchProjectId(accessToken: tokenBundle.accessToken)
-        logger.info("Obtained Cloud Code project ID: \(projectId)")
+        logger.info("Obtained Antigravity project ID: \(projectId)")
 
         let bundleWithProject = OAuthTokenBundle(
             accessToken: tokenBundle.accessToken,
@@ -132,23 +111,13 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
             clientSecret: Self.clientSecret
         )
 
-        logger.info("Gemini authentication successful for user: \(tokenBundle.email)")
+        logger.info("Antigravity authentication successful for user: \(tokenBundle.email)")
         return bundleWithProject
     }
 
-    /// Refreshes an expired access token using the refresh token.
-    ///
-    /// Note: Google may not return a new refresh_token in the response.
-    /// If not present, we reuse the existing refresh token.
-    /// The project ID is re-fetched using the new access token.
-    ///
-    /// - Parameter refreshToken: Valid refresh token
-    /// - Returns: New token bundle with refreshed access token and project ID
-    /// - Throws: `LLMError.tokenRefreshFailed` if refresh fails
     func refreshToken(_ refreshToken: String) async throws -> OAuthTokenBundle {
-        logger.info("Refreshing Gemini access token")
+        logger.info("Refreshing Antigravity access token")
 
-        // Build form body
         let bodyParams = [
             "client_id": Self.clientID,
             "client_secret": Self.clientSecret,
@@ -161,16 +130,16 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
             .joined(separator: "&")
 
         guard let bodyData = bodyString.data(using: .utf8) else {
-            throw LLMError.tokenRefreshFailed(provider: .gemini, detail: "Failed to encode request body")
+            throw LLMError.tokenRefreshFailed(provider: .antigravity, detail: "Failed to encode request body")
         }
 
-        // Create request
         var request = URLRequest(url: URL(string: Self.tokenURL)!)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.setValue(Self.apiUserAgent, forHTTPHeaderField: "User-Agent")
+        request.setValue("oauth2.googleapis.com", forHTTPHeaderField: "Host")
         request.httpBody = bodyData
 
-        // Execute request
         let (data, response): (Data, URLResponse)
 
         do {
@@ -187,10 +156,9 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
             logger.error("Token refresh failed with status \(httpResponse.statusCode): \(errorMessage)")
-            throw LLMError.tokenRefreshFailed(provider: .gemini, detail: "HTTP \(httpResponse.statusCode): \(errorMessage)")
+            throw LLMError.tokenRefreshFailed(provider: .antigravity, detail: "HTTP \(httpResponse.statusCode): \(errorMessage)")
         }
 
-        // Parse response
         let json: [String: Any]
 
         do {
@@ -207,17 +175,10 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
             throw LLMError.invalidResponse(detail: "Missing expires_in in response")
         }
 
-        // Google may not return a new refresh token on refresh
         let newRefreshToken = (json["refresh_token"] as? String) ?? refreshToken
-
         let expiresAt = Date(timeIntervalSinceNow: TimeInterval(expiresIn))
 
-        logger.debug("Token refresh successful, expires at: \(expiresAt)")
-
-        // Fetch user email (we need it for the token bundle)
         let email = try await fetchUserEmail(accessToken: accessToken)
-
-        // Re-fetch project ID with new access token
         let projectId = try await fetchProjectId(accessToken: accessToken)
 
         return OAuthTokenBundle(
@@ -230,43 +191,58 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         )
     }
 
-    /// Checks if a token has expired with 5-minute safety margin.
-    ///
-    /// - Parameter expiresAt: Token expiration timestamp
-    /// - Returns: `true` if token is expired or expires within 5 minutes
     func isTokenExpired(_ expiresAt: Date) -> Bool {
         expiresAt.timeIntervalSinceNow < 300
     }
 
-    /// Returns hardcoded list of supported Gemini models.
-    ///
-    /// - Parameter accessToken: Valid access token (unused, kept for protocol conformance)
-    /// - Returns: Array of model identifiers
+    /// Excluded model IDs that are internal/experimental (matching CLIProxyAPI filtering).
+    private static let excludedModels: Set<String> = [
+        "chat_20706", "chat_23310", "gemini-2.5-flash-thinking", "gemini-3-pro-low", "gemini-2.5-pro"
+    ]
+
     func fetchModels(accessToken: String, accountId: String?) async throws -> [String] {
-        [
-            "gemini-2.5-flash",
-            "gemini-2.5-pro",
-            "gemini-2.0-flash"
-        ]
+        let url = URL(string: "\(Self.apiBaseURL):fetchAvailableModels")!
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Self.apiUserAgent, forHTTPHeaderField: "User-Agent")
+        request.httpBody = "{}".data(using: .utf8)
+
+        let (data, response): (Data, URLResponse)
+
+        do {
+            (data, response) = try await urlSession.data(for: request)
+        } catch {
+            logger.error("fetchAvailableModels network error: \(error.localizedDescription)")
+            throw LLMError.networkError(underlying: error.localizedDescription)
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw LLMError.invalidResponse(detail: "Not an HTTP response")
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            logger.error("fetchAvailableModels failed with status \(httpResponse.statusCode): \(errorMessage)")
+            throw LLMError.apiError(provider: .antigravity, statusCode: httpResponse.statusCode, message: errorMessage)
+        }
+
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let models = json["models"] as? [String: Any] else {
+            throw LLMError.invalidResponse(detail: "Missing models in fetchAvailableModels response")
+        }
+
+        let modelIds = models.keys
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && !Self.excludedModels.contains($0) }
+            .sorted()
+
+        logger.info("Fetched \(modelIds.count) Antigravity models")
+        return modelIds
     }
 
-    /// Sends a chat completion request to the Cloud Code Assist API.
-    ///
-    /// Converts messages to Gemini's format:
-    /// - `system` messages -> `systemInstruction` field
-    /// - `user` messages -> role `"user"`
-    /// - `assistant` messages -> role `"model"`
-    ///
-    /// The request is wrapped in the Cloud Code format with `project`, `model`, and `request` fields.
-    ///
-    /// - Parameters:
-    ///   - messages: Conversation history
-    ///   - model: Model identifier (e.g., "gemini-2.5-flash")
-    ///   - accessToken: Valid access token
-    ///   - options: Request configuration (max tokens, temperature, system prompt)
-    ///   - tokenData: Token data containing the project ID required for Cloud Code API
-    /// - Returns: Completed response with content and token usage
-    /// - Throws: `LLMError` if request fails
     func chat(
         messages: [LLMMessage],
         model: String,
@@ -274,18 +250,16 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         options: LLMRequestOptions,
         tokenData: TokenData? = nil
     ) async throws -> LLMResponse {
-        logger.info("Sending chat request to Gemini Cloud Code API, model: \(model)")
+        logger.info("Sending chat request to Antigravity API, model: \(model)")
 
-        // Project ID is required for Cloud Code API
         guard let projectId = tokenData?.projectId, !projectId.isEmpty else {
             throw LLMError.apiError(
-                provider: .gemini,
+                provider: .antigravity,
                 statusCode: 0,
-                message: "Project ID is missing. Please reconnect your Gemini account."
+                message: "Project ID is missing. Please reconnect your Antigravity account."
             )
         }
 
-        // Build Cloud Code API URL (RPC-style endpoint)
         let url = URL(string: "\(Self.apiBaseURL):generateContent")!
 
         // Convert messages to Gemini format
@@ -309,15 +283,10 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
             }
         }
 
-        // Build inner Gemini request
         var geminiRequest: [String: Any] = [
-            "contents": contents,
-            "generationConfig": [
-                "maxOutputTokens": options.maxTokens
-            ]
+            "contents": contents
         ]
 
-        // Add system instruction (prefer options.systemPrompt over message-based system prompts)
         let finalSystemPrompt = options.systemPrompt ?? systemInstructions.joined(separator: "\n\n")
         if !finalSystemPrompt.isEmpty {
             geminiRequest["systemInstruction"] = [
@@ -325,14 +294,19 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
             ]
         }
 
-        // Wrap in Cloud Code API format
+        // Add sessionId matching generateStableSessionID in executor
+        geminiRequest["sessionId"] = generateStableSessionID(contents: contents)
+
+        // Build body matching geminiToAntigravity() in executor
         let wrappedBody: [String: Any] = [
             "project": projectId,
             "model": model,
+            "userAgent": "antigravity",
+            "requestType": "agent",
+            "requestId": "agent-\(UUID().uuidString.lowercased())",
             "request": geminiRequest
         ]
 
-        // Serialize to JSON
         let bodyData: Data
 
         do {
@@ -341,19 +315,16 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
             throw LLMError.invalidResponse(detail: "Failed to serialize request body: \(error.localizedDescription)")
         }
 
-        // Create request with Cloud Code headers
+        // Headers match executor buildRequest — only Authorization, Content-Type, User-Agent, Accept
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.timeoutInterval = 300
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue(Self.cliUserAgent, forHTTPHeaderField: "User-Agent")
-        request.setValue(Self.cliApiClient, forHTTPHeaderField: "X-Goog-Api-Client")
-        request.setValue(Self.cliMetadata, forHTTPHeaderField: "Client-Metadata")
+        request.setValue(Self.apiUserAgent, forHTTPHeaderField: "User-Agent")
         request.httpBody = bodyData
 
-        // Execute request
         let (data, response): (Data, URLResponse)
 
         do {
@@ -367,22 +338,19 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
             throw LLMError.invalidResponse(detail: "Not an HTTP response")
         }
 
-        // Handle non-2xx status codes
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
             logger.error("Chat request failed with status \(httpResponse.statusCode): \(errorMessage)")
 
-            // Handle rate limiting
             if httpResponse.statusCode == 429 {
                 let retryAfter = httpResponse.value(forHTTPHeaderField: "Retry-After")
                     .flatMap { Double($0) }
-                throw LLMError.rateLimited(provider: .gemini, retryAfter: retryAfter)
+                throw LLMError.rateLimited(provider: .antigravity, retryAfter: retryAfter)
             }
 
-            throw LLMError.apiError(provider: .gemini, statusCode: httpResponse.statusCode, message: errorMessage)
+            throw LLMError.apiError(provider: .antigravity, statusCode: httpResponse.statusCode, message: errorMessage)
         }
 
-        // Parse response
         let json: [String: Any]
 
         do {
@@ -394,7 +362,6 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         // Cloud Code API may wrap response in a "response" field
         let actualResponse = (json["response"] as? [String: Any]) ?? json
 
-        // Extract content from response
         guard let candidates = actualResponse["candidates"] as? [[String: Any]],
               let firstCandidate = candidates.first,
               let content = firstCandidate["content"] as? [String: Any],
@@ -405,12 +372,9 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
             throw LLMError.invalidResponse(detail: "Missing or invalid content in response")
         }
 
-        // Extract usage metadata (optional)
         let usageMetadata = actualResponse["usageMetadata"] as? [String: Any]
         let inputTokens = usageMetadata?["promptTokenCount"] as? Int
         let outputTokens = usageMetadata?["candidatesTokenCount"] as? Int
-
-        // Extract finish reason (optional)
         let finishReason = firstCandidate["finishReason"] as? String
 
         logger.debug("Chat request successful, input tokens: \(inputTokens ?? 0), output tokens: \(outputTokens ?? 0)")
@@ -418,7 +382,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         return LLMResponse(
             content: text,
             model: model,
-            provider: .gemini,
+            provider: .antigravity,
             inputTokens: inputTokens,
             outputTokens: outputTokens,
             finishReason: finishReason
@@ -427,27 +391,19 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
 
     // MARK: - Private Helpers
 
-    /// Fetches the Google Cloud Project ID required for the Cloud Code API.
-    ///
-    /// Calls the `loadCodeAssist` endpoint to retrieve the user's project ID.
-    /// This is the same mechanism used by the Gemini CLI.
-    ///
-    /// - Parameter accessToken: Valid access token
-    /// - Returns: Cloud AI Companion project ID
-    /// - Throws: `LLMError` if fetch fails
     private func fetchProjectId(accessToken: String) async throws -> String {
         let url = URL(string: "\(Self.apiBaseURL):loadCodeAssist")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        request.setValue(Self.cliUserAgent, forHTTPHeaderField: "User-Agent")
-        request.setValue(Self.cliApiClient, forHTTPHeaderField: "X-Goog-Api-Client")
-        request.setValue(Self.cliMetadata, forHTTPHeaderField: "Client-Metadata")
+        request.setValue(Self.authUserAgent, forHTTPHeaderField: "User-Agent")
+        request.setValue(Self.authApiClient, forHTTPHeaderField: "X-Goog-Api-Client")
+        request.setValue(Self.authClientMetadata, forHTTPHeaderField: "Client-Metadata")
 
         let body: [String: Any] = [
             "metadata": [
-                "ideType": "IDE_UNSPECIFIED",
+                "ideType": "ANTIGRAVITY",
                 "platform": "PLATFORM_UNSPECIFIED",
                 "pluginType": "GEMINI"
             ]
@@ -471,7 +427,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
             let errorText = String(data: data, encoding: .utf8) ?? "Unknown"
             logger.error("Failed to fetch project ID, status \(httpResponse.statusCode): \(errorText)")
             throw LLMError.apiError(
-                provider: .gemini,
+                provider: .antigravity,
                 statusCode: httpResponse.statusCode,
                 message: "Failed to fetch Project ID: \(errorText)"
             )
@@ -481,7 +437,6 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
             throw LLMError.invalidResponse(detail: "Failed to parse loadCodeAssist response")
         }
 
-        // Extract project ID — can be a string or an object with "id" field
         if let projectId = json["cloudaicompanionProject"] as? String, !projectId.isEmpty {
             return projectId.trimmingCharacters(in: .whitespaces)
         }
@@ -492,19 +447,13 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         }
 
         throw LLMError.apiError(
-            provider: .gemini,
+            provider: .antigravity,
             statusCode: 0,
             message: "Project ID not found in loadCodeAssist response"
         )
     }
 
-    /// Exchanges authorization code for access and refresh tokens.
-    ///
-    /// - Parameter code: Authorization code from OAuth callback
-    /// - Returns: Token bundle with access/refresh tokens and user email
-    /// - Throws: `LLMError` if exchange fails
     private func exchangeCodeForTokens(code: String) async throws -> OAuthTokenBundle {
-        // Build form body
         let bodyParams = [
             "grant_type": "authorization_code",
             "client_id": Self.clientID,
@@ -518,16 +467,14 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
             .joined(separator: "&")
 
         guard let bodyData = bodyString.data(using: .utf8) else {
-            throw LLMError.authenticationFailed(provider: .gemini, detail: "Failed to encode request body")
+            throw LLMError.authenticationFailed(provider: .antigravity, detail: "Failed to encode request body")
         }
 
-        // Create request
         var request = URLRequest(url: URL(string: Self.tokenURL)!)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.httpBody = bodyData
 
-        // Execute request
         let (data, response): (Data, URLResponse)
 
         do {
@@ -544,10 +491,9 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
             logger.error("Token exchange failed with status \(httpResponse.statusCode): \(errorMessage)")
-            throw LLMError.authenticationFailed(provider: .gemini, detail: "HTTP \(httpResponse.statusCode): \(errorMessage)")
+            throw LLMError.authenticationFailed(provider: .antigravity, detail: "HTTP \(httpResponse.statusCode): \(errorMessage)")
         }
 
-        // Parse response
         let json: [String: Any]
 
         do {
@@ -570,7 +516,6 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
 
         let expiresAt = Date(timeIntervalSinceNow: TimeInterval(expiresIn))
 
-        // Fetch user email
         let email = try await fetchUserEmail(accessToken: accessToken)
 
         return OAuthTokenBundle(
@@ -582,16 +527,30 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         )
     }
 
-    /// Fetches the user's email from Google userinfo API.
-    ///
-    /// - Parameter accessToken: Valid access token
-    /// - Returns: User email address
-    /// - Throws: `LLMError` if fetch fails
+    /// Generates a stable session ID from the first user message (matches Go generateStableSessionID).
+    private func generateStableSessionID(contents: [[String: Any]]) -> String {
+        for content in contents {
+            if (content["role"] as? String) == "user",
+               let parts = content["parts"] as? [[String: Any]],
+               let text = parts.first?["text"] as? String,
+               !text.isEmpty {
+                var hash = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
+                text.data(using: .utf8)!.withUnsafeBytes { ptr in
+                    _ = CC_SHA256(ptr.baseAddress, CC_LONG(ptr.count), &hash)
+                }
+                // Take first 8 bytes as big-endian UInt64, mask to positive Int64
+                let value = hash[0..<8].reduce(UInt64(0)) { ($0 << 8) | UInt64($1) } & 0x7FFFFFFFFFFFFFFF
+                return "-\(value)"
+            }
+        }
+        // Fallback: random session ID (matches generateSessionID in Go)
+        return "-\(Int64.random(in: 0..<9_000_000_000_000_000_000))"
+    }
+
     private func fetchUserEmail(accessToken: String) async throws -> String {
         var request = URLRequest(url: URL(string: Self.userinfoURL)!)
         request.httpMethod = "GET"
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let (data, response): (Data, URLResponse)
 
@@ -609,7 +568,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
             logger.error("Userinfo request failed with status \(httpResponse.statusCode): \(errorMessage)")
-            throw LLMError.authenticationFailed(provider: .gemini, detail: "Failed to fetch user email")
+            throw LLMError.authenticationFailed(provider: .antigravity, detail: "Failed to fetch user email")
         }
 
         let json: [String: Any]
