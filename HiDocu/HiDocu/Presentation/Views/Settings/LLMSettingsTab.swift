@@ -243,7 +243,7 @@ private struct LLMSettingsContent: View {
         } header: {
             Text("Prompt Template")
         } footer: {
-            Text("Template used for generating document summaries. Use {{body}} as a placeholder for document content.")
+            Text("Template used for generating document summaries. Placeholders: {{document_title}}, {{document_body}}, {{current_date}}.")
         }
     }
 }

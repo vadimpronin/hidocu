@@ -215,8 +215,14 @@ final class LLMService {
         let model = settings.defaultModel.isEmpty ? "claude-3-5-sonnet-20241022" : settings.defaultModel
         let promptTemplate = settings.summaryPromptTemplate
 
-        // Build prompt — the template already contains {{body}} which gets replaced
-        let systemPrompt = promptTemplate.replacingOccurrences(of: "{{body}}", with: body)
+        // Replace template placeholders
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .long
+        dateFormatter.timeStyle = .none
+        let systemPrompt = promptTemplate
+            .replacingOccurrences(of: "{{document_body}}", with: body)
+            .replacingOccurrences(of: "{{document_title}}", with: document.title)
+            .replacingOccurrences(of: "{{current_date}}", with: dateFormatter.string(from: Date()))
 
         // Select account
         let account = try await selectAccount(provider: provider)
