@@ -110,20 +110,6 @@ struct DocumentDetailView: View {
         switch viewModel.selectedTab {
         case .body:
             VStack(spacing: 0) {
-                HStack {
-                    Spacer()
-                    Button(viewModel.isBodyEditing ? "Done" : "Edit") {
-                        viewModel.isBodyEditing.toggle()
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(.bar)
-
-                Divider()
-
                 MarkdownEditableView(
                     text: $viewModel.bodyText,
                     isEditing: $viewModel.isBodyEditing
@@ -131,69 +117,29 @@ struct DocumentDetailView: View {
                 .onChange(of: viewModel.bodyText) { _, _ in
                     viewModel.bodyDidChange()
                 }
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button(viewModel.isBodyEditing ? "Done" : "Edit") {
+                            viewModel.isBodyEditing.toggle()
+                        }
+                    }
+                }
             }
 
         case .summary:
             VStack(spacing: 0) {
-                // Action Bar
-                HStack {
-                    if case .generating = viewModel.summaryGenerationState {
-                        Button("Cancel", systemImage: "xmark") {
-                            viewModel.cancelGeneration()
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                    } else if viewModel.hasSummary {
-                        Button("Regenerate", systemImage: "arrow.triangle.2.circlepath") {
-                            viewModel.generateSummary()
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                    } else {
-                        Button("Generate Summary", systemImage: "sparkles") {
-                            viewModel.generateSummary()
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                if case .error(let message) = viewModel.summaryGenerationState {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.yellow)
+                        Text(message)
+                            .font(.caption)
+                            .lineLimit(1)
+                            .foregroundStyle(.secondary)
                     }
-
-                    if viewModel.hasLLMService {
-                        ModelPickerMenu(
-                            models: viewModel.availableModels,
-                            selectedModelId: $viewModel.selectedModelId,
-                            disabled: viewModel.summaryGenerationState == .generating
-                        )
-                        .frame(maxWidth: 200)
-                        .controlSize(.small)
-                    }
-
-                    Spacer()
-
-                    if case .error(let message) = viewModel.summaryGenerationState {
-                        HStack(spacing: 4) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundStyle(.yellow)
-                            Text(message)
-                                .font(.caption)
-                                .lineLimit(1)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                    }
-
-                    if viewModel.hasSummary {
-                        Button(viewModel.isSummaryEditing ? "Done" : "Edit") {
-                            viewModel.isSummaryEditing.toggle()
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(.bar)
-
-                Divider()
 
                 // Content
                 if case .generating = viewModel.summaryGenerationState {
@@ -212,6 +158,35 @@ struct DocumentDetailView: View {
                     )
                     .onChange(of: viewModel.summaryText) { _, _ in
                         viewModel.summaryDidChange()
+                    }
+                }
+            }
+            .toolbar {
+                ToolbarItemGroup(placement: .primaryAction) {
+                    if viewModel.hasLLMService {
+                        ModelPickerMenu(
+                            models: viewModel.availableModels,
+                            selectedModelId: $viewModel.selectedModelId,
+                            disabled: viewModel.summaryGenerationState == .generating
+                        )
+                    }
+                    
+                    if case .generating = viewModel.summaryGenerationState {
+                        Button("Cancel", systemImage: "xmark") {
+                            viewModel.cancelGeneration()
+                        }
+                    } else if viewModel.hasSummary {
+                        Button("Regenerate", systemImage: "arrow.triangle.2.circlepath") {
+                            viewModel.generateSummary()
+                        }
+                        
+                        Button(viewModel.isSummaryEditing ? "Done" : "Edit") {
+                            viewModel.isSummaryEditing.toggle()
+                        }
+                    } else {
+                        Button("Generate Summary", systemImage: "sparkles") {
+                            viewModel.generateSummary()
+                        }
                     }
                 }
             }
