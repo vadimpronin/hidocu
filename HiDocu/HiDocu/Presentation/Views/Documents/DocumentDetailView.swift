@@ -44,7 +44,6 @@ struct DocumentDetailView: View {
                     // Strict View Identity: Force a fresh view hierarchy when switching tabs.
                     .id(viewModel.selectedTab)
             }
-            .coordinateSpace(name: "detailScroll") // Provide a stable coordinate system for Textual layout
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             // Status Bar
