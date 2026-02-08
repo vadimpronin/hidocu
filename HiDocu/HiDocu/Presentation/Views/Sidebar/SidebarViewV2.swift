@@ -27,6 +27,9 @@ struct SidebarViewV2: View {
                 Label("All Documents", systemImage: "doc.on.doc")
                     .tag(SidebarItemV2.allDocuments)
 
+                Label("Uncategorized", systemImage: "tray")
+                    .tag(SidebarItemV2.uncategorized)
+
                 Label("Trash", systemImage: "trash")
                     .tag(SidebarItemV2.trash)
             }

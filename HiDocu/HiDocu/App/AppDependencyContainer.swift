@@ -116,7 +116,8 @@ final class AppDependencyContainer {
 
         self.importServiceV2 = RecordingImportServiceV2(
             fileSystemService: fileSystemService,
-            repository: recordingRepositoryV2
+            documentService: documentService,
+            sourceRepository: sourceRepository
         )
 
         self.llmService = LLMService(

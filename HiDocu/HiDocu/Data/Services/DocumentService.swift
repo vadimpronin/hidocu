@@ -36,12 +36,14 @@ final class DocumentService {
 
     // MARK: - Document CRUD
 
-    func createDocument(title: String, folderId: Int64?) async throws -> Document {
+    func createDocument(title: String, folderId: Int64?, parentRelativePath: String? = nil, createdAt: Date = Date()) async throws -> Document {
         try fileSystemService.ensureDataDirectoryExists()
 
         // Resolve parent folder path
         let parentPath: String
-        if let folderId {
+        if let override = parentRelativePath {
+            parentPath = override
+        } else if let folderId {
             if let folder = try await folderRepository.fetchById(folderId) {
                 parentPath = folder.diskPath ?? ""
             } else {
@@ -63,7 +65,8 @@ final class DocumentService {
         let doc = Document(
             folderId: folderId,
             title: title,
-            diskPath: diskPath
+            diskPath: diskPath,
+            createdAt: createdAt
         )
         let inserted = try await documentRepository.insert(doc)
 
@@ -318,7 +321,7 @@ final class DocumentService {
 
     // MARK: - Sources
 
-    func addSource(documentId: Int64, recordingId: Int64, displayName: String?) async throws -> Source {
+    func addSource(documentId: Int64, recordingId: Int64? = nil, displayName: String?) async throws -> Source {
         guard let doc = try await documentRepository.fetchById(documentId) else {
             throw DocumentServiceError.documentNotFound
         }
@@ -339,25 +342,70 @@ final class DocumentService {
             sourceId: inserted.id
         )
 
-        // Delete and re-insert with correct path
-        // (SourceRepository only has insert/delete, no update method)
-        try await sourceRepository.delete(id: inserted.id)
-        let final_ = try await sourceRepository.insert(Source(
-            documentId: documentId,
-            sourceType: .recording,
-            recordingId: recordingId,
-            diskPath: correctPath,
-            displayName: displayName
-        ))
+        // Update with correct diskPath
+        var updated = inserted
+        updated.diskPath = correctPath
+        try await sourceRepository.update(updated)
 
-        AppLogger.fileSystem.info("Added source \(final_.id) to document \(documentId) at \(correctPath)")
-        return final_
+        AppLogger.fileSystem.info("Added source \(updated.id) to document \(documentId) at \(correctPath)")
+        return updated
     }
 
     func removeSource(id: Int64) async throws {
         guard let source = try await sourceRepository.fetchById(id) else { return }
         fileSystemService.removeSourceFolder(diskPath: source.diskPath)
         try await sourceRepository.delete(id: id)
+    }
+
+    func createDocumentWithSource(
+        title: String,
+        audioRelativePath: String,
+        originalFilename: String,
+        durationSeconds: Int?,
+        fileSizeBytes: Int?,
+        deviceSerial: String?,
+        deviceModel: String?,
+        recordingMode: String?,
+        recordedAt: Date?
+    ) async throws -> (Document, Source) {
+        try fileSystemService.ensureUncategorizedDirectoryExists()
+
+        let doc = try await createDocument(
+            title: title,
+            folderId: nil,
+            parentRelativePath: FileSystemService.uncategorizedPath,
+            createdAt: recordedAt ?? Date()
+        )
+
+        do {
+            let source = try await addSource(
+                documentId: doc.id,
+                recordingId: nil,
+                displayName: originalFilename
+            )
+
+            try fileSystemService.writeSourceYAML(
+                sourceDiskPath: source.diskPath,
+                audioRelativePath: audioRelativePath,
+                originalFilename: originalFilename,
+                durationSeconds: durationSeconds,
+                fileSizeBytes: fileSizeBytes,
+                deviceSerial: deviceSerial,
+                deviceModel: deviceModel,
+                recordingMode: recordingMode,
+                recordedAt: recordedAt
+            )
+
+            AppLogger.fileSystem.info("Created document '\(title)' id=\(doc.id) with source \(source.id) for \(originalFilename)")
+            return (doc, source)
+        } catch {
+            // Cleanup: remove half-created document
+            try? await documentRepository.delete(id: doc.id)
+            try? FileManager.default.removeItem(
+                at: fileSystemService.dataDirectory.appendingPathComponent(doc.diskPath, isDirectory: true)
+            )
+            throw error
+        }
     }
 
     // MARK: - Sorting

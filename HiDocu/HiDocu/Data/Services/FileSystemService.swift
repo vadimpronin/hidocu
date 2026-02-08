@@ -420,6 +420,9 @@ final class FileSystemService {
 
     // MARK: - Data Directory (Context Management)
 
+    /// Relative path for uncategorized documents
+    static let uncategorizedPath = "Uncategorized"
+
     /// The data directory for documents (default: ~/HiDocu)
     var dataDirectory: URL {
         if let custom = customDataDirectory {
@@ -602,6 +605,151 @@ final class FileSystemService {
     /// Ensure the data directory exists
     func ensureDataDirectoryExists() throws {
         try FileManager.default.createDirectory(at: dataDirectory, withIntermediateDirectories: true)
+    }
+
+    /// Ensure the Uncategorized directory exists
+    func ensureUncategorizedDirectoryExists() throws {
+        let uncategorizedURL = dataDirectory.appendingPathComponent(Self.uncategorizedPath, isDirectory: true)
+        try FileManager.default.createDirectory(at: uncategorizedURL, withIntermediateDirectories: true)
+        AppLogger.fileSystem.info("Ensured Uncategorized directory exists")
+    }
+
+    // MARK: - Audio File Management
+
+    /// Move audio file to Recordings/YYYY/MM/ directory structure.
+    /// Returns relative path (e.g., "Recordings/2026/02/file.hda").
+    /// If file exists at destination, removes it first (dedup prevents duplicates upstream).
+    ///
+    /// - Parameters:
+    ///   - sourceURL: Source file URL (temporary location)
+    ///   - filename: Target filename
+    ///   - date: Recording date (used for year/month subdirectories)
+    /// - Returns: Relative path from data directory
+    /// - Throws: FileSystemError on failure
+    func moveAudioToRecordings(from sourceURL: URL, filename: String, date: Date) throws -> String {
+        return try performAudioOperation(
+            from: sourceURL,
+            filename: filename,
+            date: date,
+            isMove: true
+        )
+    }
+
+    /// Copy audio file to Recordings/YYYY/MM/ directory structure.
+    /// Returns relative path (e.g., "Recordings/2026/02/file.hda").
+    /// Used for manual import to preserve user's original file.
+    ///
+    /// - Parameters:
+    ///   - sourceURL: Source file URL
+    ///   - filename: Target filename
+    ///   - date: Recording date (used for year/month subdirectories)
+    /// - Returns: Relative path from data directory
+    /// - Throws: FileSystemError on failure
+    func copyAudioToRecordings(from sourceURL: URL, filename: String, date: Date) throws -> String {
+        return try performAudioOperation(
+            from: sourceURL,
+            filename: filename,
+            date: date,
+            isMove: false
+        )
+    }
+
+    /// Private helper for audio move/copy operations to avoid duplication.
+    private func performAudioOperation(
+        from sourceURL: URL,
+        filename: String,
+        date: Date,
+        isMove: Bool
+    ) throws -> String {
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: date)
+        let month = calendar.component(.month, from: date)
+        let monthString = String(format: "%02d", month)
+
+        // Build relative path: Recordings/YYYY/MM/filename
+        let relativePath = "Recordings/\(year)/\(monthString)/\(filename)"
+        let destinationURL = dataDirectory.appendingPathComponent(relativePath)
+
+        // Create intermediate directories
+        let parentURL = destinationURL.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: parentURL, withIntermediateDirectories: true)
+
+        // Remove existing file if present (dedup prevents duplicates upstream)
+        if FileManager.default.fileExists(atPath: destinationURL.path) {
+            try FileManager.default.removeItem(at: destinationURL)
+            AppLogger.fileSystem.info("Removed existing file at destination: \(relativePath)")
+        }
+
+        // Move or copy the file
+        if isMove {
+            try FileManager.default.moveItem(at: sourceURL, to: destinationURL)
+            AppLogger.fileSystem.info("Moved audio to: \(relativePath)")
+        } else {
+            try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
+            AppLogger.fileSystem.info("Copied audio to: \(relativePath)")
+        }
+
+        return relativePath
+    }
+
+    /// Write source.yaml metadata file inside a source folder.
+    ///
+    /// - Parameters:
+    ///   - sourceDiskPath: Relative path to source folder (e.g., "42.document/sources/7.source")
+    ///   - audioRelativePath: Relative path to audio file (e.g., "Recordings/2026/02/file.hda")
+    ///   - originalFilename: Original filename from device
+    ///   - durationSeconds: Recording duration in seconds (optional)
+    ///   - fileSizeBytes: File size in bytes (optional)
+    ///   - deviceSerial: Device serial number (optional)
+    ///   - deviceModel: Device model string (optional)
+    ///   - recordingMode: Recording mode (optional)
+    ///   - recordedAt: Recording timestamp (optional)
+    /// - Throws: Error if write fails
+    func writeSourceYAML(
+        sourceDiskPath: String,
+        audioRelativePath: String,
+        originalFilename: String,
+        durationSeconds: Int?,
+        fileSizeBytes: Int?,
+        deviceSerial: String?,
+        deviceModel: String?,
+        recordingMode: String?,
+        recordedAt: Date?
+    ) throws {
+        let sourceURL = dataDirectory.appendingPathComponent(sourceDiskPath, isDirectory: true)
+        let yamlURL = sourceURL.appendingPathComponent("source.yaml")
+
+        var lines: [String] = []
+        lines.append("type: recording")
+        lines.append("audio_path: \(yamlQuoted(audioRelativePath))")
+        lines.append("original_filename: \(yamlQuoted(originalFilename))")
+
+        if let duration = durationSeconds {
+            lines.append("duration_seconds: \(duration)")
+        }
+        if let size = fileSizeBytes {
+            lines.append("file_size_bytes: \(size)")
+        }
+        if let serial = deviceSerial {
+            lines.append("device_serial: \(yamlQuoted(serial))")
+        }
+        if let model = deviceModel {
+            lines.append("device_model: \(yamlQuoted(model))")
+        }
+        if let mode = recordingMode {
+            lines.append("recording_mode: \(yamlQuoted(mode))")
+        }
+        if let recorded = recordedAt {
+            lines.append("recorded_at: \(Self.isoFormatter.string(from: recorded))")
+        }
+
+        // Always include import timestamp
+        lines.append("imported_at: \(Self.isoFormatter.string(from: Date()))")
+
+        let yaml = lines.joined(separator: "\n") + "\n"
+        try yaml.write(to: yamlURL, atomically: true, encoding: .utf8)
+
+        AppLogger.fileSystem.info("Wrote source.yaml: \(sourceDiskPath)/source.yaml")
     }
 
     /// Write a transcript .md file to a source folder

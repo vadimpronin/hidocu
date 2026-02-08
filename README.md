@@ -107,7 +107,7 @@ HiDocu is a native macOS application designed to replace the proprietary HiNotes
 from HiDock hardware (H1, H1E, P1, and P1 Mini).
 
 Я хочу поменять концепт своей HiDocu app.
-Новый концепт: HiDocu — это Context Management System для LLM.
+Новый концепт: HiDocu — это Artificial Memory / Context Management System для LLM.
 
 Пользователь может создавать контексты из своих документов (заметки, стенограммы встреч, документация, планы, идеи и
 т.п.) и использовать эти контексты для общения с любой LLM: ChatGPT, Gemini, Claude и т.д. Контекст формируется на

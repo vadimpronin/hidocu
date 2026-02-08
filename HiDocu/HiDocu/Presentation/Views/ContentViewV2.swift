@@ -98,7 +98,7 @@ struct ContentViewV2: View {
     @ViewBuilder
     private var contentColumn: some View {
         switch navigationVM.selectedSidebarItem {
-        case .folder, .allDocuments, .none:
+        case .folder, .allDocuments, .uncategorized, .none:
             if let documentListVM {
                 DocumentListView(
                     viewModel: documentListVM,
@@ -171,13 +171,16 @@ struct ContentViewV2: View {
     private func makeDashboardVM(for controller: DeviceController) -> DeviceDashboardViewModel {
         let vm = DeviceDashboardViewModel(
             deviceController: controller,
-            repository: container.recordingRepositoryV2
+            sourceRepository: container.sourceRepository
         )
         deviceDashboardVMs[controller.id] = vm
         return vm
     }
 
     private var currentFolderName: String? {
+        if case .uncategorized = navigationVM.selectedSidebarItem {
+            return "Uncategorized"
+        }
         guard let folderId = currentFolderId else { return nil }
         return folderTreeVM?.allFolders.first(where: { $0.id == folderId })?.name
     }
@@ -214,6 +217,9 @@ struct ContentViewV2: View {
         case .folder(let id):
             documentListVM?.observeDocuments(folderId: id)
             columnVisibility = .all
+        case .uncategorized:
+            documentListVM?.observeDocuments(folderId: nil)
+            columnVisibility = .all
         case .allDocuments:
             documentListVM?.observeAllDocuments()
             columnVisibility = .all
@@ -245,7 +251,7 @@ struct ContentViewV2: View {
             if deviceDashboardVMs[controller.id] == nil {
                 let vm = DeviceDashboardViewModel(
                     deviceController: controller,
-                    repository: container.recordingRepositoryV2
+                    sourceRepository: container.sourceRepository
                 )
                 deviceDashboardVMs[controller.id] = vm
                 if controller.isConnected {

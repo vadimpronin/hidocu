@@ -150,8 +150,8 @@ struct HiDocuApp: App {
 
         Task {
             do {
-                let recordings = try await container.importServiceV2.importFiles(urls)
-                AppLogger.ui.info("Imported \(recordings.count) files via menu")
+                let documents = try await container.importServiceV2.importFiles(urls)
+                AppLogger.ui.info("Imported \(documents.count) files via menu")
             } catch {
                 AppLogger.ui.error("Import failed: \(error.localizedDescription)")
                 await MainActor.run {

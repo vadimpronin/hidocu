@@ -3,8 +3,7 @@
 //  HiDocu
 //
 //  Import service for context management system.
-//  Uses RecordingRepositoryV2 and recordings_v2 table.
-//  No audio duration extraction, no AudioCompatibilityService dependency.
+//  Creates Document + Source entities from device recordings and manual imports.
 //
 
 import Foundation
@@ -170,14 +169,17 @@ final class RecordingImportServiceV2 {
     // MARK: - Dependencies
 
     private let fileSystemService: FileSystemService
-    private let repository: any RecordingRepositoryV2
+    private let documentService: DocumentService
+    private let sourceRepository: any SourceRepository
 
     init(
         fileSystemService: FileSystemService,
-        repository: any RecordingRepositoryV2
+        documentService: DocumentService,
+        sourceRepository: any SourceRepository
     ) {
         self.fileSystemService = fileSystemService
-        self.repository = repository
+        self.documentService = documentService
+        self.sourceRepository = sourceRepository
         AppLogger.fileSystem.info("RecordingImportServiceV2 initialized")
     }
 
@@ -245,7 +247,7 @@ final class RecordingImportServiceV2 {
         var failed = 0
 
         do {
-            try fileSystemService.ensureStorageDirectoryExists()
+            try fileSystemService.ensureDataDirectoryExists()
 
             let total = deviceFiles.count
             let totalBytes = deviceFiles.reduce(Int64(0)) { $0 + Int64($1.size) }
@@ -276,8 +278,8 @@ final class RecordingImportServiceV2 {
                     failed += 1
                 }
 
-                session.completedBytes += Int64(fileInfo.size)
                 await MainActor.run {
+                    session.completedBytes += Int64(fileInfo.size)
                     session.totalBytesImported = session.completedBytes
                 }
             }
@@ -309,18 +311,12 @@ final class RecordingImportServiceV2 {
 
     private func processFile(_ fileInfo: DeviceFileInfo, from controller: any DeviceFileProvider, session: ImportSession) async throws -> ProcessResult {
         let filename = fileInfo.filename
-        let expectedSize = fileInfo.size
 
-        // Check if already exists
-        if let existing = try await repository.fetchByFilename(filename) {
-            if existing.fileSizeBytes == expectedSize || existing.fileSizeBytes == nil {
-                return .skipped
-            }
-            // For V2, skip conflict resolution — just skip the file
+        // Dedup: check if a Source with this displayName already exists
+        if try await sourceRepository.existsByDisplayName(filename) {
             return .skipped
         }
 
-        // Download
         try await downloadAndStore(fileInfo, from: controller, session: session)
         return .downloaded
     }
@@ -348,36 +344,48 @@ final class RecordingImportServiceV2 {
             throw ImportError.downloadIncomplete(filename: filename, expectedBytes: fileInfo.size, actualBytes: downloadedSize)
         }
 
-        // Move to storage
-        let finalURL = try fileSystemService.moveToStorage(from: tempURL, filename: filename)
-
-        // Create Recording (no duration extraction)
-        let recording = RecordingV2(
+        // Move audio to date-organized directory
+        let recordingDate = fileInfo.createdAt ?? Date()
+        let audioRelativePath = try fileSystemService.moveAudioToRecordings(
+            from: tempURL,
             filename: filename,
-            filepath: finalURL.path,
-            title: nil,
-            fileSizeBytes: fileInfo.size,
-            durationSeconds: fileInfo.durationSeconds,
-            createdAt: fileInfo.createdAt ?? Date(),
-            modifiedAt: Date(),
-            deviceSerial: controller.connectionInfo?.serialNumber,
-            deviceModel: controller.connectionInfo?.model.rawValue,
-            recordingMode: fileInfo.mode
+            date: recordingDate
         )
 
-        _ = try await repository.insert(recording)
+        // Generate document title
+        let title = Self.documentTitle(for: recordingDate, durationSeconds: fileInfo.durationSeconds)
+
+        // Create Document + Source
+        do {
+            _ = try await documentService.createDocumentWithSource(
+                title: title,
+                audioRelativePath: audioRelativePath,
+                originalFilename: filename,
+                durationSeconds: fileInfo.durationSeconds,
+                fileSizeBytes: fileInfo.size,
+                deviceSerial: controller.connectionInfo?.serialNumber,
+                deviceModel: controller.connectionInfo?.model.rawValue,
+                recordingMode: fileInfo.mode?.rawValue,
+                recordedAt: recordingDate
+            )
+        } catch {
+            // Cleanup orphaned audio file
+            let audioURL = fileSystemService.dataDirectory.appendingPathComponent(audioRelativePath)
+            try? FileManager.default.removeItem(at: audioURL)
+            throw error
+        }
     }
 
     // MARK: - Manual Import
 
-    func importFiles(_ urls: [URL]) async throws -> [RecordingV2] {
-        var imported: [RecordingV2] = []
+    func importFiles(_ urls: [URL]) async throws -> [Document] {
+        var imported: [Document] = []
 
         for url in urls {
             let filename = url.lastPathComponent
 
             // Skip if already exists
-            if try await repository.fetchByFilename(filename) != nil {
+            if (try? await sourceRepository.existsByDisplayName(filename)) == true {
                 continue
             }
 
@@ -386,23 +394,56 @@ final class RecordingImportServiceV2 {
                 if accessed { url.stopAccessingSecurityScopedResource() }
             }
 
-            let attrs = try FileManager.default.attributesOfItem(atPath: url.path)
-            let fileSize = attrs[.size] as? Int ?? 0
+            do {
+                let attrs = try FileManager.default.attributesOfItem(atPath: url.path)
+                let fileSize = attrs[.size] as? Int ?? 0
+                let creationDate = attrs[.creationDate] as? Date ?? Date()
 
-            let finalURL = try fileSystemService.copyToStorage(from: url, filename: filename)
+                let audioRelativePath = try fileSystemService.copyAudioToRecordings(
+                    from: url,
+                    filename: filename,
+                    date: creationDate
+                )
 
-            let recording = RecordingV2(
-                filename: filename,
-                filepath: finalURL.path,
-                fileSizeBytes: fileSize,
-                createdAt: attrs[.creationDate] as? Date ?? Date(),
-                modifiedAt: Date()
-            )
+                let title = Self.documentTitle(for: creationDate, durationSeconds: nil)
 
-            let inserted = try await repository.insert(recording)
-            imported.append(inserted)
+                do {
+                    let (doc, _) = try await documentService.createDocumentWithSource(
+                        title: title,
+                        audioRelativePath: audioRelativePath,
+                        originalFilename: filename,
+                        durationSeconds: nil,
+                        fileSizeBytes: fileSize,
+                        deviceSerial: nil,
+                        deviceModel: nil,
+                        recordingMode: nil,
+                        recordedAt: creationDate
+                    )
+                    imported.append(doc)
+                } catch {
+                    // Cleanup orphaned audio
+                    let audioURL = fileSystemService.dataDirectory.appendingPathComponent(audioRelativePath)
+                    try? FileManager.default.removeItem(at: audioURL)
+                    AppLogger.fileSystem.error("Failed to create document for \(filename): \(error.localizedDescription)")
+                }
+            } catch {
+                AppLogger.fileSystem.error("Failed to import \(filename): \(error.localizedDescription)")
+            }
         }
 
         return imported
+    }
+
+    // MARK: - Title Formatting
+
+    static func documentTitle(for date: Date, durationSeconds: Int?) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        let dateString = formatter.string(from: date)
+        if let seconds = durationSeconds, seconds > 0 {
+            let minutes = max(seconds / 60, 1)
+            return "Recording \(dateString) (\(minutes) min)"
+        }
+        return "Recording \(dateString)"
     }
 }

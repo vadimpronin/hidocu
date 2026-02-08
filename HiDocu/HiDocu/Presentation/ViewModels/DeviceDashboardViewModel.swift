@@ -48,16 +48,16 @@ final class DeviceDashboardViewModel {
     // MARK: - Dependencies
 
     private let deviceController: DeviceController
-    private let repository: any RecordingRepositoryV2
+    private let sourceRepository: any SourceRepository
 
     // MARK: - Initialization
 
     init(
         deviceController: DeviceController,
-        repository: any RecordingRepositoryV2
+        sourceRepository: any SourceRepository
     ) {
         self.deviceController = deviceController
-        self.repository = repository
+        self.sourceRepository = sourceRepository
     }
 
     // MARK: - Actions
@@ -73,10 +73,7 @@ final class DeviceDashboardViewModel {
             var rows: [DeviceFileRow] = []
 
             for file in deviceFiles {
-                let imported = try await repository.exists(
-                    filename: file.filename,
-                    sizeBytes: file.size
-                )
+                let imported = try await sourceRepository.existsByDisplayName(file.filename)
                 rows.append(DeviceFileRow(fileInfo: file, isImported: imported))
             }
 
@@ -96,9 +93,8 @@ final class DeviceDashboardViewModel {
 
         var updatedRows: [DeviceFileRow] = []
         for row in files {
-            let imported = (try? await repository.exists(
-                filename: row.fileInfo.filename,
-                sizeBytes: row.fileInfo.size
+            let imported = (try? await sourceRepository.existsByDisplayName(
+                row.fileInfo.filename
             )) ?? row.isImported
             updatedRows.append(DeviceFileRow(fileInfo: row.fileInfo, isImported: imported))
         }

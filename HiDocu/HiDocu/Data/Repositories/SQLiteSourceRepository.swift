@@ -41,6 +41,13 @@ final class SQLiteSourceRepository: SourceRepository, Sendable {
         }
     }
 
+    func update(_ source: Source) async throws {
+        try await db.asyncWrite { database in
+            let dto = SourceDTO(from: source)
+            try dto.update(database)
+        }
+    }
+
     func delete(id: Int64) async throws {
         _ = try await db.asyncWrite { database in
             try SourceDTO.deleteOne(database, key: id)
@@ -57,6 +64,15 @@ final class SQLiteSourceRepository: SourceRepository, Sendable {
                 """,
                 arguments: [newPrefix, oldPrefix.count, oldPrefix]
             )
+        }
+    }
+
+    func existsByDisplayName(_ displayName: String) async throws -> Bool {
+        try await db.asyncRead { database in
+            let count = try SourceDTO
+                .filter(SourceDTO.Columns.displayName == displayName)
+                .fetchCount(database)
+            return count > 0
         }
     }
 }
