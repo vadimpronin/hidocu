@@ -38,13 +38,20 @@ struct DocumentDetailView: View {
             .padding(.bottom, 8)
 
             // Content Area
-            ScrollView {
-                tabContent
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    // Strict View Identity: Force a fresh view hierarchy when switching tabs.
-                    .id(viewModel.selectedTab)
+            Group {
+                if viewModel.selectedTab == .sources {
+                    tabContent
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .id(viewModel.selectedTab)
+                } else {
+                    ScrollView {
+                        tabContent
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .id(viewModel.selectedTab)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             // Status Bar
             HStack {
@@ -193,7 +200,9 @@ struct DocumentDetailView: View {
 
         case .sources:
             if let doc = viewModel.document, let sourcesVM = sourcesViewModel {
-                SourcesSectionView(viewModel: sourcesVM, documentId: doc.id)
+                SourceBrowserView(viewModel: sourcesVM, documentId: doc.id, onBodyUpdated: {
+                    viewModel.reloadBody()
+                })
             } else {
                 ProgressView()
                     .frame(maxWidth: .infinity, minHeight: 200)

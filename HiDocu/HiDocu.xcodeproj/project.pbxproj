@@ -15,6 +15,7 @@
 		0EC792C8A6BE261D6C07D17F /* TrashService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D69953C06FF92116AE18C2DE /* TrashService.swift */; };
 		126303CB56D1092A093FF1D6 /* SourcesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBA3562E4C531972E9D61F66 /* SourcesViewModel.swift */; };
 		1B98078D788AC5018EB55EB5 /* SourcesSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 107105922C3DEAA5D62BDD99 /* SourcesSectionView.swift */; };
+		1D9760D8F5A34423072352C6 /* SourceBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3BEEAE53E470F70F71A8D44 /* SourceBrowserView.swift */; };
 		20B7797FB09248004C7B5DF8 /* DocumentDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4937DF72E8C1DB57768B0B94 /* DocumentDTO.swift */; };
 		2D4B4E272B97C1411E75FA0C /* SQLiteDeletionLogRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA3834F987CA973FCD8506B /* SQLiteDeletionLogRepository.swift */; };
 		310961DA68DD2E6085C77B8F /* SettingsViewV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC12039CA327089CC1010027 /* SettingsViewV2.swift */; };
@@ -121,6 +122,7 @@
 		09134FD2A3C89DFB7EA7BB0F /* DeviceDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DeviceDashboardView.swift; path = HiDocu/Presentation/Views/Device/DeviceDashboardView.swift; sourceTree = SOURCE_ROOT; };
 		099ED2A52F348BBA00905EA4 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		107105922C3DEAA5D62BDD99 /* SourcesSectionView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesSectionView.swift; sourceTree = "<group>"; };
+		A3BEEAE53E470F70F71A8D44 /* SourceBrowserView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceBrowserView.swift; sourceTree = "<group>"; };
 		114150E40F24A3004A2DF620 /* FolderSettingsSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FolderSettingsSheet.swift; sourceTree = "<group>"; };
 		120ABFADCBA34F60024F6346 /* Transcript.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Transcript.swift; sourceTree = "<group>"; };
 		12A960990416284D3F0FFA9C /* DocumentRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentRepository.swift; sourceTree = "<group>"; };
@@ -252,6 +254,7 @@
 				3F5287EBB0531F111E6E01E6 /* DocumentListView.swift */,
 				FDC92D8AF4F6028806551C10 /* DocumentDetailView.swift */,
 				107105922C3DEAA5D62BDD99 /* SourcesSectionView.swift */,
+				A3BEEAE53E470F70F71A8D44 /* SourceBrowserView.swift */,
 				627C906DFCEFBC8B5814A44A /* RecordingPickerView.swift */,
 				A1CC8A49FA6E93D18AFEC001 /* TranscriptEditorView.swift */,
 			);
@@ -747,6 +750,7 @@
 				E6BB1D6635FBEC8625C57A77 /* DocumentDetailView.swift in Sources */,
 				126303CB56D1092A093FF1D6 /* SourcesViewModel.swift in Sources */,
 				1B98078D788AC5018EB55EB5 /* SourcesSectionView.swift in Sources */,
+				1D9760D8F5A34423072352C6 /* SourceBrowserView.swift in Sources */,
 				A42DC75AA8AEA317B8C3AF98 /* RecordingPickerView.swift in Sources */,
 				336926BF123BAFF582F6F777 /* TranscriptEditorView.swift in Sources */,
 				8FC3622F4017BD0964C8FA82 /* FolderSettingsSheet.swift in Sources */,

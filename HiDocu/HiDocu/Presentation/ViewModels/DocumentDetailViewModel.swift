@@ -98,6 +98,18 @@ final class DocumentDetailViewModel {
 
     }
 
+    func reloadBody() {
+        guard let doc = document else { return }
+        do {
+            bodyText = try documentService.readBody(diskPath: doc.diskPath)
+            loadedBody = bodyText
+            bodyModified = false
+            updateByteCounts()
+        } catch {
+            errorMessage = "Failed to reload body: \(error.localizedDescription)"
+        }
+    }
+
     func titleDidChange() {
         let modified = titleText != loadedTitle
         titleModified = modified

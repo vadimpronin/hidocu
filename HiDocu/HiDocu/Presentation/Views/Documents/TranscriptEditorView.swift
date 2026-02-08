@@ -114,7 +114,7 @@ struct TranscriptEditorView: View {
 
 // MARK: - Add Transcript Sheet
 
-private struct AddTranscriptSheet: View {
+struct AddTranscriptSheet: View {
     let sourceId: Int64
     let documentId: Int64
     var viewModel: SourcesViewModel

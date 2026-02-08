@@ -20,7 +20,7 @@ final class SQLiteTranscriptRepository: TranscriptRepository, Sendable {
         try await db.asyncRead { database in
             let dtos = try TranscriptDTO
                 .filter(TranscriptDTO.Columns.sourceId == sourceId)
-                .order(TranscriptDTO.Columns.isPrimary.desc, TranscriptDTO.Columns.id.asc)
+                .order(TranscriptDTO.Columns.id.asc)
                 .fetchAll(database)
             return dtos.map { $0.toDomain() }
         }
