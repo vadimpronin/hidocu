@@ -10,8 +10,6 @@ import Foundation
 import Security
 import os
 
-private let logger = Logger(subsystem: "com.hidocu.app", category: "llm")
-
 /// OpenAI Codex provider implementation using the Responses API.
 final class CodexProvider: LLMProviderStrategy, Sendable {
     // MARK: - OAuth Constants
@@ -44,7 +42,7 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
     // MARK: - LLMProviderStrategy
 
     func authenticate() async throws -> OAuthTokenBundle {
-        logger.info("Starting Codex OAuth authentication")
+        AppLogger.llm.info("Starting Codex OAuth authentication")
 
         // Generate PKCE codes and state
         let pkceCodes = try PKCEHelper.generatePKCECodes()
@@ -69,20 +67,20 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
             throw LLMError.authenticationFailed(provider: .codex, detail: "Failed to construct authorization URL")
         }
 
-        logger.debug("Authorization URL constructed: \(authURL.absoluteString)")
+        AppLogger.llm.debug("Authorization URL constructed: \(authURL.absoluteString)")
 
         // Create callback server and await authorization
         let server = OAuthCallbackServer(port: Self.callbackPort, callbackPath: Self.callbackPath, provider: .codex)
         let result = try await server.awaitCallback(authorizationURL: authURL)
 
-        logger.info("OAuth callback received with code")
+        AppLogger.llm.info("OAuth callback received with code")
 
         // Exchange authorization code for tokens
         return try await exchangeCodeForTokens(code: result.code, pkceCodes: pkceCodes)
     }
 
     func refreshToken(_ refreshToken: String) async throws -> OAuthTokenBundle {
-        logger.info("Refreshing Codex access token")
+        AppLogger.llm.info("Refreshing Codex access token")
 
         guard !refreshToken.isEmpty else {
             throw LLMError.tokenRefreshFailed(provider: .codex, detail: "Refresh token is empty")
@@ -116,7 +114,7 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
 
         guard httpResponse.statusCode == 200 else {
             let message = String(data: data, encoding: .utf8) ?? "Unknown error"
-            logger.error("Token refresh failed with status \(httpResponse.statusCode): \(message)")
+            AppLogger.llm.error("Token refresh failed with status \(httpResponse.statusCode): \(message)")
             throw LLMError.tokenRefreshFailed(provider: .codex, detail: "HTTP \(httpResponse.statusCode): \(message)")
         }
 
@@ -129,7 +127,7 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
     }
 
     func fetchModels(accessToken: String, accountId: String?) async throws -> [String] {
-        logger.info("Fetching Codex models from API")
+        AppLogger.llm.info("Fetching Codex models from API")
 
         var request = URLRequest(url: URL(string: "\(Self.apiBaseURL)/models?client_version=\(Self.clientVersion)")!)
         request.httpMethod = "GET"
@@ -150,7 +148,7 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
 
         guard httpResponse.statusCode == 200 else {
             let message = String(data: data, encoding: .utf8) ?? "Unknown error"
-            logger.error("Codex models fetch failed with status \(httpResponse.statusCode): \(message)")
+            AppLogger.llm.error("Codex models fetch failed with status \(httpResponse.statusCode): \(message)")
             throw LLMError.apiError(
                 provider: .codex,
                 statusCode: httpResponse.statusCode,
@@ -169,7 +167,7 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
             .sorted { ($0["priority"] as? Int ?? Int.max) < ($1["priority"] as? Int ?? Int.max) }
             .compactMap { $0["slug"] as? String }
 
-        logger.info("Fetched \(visibleModels.count) visible Codex models")
+        AppLogger.llm.info("Fetched \(visibleModels.count) visible Codex models")
         return visibleModels
     }
 
@@ -180,7 +178,7 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
         options: LLMRequestOptions,
         tokenData: TokenData? = nil
     ) async throws -> LLMResponse {
-        logger.info("Sending chat request to Codex API with model: \(model)")
+        AppLogger.llm.info("Sending chat request to Codex API with model: \(model)")
 
         // Build Responses API format
         let requestBody = try buildResponsesAPIRequest(
@@ -209,7 +207,7 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
         }
         request.httpBody = jsonData
 
-        logger.debug("Sending SSE request to \(request.url?.absoluteString ?? "unknown")")
+        AppLogger.llm.debug("Sending SSE request to \(request.url?.absoluteString ?? "unknown")")
 
         // Stream SSE events
         let eventStream = SSEParser.streamBytes(from: urlSession, request: request)
@@ -267,10 +265,10 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
                 }
             }
         } catch let llmError as LLMError {
-            logger.error("SSE stream error: \(String(describing: llmError))")
+            AppLogger.llm.error("SSE stream error: \(String(describing: llmError))")
             throw llmError
         } catch {
-            logger.error("SSE stream error: \(error.localizedDescription)")
+            AppLogger.llm.error("SSE stream error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
         }
 
@@ -278,7 +276,7 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
             throw LLMError.invalidResponse(detail: "No content received from stream")
         }
 
-        logger.info("Chat response received: \(outputTokens ?? 0) output tokens")
+        AppLogger.llm.info("Chat response received: \(outputTokens ?? 0) output tokens")
 
         return LLMResponse(
             content: accumulatedText,
@@ -307,7 +305,7 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
         code: String,
         pkceCodes: PKCECodes
     ) async throws -> OAuthTokenBundle {
-        logger.debug("Exchanging authorization code for tokens")
+        AppLogger.llm.debug("Exchanging authorization code for tokens")
 
         // Build form-urlencoded body
         var components = URLComponents()
@@ -338,7 +336,7 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
 
         guard httpResponse.statusCode == 200 else {
             let message = String(data: data, encoding: .utf8) ?? "Unknown error"
-            logger.error("Token exchange failed with status \(httpResponse.statusCode): \(message)")
+            AppLogger.llm.error("Token exchange failed with status \(httpResponse.statusCode): \(message)")
             throw LLMError.authenticationFailed(provider: .codex, detail: "HTTP \(httpResponse.statusCode): \(message)")
         }
 
@@ -363,7 +361,7 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
 
         let expiresAt = Date().addingTimeInterval(TimeInterval(expiresIn))
 
-        logger.info("Token response parsed successfully for email: \(email)")
+        AppLogger.llm.info("Token response parsed successfully for email: \(email)")
 
         return OAuthTokenBundle(
             accessToken: accessToken,
@@ -380,14 +378,14 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
     private func parseJWT(_ token: String) -> (email: String, accountId: String?) {
         let parts = token.split(separator: ".")
         guard parts.count == 3 else {
-            logger.warning("Invalid JWT format: expected 3 parts, got \(parts.count)")
+            AppLogger.llm.warning("Invalid JWT format: expected 3 parts, got \(parts.count)")
             return ("", nil)
         }
 
         // Decode payload (second part)
         guard let payloadData = base64URLDecode(String(parts[1])),
               let json = try? JSONSerialization.jsonObject(with: payloadData) as? [String: Any] else {
-            logger.warning("Failed to decode JWT payload")
+            AppLogger.llm.warning("Failed to decode JWT payload")
             return ("", nil)
         }
 

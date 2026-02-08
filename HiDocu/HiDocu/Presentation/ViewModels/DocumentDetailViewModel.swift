@@ -27,6 +27,7 @@ final class DocumentDetailViewModel {
     var errorMessage: String?
     var summaryGenerationState: SummaryGenerationState = .idle
     var isSummaryEditing: Bool = false
+    var selectedModelId: String = ""
 
     enum DetailTab: String, CaseIterable {
         case body = "Body"
@@ -43,6 +44,7 @@ final class DocumentDetailViewModel {
 
     private let documentService: DocumentService
     private let llmService: LLMService?
+    private let settingsService: SettingsService
     @ObservationIgnored
     private var loadedTitle = ""
     @ObservationIgnored
@@ -54,9 +56,10 @@ final class DocumentDetailViewModel {
     @ObservationIgnored
     private var generationTask: Task<Void, Never>?
 
-    init(documentService: DocumentService, llmService: LLMService? = nil) {
+    init(documentService: DocumentService, llmService: LLMService? = nil, settingsService: SettingsService) {
         self.documentService = documentService
         self.llmService = llmService
+        self.settingsService = settingsService
     }
 
     func loadDocument(_ doc: Document) {
@@ -75,6 +78,21 @@ final class DocumentDetailViewModel {
         bodyModified = false
         summaryModified = false
         updateByteCounts()
+
+        // Determine initial model selection
+        if let docModel = doc.summaryModel, !docModel.isEmpty {
+            selectedModelId = docModel
+        } else {
+            let settings = settingsService.settings.llm
+            let defaultModel = settings.defaultModel
+            let defaultProvider = settings.defaultProvider
+            if !defaultModel.isEmpty {
+                selectedModelId = "\(defaultProvider):\(defaultModel)"
+            } else {
+                selectedModelId = ""
+            }
+        }
+
     }
 
     func titleDidChange() {
@@ -91,6 +109,7 @@ final class DocumentDetailViewModel {
     }
 
     func summaryDidChange() {
+        guard summaryGenerationState != .generating else { return }
         let modified = summaryText != loadedSummary
         summaryModified = modified
         updateByteCounts()
@@ -118,6 +137,9 @@ final class DocumentDetailViewModel {
                 try await documentService.writeSummary(documentId: doc.id, diskPath: doc.diskPath, content: summaryText)
                 loadedSummary = summaryText
                 summaryModified = false
+                if let refreshed = try await documentService.fetchDocument(id: doc.id) {
+                    document = refreshed
+                }
             }
         } catch {
             // Silently ignore save errors if document was cleared (e.g., deleted)
@@ -166,6 +188,12 @@ final class DocumentDetailViewModel {
         summaryBytes = summaryText.utf8.count
     }
 
+    var hasLLMService: Bool { llmService != nil }
+
+    var availableModels: [AvailableModel] {
+        llmService?.availableModels ?? []
+    }
+
     // MARK: - Summary Generation
 
     var hasSummary: Bool {
@@ -174,17 +202,23 @@ final class DocumentDetailViewModel {
 
     func generateSummary() {
         guard let doc = document, let llmService else { return }
+        saveTimer?.invalidate()
+        saveTimer = nil
         summaryGenerationState = .generating
+        let modelId = selectedModelId.isEmpty ? nil : selectedModelId
 
         generationTask = Task {
             do {
-                let response = try await llmService.generateSummary(for: doc)
+                let response = try await llmService.generateSummary(for: doc, modelOverride: modelId)
                 summaryText = response.content
                 loadedSummary = response.content
                 summaryModified = false
                 summaryGenerationState = .idle
                 isSummaryEditing = false
                 updateByteCounts()
+                if let refreshed = try await documentService.fetchDocument(id: doc.id) {
+                    document = refreshed
+                }
             } catch is CancellationError {
                 summaryGenerationState = .idle
             } catch {

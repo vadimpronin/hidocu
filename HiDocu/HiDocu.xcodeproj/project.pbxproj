@@ -47,6 +47,19 @@
 		AFA436901852E6303785837D /* NavigationViewModelV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = B89857DC3BCEF88B833F5CEF /* NavigationViewModelV2.swift */; };
 		B0FBD0073DA6FED0C951D973 /* Source.swift in Sources */ = {isa = PBXBuildFile; fileRef = 371F17CB8D6ADADD5D3AD590 /* Source.swift */; };
 		B748C5428CCF2AE46CDC0CDD /* SidebarViewV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A63BCA40C34F1107B6A60 /* SidebarViewV2.swift */; };
+		BB00000100000001 /* LLMProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000100000001 /* LLMProvider.swift */; };
+		BB00000200000002 /* LLMAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000200000002 /* LLMAccount.swift */; };
+		BB00000300000003 /* LLMMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000300000003 /* LLMMessage.swift */; };
+		BB00000400000004 /* APILogEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000400000004 /* APILogEntry.swift */; };
+		BB00000500000005 /* LLMError.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000500000005 /* LLMError.swift */; };
+		BB00000600000006 /* LLMProviderStrategy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000600000006 /* LLMProviderStrategy.swift */; };
+		BB00000700000007 /* LLMAccountRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000700000007 /* LLMAccountRepository.swift */; };
+		BB00000800000008 /* APILogRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000800000008 /* APILogRepository.swift */; };
+		BB00000900000009 /* PKCEHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000900000009 /* PKCEHelper.swift */; };
+		BB0000100000000A /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000100000000A /* KeychainService.swift */; };
+		BB0000110000000B /* OAuthCallbackServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000110000000B /* OAuthCallbackServer.swift */; };
+		BB0000120000000C /* SSEParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000120000000C /* SSEParser.swift */; };
+		BB0000A00000000A /* AvailableModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000A00000000A /* AvailableModel.swift */; };
 		BE6ECC1B25F71F50417558E0 /* RecordingImportServiceV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368BA73F8C08D273FE2B21C8 /* RecordingImportServiceV2.swift */; };
 		BFC601E7D452D90CD990621E /* DocumentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6226CD68D273A20A4EBB9B65 /* DocumentService.swift */; };
 		C5C630A403A97F0B29ABD83C /* DocumentListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F5287EBB0531F111E6E01E6 /* DocumentListView.swift */; };
@@ -56,6 +69,10 @@
 		DE3B51E4417F4918F5022E40 /* RecordingV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB033465FB3E12E0BB749B1 /* RecordingV2.swift */; };
 		DF3313BAB7828D8D8AB8304A /* DeletionLogEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1358CE1110F0A9D6089071F3 /* DeletionLogEntry.swift */; };
 		E6BB1D6635FBEC8625C57A77 /* DocumentDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDC92D8AF4F6028806551C10 /* DocumentDetailView.swift */; };
+		EE00000100000001 /* LLMAccountDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000100000001 /* LLMAccountDTO.swift */; };
+		EE00000200000002 /* APILogDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000002 /* APILogDTO.swift */; };
+		EE00000300000003 /* SQLiteLLMAccountRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000300000003 /* SQLiteLLMAccountRepository.swift */; };
+		EE00000400000004 /* SQLiteAPILogRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000400000004 /* SQLiteAPILogRepository.swift */; };
 		F0000001F0000001 /* HiDocuApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000011F0000011 /* HiDocuApp.swift */; };
 		F0000002F0000002 /* AppDependencyContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000012F0000012 /* AppDependencyContainer.swift */; };
 		F0000003F0000003 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000013F0000013 /* AppLogger.swift */; };
@@ -76,30 +93,15 @@
 		F0A00052F0A00052 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = F0A00053F0A00053 /* GRDB */; };
 		F21116180C58EFA51A7A7459 /* SQLiteFolderRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 366665D1CFE1F75AFAAD9DF4 /* SQLiteFolderRepository.swift */; };
 		F5A00001F5A00001 /* TranscriptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A00011F5A00011 /* TranscriptionTests.swift */; };
+		CC0000C00000000C /* ModelPickerMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000B00000000B /* ModelPickerMenu.swift */; };
 		F8000020F8000020 /* ErrorBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8000010F8000010 /* ErrorBannerView.swift */; };
-		BB00000100000001 /* LLMProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000100000001 /* LLMProvider.swift */; };
-		BB00000200000002 /* LLMAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000200000002 /* LLMAccount.swift */; };
-		BB00000300000003 /* LLMMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000300000003 /* LLMMessage.swift */; };
-		BB00000400000004 /* APILogEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000400000004 /* APILogEntry.swift */; };
-		BB00000500000005 /* LLMError.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000500000005 /* LLMError.swift */; };
-		BB00000600000006 /* LLMProviderStrategy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000600000006 /* LLMProviderStrategy.swift */; };
-		BB00000700000007 /* LLMAccountRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000700000007 /* LLMAccountRepository.swift */; };
-		BB00000800000008 /* APILogRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000800000008 /* APILogRepository.swift */; };
-		BB00000900000009 /* PKCEHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000900000009 /* PKCEHelper.swift */; };
-		BB0000100000000A /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000100000000A /* KeychainService.swift */; };
-		BB0000110000000B /* OAuthCallbackServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000110000000B /* OAuthCallbackServer.swift */; };
-		BB0000120000000C /* SSEParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000120000000C /* SSEParser.swift */; };
-		EE00000100000001 /* LLMAccountDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000100000001 /* LLMAccountDTO.swift */; };
-		EE00000200000002 /* APILogDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000002 /* APILogDTO.swift */; };
-		EE00000300000003 /* SQLiteLLMAccountRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000300000003 /* SQLiteLLMAccountRepository.swift */; };
-		EE00000400000004 /* SQLiteAPILogRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000400000004 /* SQLiteAPILogRepository.swift */; };
 		FF10000100000001 /* ClaudeProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000100000001 /* ClaudeProvider.swift */; };
 		FF10000200000002 /* CodexProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000200000002 /* CodexProvider.swift */; };
 		FF10000300000003 /* GeminiProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000300000003 /* GeminiProvider.swift */; };
-		FF10000700000007 /* AntigravityProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000700000007 /* AntigravityProvider.swift */; };
 		FF10000400000004 /* LLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000400000004 /* LLMService.swift */; };
 		FF10000500000005 /* LLMSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000500000005 /* LLMSettingsViewModel.swift */; };
 		FF10000600000006 /* LLMSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000600000006 /* LLMSettingsTab.swift */; };
+		FF10000700000007 /* AntigravityProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000700000007 /* AntigravityProvider.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -118,49 +120,66 @@
 		099ED2A52F348BBA00905EA4 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		107105922C3DEAA5D62BDD99 /* SourcesSectionView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesSectionView.swift; sourceTree = "<group>"; };
 		114150E40F24A3004A2DF620 /* FolderSettingsSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FolderSettingsSheet.swift; sourceTree = "<group>"; };
-		120ABFADCBA34F60024F6346 /* Transcript.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Transcript.swift; path = Transcript.swift; sourceTree = "<group>"; };
-		12A960990416284D3F0FFA9C /* DocumentRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DocumentRepository.swift; path = DocumentRepository.swift; sourceTree = "<group>"; };
-		1358CE1110F0A9D6089071F3 /* DeletionLogEntry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeletionLogEntry.swift; path = DeletionLogEntry.swift; sourceTree = "<group>"; };
+		120ABFADCBA34F60024F6346 /* Transcript.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Transcript.swift; sourceTree = "<group>"; };
+		12A960990416284D3F0FFA9C /* DocumentRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentRepository.swift; sourceTree = "<group>"; };
+		1358CE1110F0A9D6089071F3 /* DeletionLogEntry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeletionLogEntry.swift; sourceTree = "<group>"; };
 		14B1464F9B61FF0B4ED761F6 /* DeviceDashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DeviceDashboardViewModel.swift; path = HiDocu/Presentation/ViewModels/DeviceDashboardViewModel.swift; sourceTree = SOURCE_ROOT; };
-		1982272C3186149C008392DB /* SettingsService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsService.swift; path = SettingsService.swift; sourceTree = "<group>"; };
-		2B0D1580CF48C34D6AA476C3 /* TranscriptRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TranscriptRepository.swift; path = TranscriptRepository.swift; sourceTree = "<group>"; };
+		1982272C3186149C008392DB /* SettingsService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsService.swift; sourceTree = "<group>"; };
+		2B0D1580CF48C34D6AA476C3 /* TranscriptRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TranscriptRepository.swift; sourceTree = "<group>"; };
 		364A63BCA40C34F1107B6A60 /* SidebarViewV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SidebarViewV2.swift; sourceTree = "<group>"; };
-		366665D1CFE1F75AFAAD9DF4 /* SQLiteFolderRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SQLiteFolderRepository.swift; path = SQLiteFolderRepository.swift; sourceTree = "<group>"; };
-		368BA73F8C08D273FE2B21C8 /* RecordingImportServiceV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RecordingImportServiceV2.swift; path = RecordingImportServiceV2.swift; sourceTree = "<group>"; };
-		371F17CB8D6ADADD5D3AD590 /* Source.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Source.swift; path = Source.swift; sourceTree = "<group>"; };
-		37A04E6ED12F76D8DF4867E7 /* SQLiteTranscriptRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SQLiteTranscriptRepository.swift; path = SQLiteTranscriptRepository.swift; sourceTree = "<group>"; };
-		37BFD95EBB1B504ED68E3980 /* DeletionLogDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeletionLogDTO.swift; path = DeletionLogDTO.swift; sourceTree = "<group>"; };
+		366665D1CFE1F75AFAAD9DF4 /* SQLiteFolderRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SQLiteFolderRepository.swift; sourceTree = "<group>"; };
+		368BA73F8C08D273FE2B21C8 /* RecordingImportServiceV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingImportServiceV2.swift; sourceTree = "<group>"; };
+		371F17CB8D6ADADD5D3AD590 /* Source.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Source.swift; sourceTree = "<group>"; };
+		37A04E6ED12F76D8DF4867E7 /* SQLiteTranscriptRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SQLiteTranscriptRepository.swift; sourceTree = "<group>"; };
+		37BFD95EBB1B504ED68E3980 /* DeletionLogDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeletionLogDTO.swift; sourceTree = "<group>"; };
 		3F5287EBB0531F111E6E01E6 /* DocumentListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentListView.swift; sourceTree = "<group>"; };
-		42EB92A51DFBFEB3BE82AB4E /* FolderService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FolderService.swift; path = FolderService.swift; sourceTree = "<group>"; };
-		438E368ED96312AD4F772D25 /* SQLiteSourceRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SQLiteSourceRepository.swift; path = SQLiteSourceRepository.swift; sourceTree = "<group>"; };
-		47BF7D3168C144CED0C36ED9 /* DeletionLogRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeletionLogRepository.swift; path = DeletionLogRepository.swift; sourceTree = "<group>"; };
-		4937DF72E8C1DB57768B0B94 /* DocumentDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DocumentDTO.swift; path = DocumentDTO.swift; sourceTree = "<group>"; };
-		58E73F682433820EF6C487A9 /* SQLiteDocumentRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SQLiteDocumentRepository.swift; path = SQLiteDocumentRepository.swift; sourceTree = "<group>"; };
+		42EB92A51DFBFEB3BE82AB4E /* FolderService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FolderService.swift; sourceTree = "<group>"; };
+		438E368ED96312AD4F772D25 /* SQLiteSourceRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SQLiteSourceRepository.swift; sourceTree = "<group>"; };
+		47BF7D3168C144CED0C36ED9 /* DeletionLogRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeletionLogRepository.swift; sourceTree = "<group>"; };
+		4937DF72E8C1DB57768B0B94 /* DocumentDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentDTO.swift; sourceTree = "<group>"; };
+		58E73F682433820EF6C487A9 /* SQLiteDocumentRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SQLiteDocumentRepository.swift; sourceTree = "<group>"; };
 		5CF5D0788A026355A829DC46 /* DocumentListViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentListViewModel.swift; sourceTree = "<group>"; };
-		6226CD68D273A20A4EBB9B65 /* DocumentService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DocumentService.swift; path = DocumentService.swift; sourceTree = "<group>"; };
+		6226CD68D273A20A4EBB9B65 /* DocumentService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentService.swift; sourceTree = "<group>"; };
 		627C906DFCEFBC8B5814A44A /* RecordingPickerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingPickerView.swift; sourceTree = "<group>"; };
-		6BE26D22ECF04CC038346BDC /* FolderDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FolderDTO.swift; path = FolderDTO.swift; sourceTree = "<group>"; };
+		6BE26D22ECF04CC038346BDC /* FolderDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FolderDTO.swift; sourceTree = "<group>"; };
 		86F8B131B8884602A9CF022F /* TimeInterval+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimeInterval+Extensions.swift"; sourceTree = "<group>"; };
-		8C0838C39A86F5F4DC084A98 /* ContextService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ContextService.swift; path = ContextService.swift; sourceTree = "<group>"; };
-		93F40903E763C5CAAA849A16 /* RecordingRepositoryV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RecordingRepositoryV2.swift; path = RecordingRepositoryV2.swift; sourceTree = "<group>"; };
-		9CB033465FB3E12E0BB749B1 /* RecordingV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RecordingV2.swift; path = RecordingV2.swift; sourceTree = "<group>"; };
+		8C0838C39A86F5F4DC084A98 /* ContextService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContextService.swift; sourceTree = "<group>"; };
+		93F40903E763C5CAAA849A16 /* RecordingRepositoryV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingRepositoryV2.swift; sourceTree = "<group>"; };
+		9CB033465FB3E12E0BB749B1 /* RecordingV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingV2.swift; sourceTree = "<group>"; };
 		A1CC8A49FA6E93D18AFEC001 /* TranscriptEditorView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TranscriptEditorView.swift; sourceTree = "<group>"; };
-		A29A4A2521C6F0977A6C729F /* SQLiteRecordingRepositoryV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SQLiteRecordingRepositoryV2.swift; path = SQLiteRecordingRepositoryV2.swift; sourceTree = "<group>"; };
-		A98CB705C2B0017E531544B6 /* SourceRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SourceRepository.swift; path = SourceRepository.swift; sourceTree = "<group>"; };
-		A9D040E8C768C4EB7680B474 /* RecordingV2DTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RecordingV2DTO.swift; path = RecordingV2DTO.swift; sourceTree = "<group>"; };
-		AAA3834F987CA973FCD8506B /* SQLiteDeletionLogRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SQLiteDeletionLogRepository.swift; path = SQLiteDeletionLogRepository.swift; sourceTree = "<group>"; };
+		A29A4A2521C6F0977A6C729F /* SQLiteRecordingRepositoryV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SQLiteRecordingRepositoryV2.swift; sourceTree = "<group>"; };
+		A98CB705C2B0017E531544B6 /* SourceRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceRepository.swift; sourceTree = "<group>"; };
+		A9D040E8C768C4EB7680B474 /* RecordingV2DTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingV2DTO.swift; sourceTree = "<group>"; };
+		AA00000100000001 /* LLMProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProvider.swift; sourceTree = "<group>"; };
+		AA00000200000002 /* LLMAccount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMAccount.swift; sourceTree = "<group>"; };
+		AA00000300000003 /* LLMMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMMessage.swift; sourceTree = "<group>"; };
+		AA00000400000004 /* APILogEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APILogEntry.swift; sourceTree = "<group>"; };
+		AA00000500000005 /* LLMError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMError.swift; sourceTree = "<group>"; };
+		AA00000600000006 /* LLMProviderStrategy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProviderStrategy.swift; sourceTree = "<group>"; };
+		AA00000700000007 /* LLMAccountRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMAccountRepository.swift; sourceTree = "<group>"; };
+		AA00000800000008 /* APILogRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APILogRepository.swift; sourceTree = "<group>"; };
+		AA00000900000009 /* PKCEHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PKCEHelper.swift; sourceTree = "<group>"; };
+		AA0000100000000A /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
+		AA0000110000000B /* OAuthCallbackServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthCallbackServer.swift; sourceTree = "<group>"; };
+		AA0000120000000C /* SSEParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSEParser.swift; sourceTree = "<group>"; };
+		AA0000A00000000A /* AvailableModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvailableModel.swift; sourceTree = "<group>"; };
+		AAA3834F987CA973FCD8506B /* SQLiteDeletionLogRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SQLiteDeletionLogRepository.swift; sourceTree = "<group>"; };
 		AAADD95ECAC7FF3C0B18B887 /* DocumentDetailViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentDetailViewModel.swift; sourceTree = "<group>"; };
 		AEF1499B052B6ECD6B8CCF60 /* FolderTreeViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FolderTreeViewModel.swift; sourceTree = "<group>"; };
 		B89857DC3BCEF88B833F5CEF /* NavigationViewModelV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NavigationViewModelV2.swift; sourceTree = "<group>"; };
-		B930F1D2F342C5D58BD7B889 /* TranscriptDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TranscriptDTO.swift; path = TranscriptDTO.swift; sourceTree = "<group>"; };
+		B930F1D2F342C5D58BD7B889 /* TranscriptDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TranscriptDTO.swift; sourceTree = "<group>"; };
 		BC12039CA327089CC1010027 /* SettingsViewV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsViewV2.swift; sourceTree = "<group>"; };
-		BDA413EE9305C427988A7439 /* FolderRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FolderRepository.swift; path = FolderRepository.swift; sourceTree = "<group>"; };
+		BDA413EE9305C427988A7439 /* FolderRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FolderRepository.swift; sourceTree = "<group>"; };
 		D0A200194A4444435072733F /* ContentViewV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContentViewV2.swift; sourceTree = "<group>"; };
-		D69953C06FF92116AE18C2DE /* TrashService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TrashService.swift; path = TrashService.swift; sourceTree = "<group>"; };
+		D69953C06FF92116AE18C2DE /* TrashService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TrashService.swift; sourceTree = "<group>"; };
 		DBA3562E4C531972E9D61F66 /* SourcesViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesViewModel.swift; sourceTree = "<group>"; };
-		DBECEEA4D622EE030E4E9ED6 /* SourceDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SourceDTO.swift; path = SourceDTO.swift; sourceTree = "<group>"; };
+		DBECEEA4D622EE030E4E9ED6 /* SourceDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceDTO.swift; sourceTree = "<group>"; };
+		DD00000100000001 /* LLMAccountDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMAccountDTO.swift; sourceTree = "<group>"; };
+		DD00000200000002 /* APILogDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APILogDTO.swift; sourceTree = "<group>"; };
+		DD00000300000003 /* SQLiteLLMAccountRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteLLMAccountRepository.swift; sourceTree = "<group>"; };
+		DD00000400000004 /* SQLiteAPILogRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteAPILogRepository.swift; sourceTree = "<group>"; };
 		DF266F9B0F879544CB1FB848 /* PathSanitizer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PathSanitizer.swift; sourceTree = "<group>"; };
-		E4C310BB2F07F16244282199 /* Document.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Document.swift; path = Document.swift; sourceTree = "<group>"; };
+		E4C310BB2F07F16244282199 /* Document.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Document.swift; sourceTree = "<group>"; };
 		F0000000F0000000 /* HiDocu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HiDocu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F0000011F0000011 /* HiDocuApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiDocuApp.swift; sourceTree = "<group>"; };
 		F0000012F0000012 /* AppDependencyContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencyContainer.swift; sourceTree = "<group>"; };
@@ -181,32 +200,17 @@
 		F0A00013F0A00013 /* ImportLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportLogicTests.swift; sourceTree = "<group>"; };
 		F542AE3F2464304DFD5DEFD6 /* TrashView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TrashView.swift; sourceTree = "<group>"; };
 		F5A00011F5A00011 /* TranscriptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionTests.swift; sourceTree = "<group>"; };
+		CC0000B00000000B /* ModelPickerMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelPickerMenu.swift; sourceTree = "<group>"; };
 		F8000010F8000010 /* ErrorBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBannerView.swift; sourceTree = "<group>"; };
-		FA55DE2ACE96B64C6A54BE4E /* Folder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Folder.swift; path = Folder.swift; sourceTree = "<group>"; };
+		FA55DE2ACE96B64C6A54BE4E /* Folder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Folder.swift; sourceTree = "<group>"; };
 		FDC92D8AF4F6028806551C10 /* DocumentDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentDetailView.swift; sourceTree = "<group>"; };
-		AA00000100000001 /* LLMProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMProvider.swift; path = LLMProvider.swift; sourceTree = "<group>"; };
-		AA00000200000002 /* LLMAccount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMAccount.swift; path = LLMAccount.swift; sourceTree = "<group>"; };
-		AA00000300000003 /* LLMMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMMessage.swift; path = LLMMessage.swift; sourceTree = "<group>"; };
-		AA00000400000004 /* APILogEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APILogEntry.swift; path = APILogEntry.swift; sourceTree = "<group>"; };
-		AA00000500000005 /* LLMError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMError.swift; path = LLMError.swift; sourceTree = "<group>"; };
-		AA00000600000006 /* LLMProviderStrategy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMProviderStrategy.swift; path = LLMProviderStrategy.swift; sourceTree = "<group>"; };
-		AA00000700000007 /* LLMAccountRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMAccountRepository.swift; path = LLMAccountRepository.swift; sourceTree = "<group>"; };
-		AA00000800000008 /* APILogRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APILogRepository.swift; path = APILogRepository.swift; sourceTree = "<group>"; };
-		AA00000900000009 /* PKCEHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PKCEHelper.swift; path = PKCEHelper.swift; sourceTree = "<group>"; };
-		AA0000100000000A /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeychainService.swift; path = KeychainService.swift; sourceTree = "<group>"; };
-		AA0000110000000B /* OAuthCallbackServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OAuthCallbackServer.swift; path = OAuthCallbackServer.swift; sourceTree = "<group>"; };
-		AA0000120000000C /* SSEParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SSEParser.swift; path = SSEParser.swift; sourceTree = "<group>"; };
-		DD00000100000001 /* LLMAccountDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMAccountDTO.swift; path = LLMAccountDTO.swift; sourceTree = "<group>"; };
-		DD00000200000002 /* APILogDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APILogDTO.swift; path = APILogDTO.swift; sourceTree = "<group>"; };
-		DD00000300000003 /* SQLiteLLMAccountRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SQLiteLLMAccountRepository.swift; path = SQLiteLLMAccountRepository.swift; sourceTree = "<group>"; };
-		DD00000400000004 /* SQLiteAPILogRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SQLiteAPILogRepository.swift; path = SQLiteAPILogRepository.swift; sourceTree = "<group>"; };
-		FF00000100000001 /* ClaudeProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ClaudeProvider.swift; path = ClaudeProvider.swift; sourceTree = "<group>"; };
-		FF00000200000002 /* CodexProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CodexProvider.swift; path = CodexProvider.swift; sourceTree = "<group>"; };
-		FF00000300000003 /* GeminiProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GeminiProvider.swift; path = GeminiProvider.swift; sourceTree = "<group>"; };
-		FF00000700000007 /* AntigravityProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AntigravityProvider.swift; path = AntigravityProvider.swift; sourceTree = "<group>"; };
-		FF00000400000004 /* LLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMService.swift; path = LLMService.swift; sourceTree = "<group>"; };
-		FF00000500000005 /* LLMSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMSettingsViewModel.swift; path = LLMSettingsViewModel.swift; sourceTree = "<group>"; };
-		FF00000600000006 /* LLMSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LLMSettingsTab.swift; path = LLMSettingsTab.swift; sourceTree = "<group>"; };
+		FF00000100000001 /* ClaudeProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeProvider.swift; sourceTree = "<group>"; };
+		FF00000200000002 /* CodexProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexProvider.swift; sourceTree = "<group>"; };
+		FF00000300000003 /* GeminiProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiProvider.swift; sourceTree = "<group>"; };
+		FF00000400000004 /* LLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMService.swift; sourceTree = "<group>"; };
+		FF00000500000005 /* LLMSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMSettingsViewModel.swift; sourceTree = "<group>"; };
+		FF00000600000006 /* LLMSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMSettingsTab.swift; sourceTree = "<group>"; };
+		FF00000700000007 /* AntigravityProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityProvider.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -247,7 +251,6 @@
 				627C906DFCEFBC8B5814A44A /* RecordingPickerView.swift */,
 				A1CC8A49FA6E93D18AFEC001 /* TranscriptEditorView.swift */,
 			);
-			name = Documents;
 			path = Documents;
 			sourceTree = "<group>";
 		};
@@ -256,8 +259,20 @@
 			children = (
 				F542AE3F2464304DFD5DEFD6 /* TrashView.swift */,
 			);
-			name = Trash;
 			path = Trash;
+			sourceTree = "<group>";
+		};
+		CC00000100000001 /* LLM */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000900000009 /* PKCEHelper.swift */,
+				AA0000100000000A /* KeychainService.swift */,
+				AA0000110000000B /* OAuthCallbackServer.swift */,
+				AA0000120000000C /* SSEParser.swift */,
+				FF00000400000004 /* LLMService.swift */,
+				FF20000100000001 /* Providers */,
+			);
+			path = LLM;
 			sourceTree = "<group>";
 		};
 		D8402727206E439A8869D212 /* Components */ = {
@@ -265,6 +280,7 @@
 			children = (
 				F8000010F8000010 /* ErrorBannerView.swift */,
 				07496990C2830BD1439D5351 /* BatteryIndicatorView.swift */,
+				CC0000B00000000B /* ModelPickerMenu.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -365,6 +381,7 @@
 				AA00000300000003 /* LLMMessage.swift */,
 				AA00000400000004 /* APILogEntry.swift */,
 				AA00000500000005 /* LLMError.swift */,
+				AA0000A00000000A /* AvailableModel.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -545,21 +562,7 @@
 			children = (
 				114150E40F24A3004A2DF620 /* FolderSettingsSheet.swift */,
 			);
-			name = Folders;
 			path = Folders;
-			sourceTree = "<group>";
-		};
-		CC00000100000001 /* LLM */ = {
-			isa = PBXGroup;
-			children = (
-				AA00000900000009 /* PKCEHelper.swift */,
-				AA0000100000000A /* KeychainService.swift */,
-				AA0000110000000B /* OAuthCallbackServer.swift */,
-				AA0000120000000C /* SSEParser.swift */,
-				FF00000400000004 /* LLMService.swift */,
-				FF20000100000001 /* Providers */,
-			);
-			path = LLM;
 			sourceTree = "<group>";
 		};
 		FF20000100000001 /* Providers */ = {
@@ -647,8 +650,8 @@
 			);
 			mainGroup = F2000000F2000000;
 			packageReferences = (
-				F6000000F6000000 /* XCLocalSwiftPackageReference "JensenUSB" */,
-				F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+				F6000000F6000000 /* XCLocalSwiftPackageReference "../JensenUSB" */,
+				F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB" */,
 			);
 			productRefGroup = F2000099F2000099 /* Products */;
 			projectDirPath = "";
@@ -759,6 +762,7 @@
 				63DB1BE9930DC98549A59509 /* TrashView.swift in Sources */,
 				310961DA68DD2E6085C77B8F /* SettingsViewV2.swift in Sources */,
 				7C9C910ECDD42858F96B2447 /* BatteryIndicatorView.swift in Sources */,
+				CC0000C00000000C /* ModelPickerMenu.swift in Sources */,
 				6FBDED703B6FC6EC14A8324E /* PathSanitizer.swift in Sources */,
 				BB00000100000001 /* LLMProvider.swift in Sources */,
 				BB00000200000002 /* LLMAccount.swift in Sources */,
@@ -766,6 +770,7 @@
 				BB00000400000004 /* APILogEntry.swift in Sources */,
 				BB00000500000005 /* LLMError.swift in Sources */,
 				BB00000600000006 /* LLMProviderStrategy.swift in Sources */,
+				BB0000A00000000A /* AvailableModel.swift in Sources */,
 				BB00000700000007 /* LLMAccountRepository.swift in Sources */,
 				BB00000800000008 /* APILogRepository.swift in Sources */,
 				BB00000900000009 /* PKCEHelper.swift in Sources */,
@@ -940,6 +945,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = AJW4V2TF38;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
@@ -979,6 +985,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = AJW4V2TF38;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
@@ -1083,14 +1090,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		F6000000F6000000 /* XCLocalSwiftPackageReference "JensenUSB" */ = {
+		F6000000F6000000 /* XCLocalSwiftPackageReference "../JensenUSB" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../JensenUSB;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+		F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/groue/GRDB.swift";
 			requirement = {
@@ -1107,12 +1114,12 @@
 		};
 		F0000053F0000053 /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB" */;
 			productName = GRDB;
 		};
 		F0A00053F0A00053 /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB" */;
 			productName = GRDB;
 		};
 /* End XCSwiftPackageProductDependency section */

@@ -10,8 +10,6 @@ import Foundation
 import CommonCrypto
 import os
 
-private let logger = Logger(subsystem: "com.hidocu.app", category: "llm.antigravity")
-
 /// Antigravity LLM provider strategy.
 ///
 /// Uses Google OAuth2 with client_secret (same pattern as Gemini CLI) but with
@@ -62,7 +60,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
     // MARK: - LLMProviderStrategy
 
     func authenticate() async throws -> OAuthTokenBundle {
-        logger.info("Starting Antigravity OAuth authentication flow")
+        AppLogger.llm.info("Starting Antigravity OAuth authentication flow")
 
         let state = try PKCEHelper.generateState()
 
@@ -87,7 +85,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         do {
             result = try await server.awaitCallback(authorizationURL: authURL)
         } catch {
-            logger.error("OAuth callback failed: \(error.localizedDescription)")
+            AppLogger.llm.error("OAuth callback failed: \(error.localizedDescription)")
             throw LLMError.authenticationFailed(provider: .antigravity, detail: error.localizedDescription)
         }
 
@@ -95,12 +93,12 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
             throw LLMError.authenticationFailed(provider: .antigravity, detail: "State parameter mismatch (CSRF protection)")
         }
 
-        logger.debug("Received authorization code, exchanging for tokens")
+        AppLogger.llm.debug("Received authorization code, exchanging for tokens")
 
         let tokenBundle = try await exchangeCodeForTokens(code: result.code)
 
         let projectId = try await fetchProjectId(accessToken: tokenBundle.accessToken)
-        logger.info("Obtained Antigravity project ID: \(projectId)")
+        AppLogger.llm.info("Obtained Antigravity project ID: \(projectId)")
 
         let bundleWithProject = OAuthTokenBundle(
             accessToken: tokenBundle.accessToken,
@@ -111,12 +109,12 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
             clientSecret: Self.clientSecret
         )
 
-        logger.info("Antigravity authentication successful for user: \(tokenBundle.email)")
+        AppLogger.llm.info("Antigravity authentication successful for user: \(tokenBundle.email)")
         return bundleWithProject
     }
 
     func refreshToken(_ refreshToken: String) async throws -> OAuthTokenBundle {
-        logger.info("Refreshing Antigravity access token")
+        AppLogger.llm.info("Refreshing Antigravity access token")
 
         let bodyParams = [
             "client_id": Self.clientID,
@@ -145,7 +143,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         do {
             (data, response) = try await urlSession.data(for: request)
         } catch {
-            logger.error("Token refresh network error: \(error.localizedDescription)")
+            AppLogger.llm.error("Token refresh network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
         }
 
@@ -155,7 +153,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
 
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            logger.error("Token refresh failed with status \(httpResponse.statusCode): \(errorMessage)")
+            AppLogger.llm.error("Token refresh failed with status \(httpResponse.statusCode): \(errorMessage)")
             throw LLMError.tokenRefreshFailed(provider: .antigravity, detail: "HTTP \(httpResponse.statusCode): \(errorMessage)")
         }
 
@@ -215,7 +213,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         do {
             (data, response) = try await urlSession.data(for: request)
         } catch {
-            logger.error("fetchAvailableModels network error: \(error.localizedDescription)")
+            AppLogger.llm.error("fetchAvailableModels network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
         }
 
@@ -225,7 +223,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
 
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            logger.error("fetchAvailableModels failed with status \(httpResponse.statusCode): \(errorMessage)")
+            AppLogger.llm.error("fetchAvailableModels failed with status \(httpResponse.statusCode): \(errorMessage)")
             throw LLMError.apiError(provider: .antigravity, statusCode: httpResponse.statusCode, message: errorMessage)
         }
 
@@ -239,7 +237,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
             .filter { !$0.isEmpty && !Self.excludedModels.contains($0) }
             .sorted()
 
-        logger.info("Fetched \(modelIds.count) Antigravity models")
+        AppLogger.llm.info("Fetched \(modelIds.count) Antigravity models")
         return modelIds
     }
 
@@ -250,7 +248,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         options: LLMRequestOptions,
         tokenData: TokenData? = nil
     ) async throws -> LLMResponse {
-        logger.info("Sending chat request to Antigravity API, model: \(model)")
+        AppLogger.llm.info("Sending chat request to Antigravity API, model: \(model)")
 
         guard let projectId = tokenData?.projectId, !projectId.isEmpty else {
             throw LLMError.apiError(
@@ -330,7 +328,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         do {
             (data, response) = try await urlSession.data(for: request)
         } catch {
-            logger.error("Chat request network error: \(error.localizedDescription)")
+            AppLogger.llm.error("Chat request network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
         }
 
@@ -340,7 +338,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
 
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            logger.error("Chat request failed with status \(httpResponse.statusCode): \(errorMessage)")
+            AppLogger.llm.error("Chat request failed with status \(httpResponse.statusCode): \(errorMessage)")
 
             if httpResponse.statusCode == 429 {
                 let retryAfter = httpResponse.value(forHTTPHeaderField: "Retry-After")
@@ -368,7 +366,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
               let parts = content["parts"] as? [[String: Any]],
               let firstPart = parts.first,
               let text = firstPart["text"] as? String else {
-            logger.error("Invalid response structure: \(String(data: data, encoding: .utf8) ?? "nil")")
+            AppLogger.llm.error("Invalid response structure: \(String(data: data, encoding: .utf8) ?? "nil")")
             throw LLMError.invalidResponse(detail: "Missing or invalid content in response")
         }
 
@@ -377,7 +375,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         let outputTokens = usageMetadata?["candidatesTokenCount"] as? Int
         let finishReason = firstCandidate["finishReason"] as? String
 
-        logger.debug("Chat request successful, input tokens: \(inputTokens ?? 0), output tokens: \(outputTokens ?? 0)")
+        AppLogger.llm.debug("Chat request successful, input tokens: \(inputTokens ?? 0), output tokens: \(outputTokens ?? 0)")
 
         return LLMResponse(
             content: text,
@@ -415,7 +413,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         do {
             (data, response) = try await urlSession.data(for: request)
         } catch {
-            logger.error("loadCodeAssist network error: \(error.localizedDescription)")
+            AppLogger.llm.error("loadCodeAssist network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
         }
 
@@ -425,7 +423,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
 
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorText = String(data: data, encoding: .utf8) ?? "Unknown"
-            logger.error("Failed to fetch project ID, status \(httpResponse.statusCode): \(errorText)")
+            AppLogger.llm.error("Failed to fetch project ID, status \(httpResponse.statusCode): \(errorText)")
             throw LLMError.apiError(
                 provider: .antigravity,
                 statusCode: httpResponse.statusCode,
@@ -480,7 +478,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         do {
             (data, response) = try await urlSession.data(for: request)
         } catch {
-            logger.error("Token exchange network error: \(error.localizedDescription)")
+            AppLogger.llm.error("Token exchange network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
         }
 
@@ -490,7 +488,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
 
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            logger.error("Token exchange failed with status \(httpResponse.statusCode): \(errorMessage)")
+            AppLogger.llm.error("Token exchange failed with status \(httpResponse.statusCode): \(errorMessage)")
             throw LLMError.authenticationFailed(provider: .antigravity, detail: "HTTP \(httpResponse.statusCode): \(errorMessage)")
         }
 
@@ -557,7 +555,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         do {
             (data, response) = try await urlSession.data(for: request)
         } catch {
-            logger.error("Userinfo request network error: \(error.localizedDescription)")
+            AppLogger.llm.error("Userinfo request network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
         }
 
@@ -567,7 +565,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
 
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            logger.error("Userinfo request failed with status \(httpResponse.statusCode): \(errorMessage)")
+            AppLogger.llm.error("Userinfo request failed with status \(httpResponse.statusCode): \(errorMessage)")
             throw LLMError.authenticationFailed(provider: .antigravity, detail: "Failed to fetch user email")
         }
 

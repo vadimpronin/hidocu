@@ -27,7 +27,6 @@ struct LLMSettingsTab: View {
                 settingsService: container.settingsService
             )
             await viewModel?.loadAccounts()
-            await viewModel?.refreshModels()
         }
     }
 }
@@ -163,63 +162,34 @@ private struct LLMSettingsContent: View {
         Section("Model") {
             LabeledContent("Default Model") {
                 HStack(spacing: 4) {
-                    Picker("", selection: $viewModel.selectedModelId) {
-                        if viewModel.availableModels.isEmpty && viewModel.selectedModelId.isEmpty {
-                            Text("No models available").tag("")
-                        }
-                        // Placeholder tag for the persisted selection while models load
-                        // (or if the saved model was removed from the provider)
-                        if !viewModel.selectedModelId.isEmpty,
-                           !viewModel.availableModels.contains(where: { $0.id == viewModel.selectedModelId }) {
-                            Text(viewModel.selectedModelId).tag(viewModel.selectedModelId)
-                        }
-                        ForEach(viewModel.availableModels) { model in
-                            Text(model.displayName).tag(model.id)
-                        }
-                    }
-                    .labelsHidden()
-                    .id(viewModel.availableModels.map(\.id))
+                    ModelPickerMenu(
+                        models: viewModel.availableModels,
+                        selectedModelId: $viewModel.selectedModelId
+                    )
 
-                    refreshButton
-                }
-            }
-
-            if case .error(let message) = viewModel.modelRefreshState {
-                HStack(spacing: 4) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.yellow)
-                    Text(message)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                    refreshModelsButton
                 }
             }
         }
     }
 
     @ViewBuilder
-    private var refreshButton: some View {
+    private var refreshModelsButton: some View {
         Button {
             Task {
+                isRefreshingModels = true
                 await viewModel.refreshModels()
+                isRefreshingModels = false
             }
         } label: {
-            Group {
-                switch viewModel.modelRefreshState {
-                case .idle:
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                case .loading:
-                    ProgressView()
-                        .controlSize(.small)
-                case .error:
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                }
-            }
-            .frame(width: 16, height: 16)
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .frame(width: 16, height: 16)
         }
         .buttonStyle(.borderless)
-        .disabled(viewModel.modelRefreshState == .loading)
+        .disabled(isRefreshingModels)
     }
+
+    @State private var isRefreshingModels = false
 
     // MARK: - Prompt Template Section
 

@@ -15,22 +15,6 @@ enum OAuthState: Equatable {
     case error(String)
 }
 
-/// Model refresh state for fetching available models from provider.
-enum RefreshState: Equatable {
-    case idle
-    case loading
-    case error(String)
-}
-
-/// A model available from a specific LLM provider.
-struct AvailableModel: Hashable, Identifiable {
-    let provider: LLMProvider
-    let modelId: String
-
-    var id: String { "\(provider.rawValue):\(modelId)" }
-    var displayName: String { "\(modelId) (\(provider.displayName))" }
-}
-
 /// View model for LLM/AI settings tab.
 ///
 /// Manages LLM accounts, OAuth authentication, model selection,
@@ -55,11 +39,10 @@ final class LLMSettingsViewModel {
     /// Current authentication error message, if any
     var authError: String?
 
-    /// Model refresh state
-    var modelRefreshState: RefreshState = .idle
-
-    /// All available models across all providers
-    var availableModels: [AvailableModel] = []
+    /// All available models across all providers (read from LLMService cache).
+    var availableModels: [AvailableModel] {
+        llmService.availableModels
+    }
 
     /// Combined selection identifier ("provider:modelId").
     /// Setting this updates both `defaultProvider` and `defaultModel` in settings.
@@ -115,7 +98,7 @@ final class LLMSettingsViewModel {
             _ = try await llmService.addAccount(provider: provider)
             oauthState[provider] = .idle
             await loadAccounts()
-            await refreshModels()
+            autoSelectModelIfNeeded()
         } catch {
             AppLogger.general.error("Failed to add \(provider.rawValue) account: \(error.localizedDescription)")
             let errorMessage = "Authentication failed: \(error.localizedDescription)"
@@ -128,7 +111,7 @@ final class LLMSettingsViewModel {
         do {
             try await llmService.removeAccount(id: account.id)
             await loadAccounts()
-            await refreshModels()
+            autoSelectModelIfNeeded()
         } catch {
             AppLogger.general.error("Failed to remove account \(account.id): \(error.localizedDescription)")
             authError = "Failed to remove account: \(error.localizedDescription)"
@@ -137,49 +120,19 @@ final class LLMSettingsViewModel {
 
     // MARK: - Model Management
 
-    /// Fetches available models from all providers that have accounts.
-    /// Updates `availableModels` with results sorted by provider.
+    /// Force-refreshes the model cache from all providers.
     func refreshModels() async {
-        modelRefreshState = .loading
+        await llmService.refreshAvailableModels()
+        autoSelectModelIfNeeded()
+    }
 
-        var allModels: [AvailableModel] = []
-        var errors: [String] = []
-
-        for provider in LLMProvider.allCases {
-            do {
-                let models = try await llmService.fetchModels(provider: provider)
-                allModels.append(contentsOf: models.map { AvailableModel(provider: provider, modelId: $0) })
-            } catch let error as LLMError {
-                if case .noAccountsConfigured = error {
-                    // No accounts for this provider — skip silently
-                } else {
-                    errors.append("\(provider.displayName): \(error.localizedDescription)")
-                }
-            } catch {
-                errors.append("\(provider.displayName): \(error.localizedDescription)")
-            }
-        }
-
-        // Sort by provider name, then model name
-        availableModels = allModels.sorted {
-            if $0.provider.rawValue != $1.provider.rawValue {
-                return $0.provider.rawValue < $1.provider.rawValue
-            }
-            return $0.modelId < $1.modelId
-        }
-
-        // Auto-select first model if current selection is empty or missing
-        if !availableModels.isEmpty {
-            let currentId = selectedModelId
-            if currentId.isEmpty || !availableModels.contains(where: { $0.id == currentId }) {
-                selectedModelId = availableModels[0].id
-            }
-        }
-
-        if errors.isEmpty {
-            modelRefreshState = .idle
-        } else {
-            modelRefreshState = .error(errors.joined(separator: "; "))
+    /// Auto-selects the first available model if the current selection is empty or stale.
+    private func autoSelectModelIfNeeded() {
+        let models = availableModels
+        guard !models.isEmpty else { return }
+        let currentId = selectedModelId
+        if currentId.isEmpty || !models.contains(where: { $0.id == currentId }) {
+            selectedModelId = models[0].id
         }
     }
 }

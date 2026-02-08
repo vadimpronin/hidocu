@@ -22,6 +22,9 @@ struct Document: Identifiable, Sendable, Equatable, Hashable {
     var sortOrder: Int
     var createdAt: Date
     var modifiedAt: Date
+    var summaryGeneratedAt: Date?
+    var summaryModel: String?
+    var summaryEdited: Bool
 
     init(
         id: Int64 = 0,
@@ -37,7 +40,10 @@ struct Document: Identifiable, Sendable, Equatable, Hashable {
         minimizeBeforeLLM: Bool = false,
         sortOrder: Int = 0,
         createdAt: Date = Date(),
-        modifiedAt: Date = Date()
+        modifiedAt: Date = Date(),
+        summaryGeneratedAt: Date? = nil,
+        summaryModel: String? = nil,
+        summaryEdited: Bool = false
     ) {
         self.id = id
         self.folderId = folderId
@@ -53,5 +59,8 @@ struct Document: Identifiable, Sendable, Equatable, Hashable {
         self.sortOrder = sortOrder
         self.createdAt = createdAt
         self.modifiedAt = modifiedAt
+        self.summaryGeneratedAt = summaryGeneratedAt
+        self.summaryModel = summaryModel
+        self.summaryEdited = summaryEdited
     }
 }

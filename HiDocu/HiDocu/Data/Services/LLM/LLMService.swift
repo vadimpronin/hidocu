@@ -24,6 +24,14 @@ final class LLMService {
 
     private let providers: [LLMProvider: any LLMProviderStrategy]
 
+    // MARK: - Model Cache
+
+    /// Cached available models across all providers, sorted by provider then model name.
+    private(set) var availableModels: [AvailableModel] = []
+
+    /// Guard against concurrent refresh calls.
+    private var isRefreshingModels = false
+
     // MARK: - Round-Robin State
 
     private var roundRobinCounters: [LLMProvider: Int] = [:]
@@ -117,6 +125,7 @@ final class LLMService {
         try keychainService.saveToken(tokenData, identifier: account.keychainIdentifier)
 
         AppLogger.llm.info("Successfully added account id=\(account.id) for \(provider.rawValue)")
+        await refreshAvailableModels()
         return account
     }
 
@@ -138,6 +147,7 @@ final class LLMService {
         try await accountRepository.delete(id: id)
 
         AppLogger.llm.info("Successfully removed account id=\(id)")
+        await refreshAvailableModels()
     }
 
     /// Lists all configured LLM accounts.
@@ -181,13 +191,45 @@ final class LLMService {
         return models
     }
 
+    /// Refreshes the cached list of available models from all providers.
+    /// Silently skips providers with no configured accounts.
+    /// Deduplicates concurrent calls — only one refresh runs at a time.
+    func refreshAvailableModels() async {
+        guard !isRefreshingModels else { return }
+        isRefreshingModels = true
+        defer { isRefreshingModels = false }
+        AppLogger.llm.info("Refreshing available models cache")
+        var allModels: [AvailableModel] = []
+        for provider in LLMProvider.allCases {
+            do {
+                let models = try await fetchModels(provider: provider)
+                allModels.append(contentsOf: models.map { AvailableModel(provider: provider, modelId: $0) })
+            } catch let error as LLMError {
+                if case .noAccountsConfigured = error { }
+                else { AppLogger.llm.warning("Failed to fetch models for \(provider.rawValue): \(error.localizedDescription)") }
+            } catch {
+                AppLogger.llm.warning("Failed to fetch models for \(provider.rawValue): \(error.localizedDescription)")
+            }
+        }
+        availableModels = allModels.sorted {
+            if $0.provider.rawValue != $1.provider.rawValue {
+                return $0.provider.rawValue < $1.provider.rawValue
+            }
+            return $0.modelId < $1.modelId
+        }
+        let count = availableModels.count
+        AppLogger.llm.info("Cached \(count) available models")
+    }
+
     // MARK: - Summary Generation
 
     /// Generates a summary for a document using configured LLM settings.
-    /// - Parameter document: Document to summarize
+    /// - Parameters:
+    ///   - document: Document to summarize
+    ///   - modelOverride: Optional provider:model override (e.g., "claude:claude-3-5-sonnet-20241022")
     /// - Returns: LLM response with generated summary
     /// - Throws: `LLMError` if generation fails
-    func generateSummary(for document: Document) async throws -> LLMResponse {
+    func generateSummary(for document: Document, modelOverride: String? = nil) async throws -> LLMResponse {
         let startTime = Date()
         AppLogger.llm.info("Generating summary for document id=\(document.id)")
 
@@ -200,17 +242,37 @@ final class LLMService {
             throw LLMError.documentNotFound
         }
 
-        // Get settings
-        let settings = settingsService.settings.llm
-        guard let providerRawValue = LLMProvider(rawValue: settings.defaultProvider) else {
-            throw LLMError.authenticationFailed(
-                provider: .claude,
-                detail: "Invalid default provider: \(settings.defaultProvider)"
-            )
+        // Determine provider and model
+        let provider: LLMProvider
+        let model: String
+        if let override = modelOverride {
+            let parts = override.split(separator: ":", maxSplits: 1)
+            guard parts.count == 2 else {
+                throw LLMError.authenticationFailed(
+                    provider: .claude,
+                    detail: "Invalid modelOverride format: \(override)"
+                )
+            }
+            guard let providerValue = LLMProvider(rawValue: String(parts[0])) else {
+                throw LLMError.authenticationFailed(
+                    provider: .claude,
+                    detail: "Invalid provider in override: \(parts[0])"
+                )
+            }
+            provider = providerValue
+            model = String(parts[1])
+        } else {
+            let settings = settingsService.settings.llm
+            guard let providerRawValue = LLMProvider(rawValue: settings.defaultProvider) else {
+                throw LLMError.authenticationFailed(
+                    provider: .claude,
+                    detail: "Invalid default provider: \(settings.defaultProvider)"
+                )
+            }
+            provider = providerRawValue
+            model = settings.defaultModel.isEmpty ? "claude-3-5-sonnet-20241022" : settings.defaultModel
         }
-        let provider = providerRawValue
-        let model = settings.defaultModel.isEmpty ? "claude-3-5-sonnet-20241022" : settings.defaultModel
-        let promptTemplate = settings.summaryPromptTemplate
+        let promptTemplate = settingsService.settings.llm.summaryPromptTemplate
 
         // Replace template placeholders
         let dateFormatter = DateFormatter()
@@ -273,12 +335,15 @@ final class LLMService {
             }
         }
 
-        // Save summary to disk
+        // Save summary to disk with metadata
         do {
             try await documentService.writeSummary(
                 documentId: document.id,
                 diskPath: document.diskPath,
-                content: response.content
+                content: response.content,
+                model: "\(provider.rawValue):\(response.model)",
+                generatedAt: Date(),
+                edited: false
             )
             AppLogger.llm.info("Saved summary for document id=\(document.id)")
         } catch {

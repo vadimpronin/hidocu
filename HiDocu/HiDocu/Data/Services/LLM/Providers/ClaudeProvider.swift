@@ -10,8 +10,6 @@ import Foundation
 import Security
 import os
 
-private let logger = Logger(subsystem: "com.hidocu.app", category: "llm")
-
 /// Anthropic Claude provider implementation.
 final class ClaudeProvider: LLMProviderStrategy, Sendable {
     // MARK: - OAuth Constants
@@ -45,7 +43,7 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
     // MARK: - LLMProviderStrategy
 
     func authenticate() async throws -> OAuthTokenBundle {
-        logger.info("Starting Claude OAuth authentication")
+        AppLogger.llm.info("Starting Claude OAuth authentication")
 
         // Generate PKCE codes and state
         let pkceCodes = try PKCEHelper.generatePKCECodes()
@@ -68,13 +66,13 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
             throw LLMError.authenticationFailed(provider: .claude, detail: "Failed to construct authorization URL")
         }
 
-        logger.debug("Authorization URL constructed: \(authURL.absoluteString)")
+        AppLogger.llm.debug("Authorization URL constructed: \(authURL.absoluteString)")
 
         // Create callback server and await authorization
         let server = OAuthCallbackServer(port: Self.callbackPort, callbackPath: Self.callbackPath, provider: .claude)
         let result = try await server.awaitCallback(authorizationURL: authURL)
 
-        logger.info("OAuth callback received with code")
+        AppLogger.llm.info("OAuth callback received with code")
 
         // Exchange authorization code for tokens
         return try await exchangeCodeForTokens(
@@ -85,7 +83,7 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
     }
 
     func refreshToken(_ refreshToken: String) async throws -> OAuthTokenBundle {
-        logger.info("Refreshing Claude access token")
+        AppLogger.llm.info("Refreshing Claude access token")
 
         guard !refreshToken.isEmpty else {
             throw LLMError.tokenRefreshFailed(provider: .claude, detail: "Refresh token is empty")
@@ -113,7 +111,7 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
 
         guard httpResponse.statusCode == 200 else {
             let message = String(data: data, encoding: .utf8) ?? "Unknown error"
-            logger.error("Token refresh failed with status \(httpResponse.statusCode): \(message)")
+            AppLogger.llm.error("Token refresh failed with status \(httpResponse.statusCode): \(message)")
             throw LLMError.tokenRefreshFailed(provider: .claude, detail: "HTTP \(httpResponse.statusCode): \(message)")
         }
 
@@ -127,7 +125,7 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
 
     func fetchModels(accessToken: String, accountId: String?) async throws -> [String] {
         // Claude OAuth tokens have a fixed set of models
-        logger.debug("Returning hardcoded Claude model list")
+        AppLogger.llm.debug("Returning hardcoded Claude model list")
         return [
             "claude-sonnet-4-5-20250929",
             "claude-opus-4-6",
@@ -142,7 +140,7 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
         options: LLMRequestOptions,
         tokenData: TokenData? = nil
     ) async throws -> LLMResponse {
-        logger.info("Sending chat request to Claude API with model: \(model)")
+        AppLogger.llm.info("Sending chat request to Claude API with model: \(model)")
 
         // Separate system messages from conversation messages
         var systemMessages: [[String: Any]] = [
@@ -227,7 +225,7 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
         request.setValue("keep-alive", forHTTPHeaderField: "Connection")
         request.httpBody = jsonData
 
-        logger.debug("Sending request to \(request.url?.absoluteString ?? "unknown")")
+        AppLogger.llm.debug("Sending request to \(request.url?.absoluteString ?? "unknown")")
 
         let (data, response) = try await urlSession.data(for: request)
 
@@ -237,7 +235,7 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
 
         guard (200..<300).contains(httpResponse.statusCode) else {
             let message = String(data: data, encoding: .utf8) ?? "Unknown error"
-            logger.error("Chat request failed with status \(httpResponse.statusCode): \(message)")
+            AppLogger.llm.error("Chat request failed with status \(httpResponse.statusCode): \(message)")
             throw LLMError.apiError(provider: .claude, statusCode: httpResponse.statusCode, message: message)
         }
 
@@ -259,7 +257,7 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
         let outputTokens = usage?["output_tokens"] as? Int
         let finishReason = json["stop_reason"] as? String
 
-        logger.info("Chat response received: \(outputTokens ?? 0) output tokens")
+        AppLogger.llm.info("Chat response received: \(outputTokens ?? 0) output tokens")
 
         return LLMResponse(
             content: text,
@@ -289,7 +287,7 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
         state: String,
         pkceCodes: PKCECodes
     ) async throws -> OAuthTokenBundle {
-        logger.debug("Exchanging authorization code for tokens")
+        AppLogger.llm.debug("Exchanging authorization code for tokens")
 
         // Parse code#state format if present
         var actualCode = code
@@ -333,7 +331,7 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
 
         guard httpResponse.statusCode == 200 else {
             let message = String(data: data, encoding: .utf8) ?? "Unknown error"
-            logger.error("Token exchange failed with status \(httpResponse.statusCode): \(message)")
+            AppLogger.llm.error("Token exchange failed with status \(httpResponse.statusCode): \(message)")
             throw LLMError.authenticationFailed(provider: .claude, detail: "HTTP \(httpResponse.statusCode): \(message)")
         }
 
@@ -361,7 +359,7 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
 
         let expiresAt = Date().addingTimeInterval(TimeInterval(expiresIn))
 
-        logger.info("Token response parsed successfully for email: \(email)")
+        AppLogger.llm.info("Token response parsed successfully for email: \(email)")
 
         return OAuthTokenBundle(
             accessToken: accessToken,

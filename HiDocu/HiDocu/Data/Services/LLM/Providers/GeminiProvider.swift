@@ -9,8 +9,6 @@
 import Foundation
 import os
 
-private let logger = Logger(subsystem: "com.hidocu.app", category: "llm")
-
 /// Google Gemini LLM provider strategy.
 ///
 /// Implements OAuth2 authentication flow with client secret (not PKCE).
@@ -77,7 +75,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
     /// - Returns: Token bundle with access/refresh tokens, user email, and project ID
     /// - Throws: `LLMError` if authentication fails
     func authenticate() async throws -> OAuthTokenBundle {
-        logger.info("Starting Gemini OAuth authentication flow")
+        AppLogger.llm.info("Starting Gemini OAuth authentication flow")
 
         // Generate state
         let state = try PKCEHelper.generateState()
@@ -105,7 +103,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         do {
             result = try await server.awaitCallback(authorizationURL: authURL)
         } catch {
-            logger.error("OAuth callback failed: \(error.localizedDescription)")
+            AppLogger.llm.error("OAuth callback failed: \(error.localizedDescription)")
             throw LLMError.authenticationFailed(provider: .gemini, detail: error.localizedDescription)
         }
 
@@ -114,14 +112,14 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
             throw LLMError.authenticationFailed(provider: .gemini, detail: "State parameter mismatch (CSRF protection)")
         }
 
-        logger.debug("Received authorization code, exchanging for tokens")
+        AppLogger.llm.debug("Received authorization code, exchanging for tokens")
 
         // Exchange code for tokens
         let tokenBundle = try await exchangeCodeForTokens(code: result.code)
 
         // Fetch project ID required for Cloud Code API
         let projectId = try await fetchProjectId(accessToken: tokenBundle.accessToken)
-        logger.info("Obtained Cloud Code project ID: \(projectId)")
+        AppLogger.llm.info("Obtained Cloud Code project ID: \(projectId)")
 
         let bundleWithProject = OAuthTokenBundle(
             accessToken: tokenBundle.accessToken,
@@ -132,7 +130,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
             clientSecret: Self.clientSecret
         )
 
-        logger.info("Gemini authentication successful for user: \(tokenBundle.email)")
+        AppLogger.llm.info("Gemini authentication successful for user: \(tokenBundle.email)")
         return bundleWithProject
     }
 
@@ -146,7 +144,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
     /// - Returns: New token bundle with refreshed access token and project ID
     /// - Throws: `LLMError.tokenRefreshFailed` if refresh fails
     func refreshToken(_ refreshToken: String) async throws -> OAuthTokenBundle {
-        logger.info("Refreshing Gemini access token")
+        AppLogger.llm.info("Refreshing Gemini access token")
 
         // Build form body
         let bodyParams = [
@@ -176,7 +174,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         do {
             (data, response) = try await urlSession.data(for: request)
         } catch {
-            logger.error("Token refresh network error: \(error.localizedDescription)")
+            AppLogger.llm.error("Token refresh network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
         }
 
@@ -186,7 +184,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
 
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            logger.error("Token refresh failed with status \(httpResponse.statusCode): \(errorMessage)")
+            AppLogger.llm.error("Token refresh failed with status \(httpResponse.statusCode): \(errorMessage)")
             throw LLMError.tokenRefreshFailed(provider: .gemini, detail: "HTTP \(httpResponse.statusCode): \(errorMessage)")
         }
 
@@ -212,7 +210,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
 
         let expiresAt = Date(timeIntervalSinceNow: TimeInterval(expiresIn))
 
-        logger.debug("Token refresh successful, expires at: \(expiresAt)")
+        AppLogger.llm.debug("Token refresh successful, expires at: \(expiresAt)")
 
         // Fetch user email (we need it for the token bundle)
         let email = try await fetchUserEmail(accessToken: accessToken)
@@ -271,7 +269,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         do {
             (data, response) = try await urlSession.data(for: request)
         } catch {
-            logger.error("fetchModels network error: \(error.localizedDescription)")
+            AppLogger.llm.error("fetchModels network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
         }
 
@@ -281,7 +279,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
 
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            logger.error("fetchModels failed with status \(httpResponse.statusCode): \(errorMessage)")
+            AppLogger.llm.error("fetchModels failed with status \(httpResponse.statusCode): \(errorMessage)")
             throw LLMError.apiError(provider: .gemini, statusCode: httpResponse.statusCode, message: errorMessage)
         }
 
@@ -301,7 +299,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         }
 
         let sortedModels = modelIds.sorted()
-        logger.info("Fetched \(sortedModels.count) Gemini models from quota endpoint")
+        AppLogger.llm.info("Fetched \(sortedModels.count) Gemini models from quota endpoint")
         return sortedModels
     }
 
@@ -329,7 +327,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         options: LLMRequestOptions,
         tokenData: TokenData? = nil
     ) async throws -> LLMResponse {
-        logger.info("Sending chat request to Gemini Cloud Code API, model: \(model)")
+        AppLogger.llm.info("Sending chat request to Gemini Cloud Code API, model: \(model)")
 
         // Project ID is required for Cloud Code API
         guard let projectId = tokenData?.projectId, !projectId.isEmpty else {
@@ -414,7 +412,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         do {
             (data, response) = try await urlSession.data(for: request)
         } catch {
-            logger.error("Chat request network error: \(error.localizedDescription)")
+            AppLogger.llm.error("Chat request network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
         }
 
@@ -425,7 +423,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         // Handle non-2xx status codes
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            logger.error("Chat request failed with status \(httpResponse.statusCode): \(errorMessage)")
+            AppLogger.llm.error("Chat request failed with status \(httpResponse.statusCode): \(errorMessage)")
 
             // Handle rate limiting
             if httpResponse.statusCode == 429 {
@@ -456,7 +454,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
               let parts = content["parts"] as? [[String: Any]],
               let firstPart = parts.first,
               let text = firstPart["text"] as? String else {
-            logger.error("Invalid response structure: \(String(data: data, encoding: .utf8) ?? "nil")")
+            AppLogger.llm.error("Invalid response structure: \(String(data: data, encoding: .utf8) ?? "nil")")
             throw LLMError.invalidResponse(detail: "Missing or invalid content in response")
         }
 
@@ -468,7 +466,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         // Extract finish reason (optional)
         let finishReason = firstCandidate["finishReason"] as? String
 
-        logger.debug("Chat request successful, input tokens: \(inputTokens ?? 0), output tokens: \(outputTokens ?? 0)")
+        AppLogger.llm.debug("Chat request successful, input tokens: \(inputTokens ?? 0), output tokens: \(outputTokens ?? 0)")
 
         return LLMResponse(
             content: text,
@@ -514,7 +512,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         do {
             (data, response) = try await urlSession.data(for: request)
         } catch {
-            logger.error("loadCodeAssist network error: \(error.localizedDescription)")
+            AppLogger.llm.error("loadCodeAssist network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
         }
 
@@ -524,7 +522,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
 
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorText = String(data: data, encoding: .utf8) ?? "Unknown"
-            logger.error("Failed to fetch project ID, status \(httpResponse.statusCode): \(errorText)")
+            AppLogger.llm.error("Failed to fetch project ID, status \(httpResponse.statusCode): \(errorText)")
             throw LLMError.apiError(
                 provider: .gemini,
                 statusCode: httpResponse.statusCode,
@@ -588,7 +586,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         do {
             (data, response) = try await urlSession.data(for: request)
         } catch {
-            logger.error("Token exchange network error: \(error.localizedDescription)")
+            AppLogger.llm.error("Token exchange network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
         }
 
@@ -598,7 +596,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
 
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            logger.error("Token exchange failed with status \(httpResponse.statusCode): \(errorMessage)")
+            AppLogger.llm.error("Token exchange failed with status \(httpResponse.statusCode): \(errorMessage)")
             throw LLMError.authenticationFailed(provider: .gemini, detail: "HTTP \(httpResponse.statusCode): \(errorMessage)")
         }
 
@@ -653,7 +651,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         do {
             (data, response) = try await urlSession.data(for: request)
         } catch {
-            logger.error("Userinfo request network error: \(error.localizedDescription)")
+            AppLogger.llm.error("Userinfo request network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
         }
 
@@ -663,7 +661,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
 
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            logger.error("Userinfo request failed with status \(httpResponse.statusCode): \(errorMessage)")
+            AppLogger.llm.error("Userinfo request failed with status \(httpResponse.statusCode): \(errorMessage)")
             throw LLMError.authenticationFailed(provider: .gemini, detail: "Failed to fetch user email")
         }
 

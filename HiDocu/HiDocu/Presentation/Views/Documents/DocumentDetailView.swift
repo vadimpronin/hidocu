@@ -61,9 +61,16 @@ struct DocumentDetailView: View {
                 Text("Body: \(viewModel.bodyBytes.formattedFileSize)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text("Summary: \(viewModel.summaryBytes.formattedFileSize)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 2) {
+                    Text("Summary: \(viewModel.summaryBytes.formattedFileSize)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    if let doc = viewModel.document, doc.summaryEdited, doc.summaryGeneratedAt != nil {
+                        Text("(edited)")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 6)
@@ -125,6 +132,16 @@ struct DocumentDetailView: View {
                             viewModel.generateSummary()
                         }
                         .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+
+                    if viewModel.hasLLMService {
+                        ModelPickerMenu(
+                            models: viewModel.availableModels,
+                            selectedModelId: $viewModel.selectedModelId,
+                            disabled: viewModel.summaryGenerationState == .generating
+                        )
+                        .frame(maxWidth: 200)
                         .controlSize(.small)
                     }
 
@@ -193,12 +210,27 @@ struct DocumentDetailView: View {
         case .info:
             if let doc = viewModel.document {
                 Form {
-                    LabeledContent("Type", value: doc.documentType)
-                    LabeledContent("Created", value: doc.createdAt, format: .dateTime)
-                    LabeledContent("Modified", value: doc.modifiedAt, format: .dateTime)
-                    LabeledContent("Body Size", value: viewModel.bodyBytes.formattedFileSize)
-                    LabeledContent("Summary Size", value: viewModel.summaryBytes.formattedFileSize)
-                    LabeledContent("Disk Path", value: doc.diskPath)
+                    Section("Document") {
+                        LabeledContent("Type", value: doc.documentType)
+                        LabeledContent("Created", value: doc.createdAt, format: .dateTime)
+                        LabeledContent("Modified", value: doc.modifiedAt, format: .dateTime)
+                    }
+                    Section("Sizes") {
+                        LabeledContent("Body", value: viewModel.bodyBytes.formattedFileSize)
+                        LabeledContent("Summary", value: viewModel.summaryBytes.formattedFileSize)
+                    }
+                    if let summaryGeneratedAt = doc.summaryGeneratedAt {
+                        Section("Summary Generation") {
+                            LabeledContent("Generated", value: summaryGeneratedAt, format: .dateTime)
+                            if let summaryModel = doc.summaryModel {
+                                LabeledContent("Model", value: summaryModel)
+                            }
+                            LabeledContent("Manually Edited", value: doc.summaryEdited ? "Yes" : "No")
+                        }
+                    }
+                    Section("Storage") {
+                        LabeledContent("Disk Path", value: doc.diskPath)
+                    }
                 }
                 .formStyle(.grouped)
                 .padding()

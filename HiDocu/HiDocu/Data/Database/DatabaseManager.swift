@@ -447,6 +447,15 @@ final class DatabaseManager: Sendable {
             AppLogger.database.info("Migration v8_llm_integration complete")
         }
 
+        // v9: Summary metadata fields
+        migrator.registerMigration("v9_summary_metadata") { db in
+            try db.execute(sql: "ALTER TABLE documents ADD COLUMN summary_generated_at DATETIME")
+            try db.execute(sql: "ALTER TABLE documents ADD COLUMN summary_model TEXT")
+            try db.execute(sql: "ALTER TABLE documents ADD COLUMN summary_edited INTEGER NOT NULL DEFAULT 0")
+
+            AppLogger.database.info("Migration v9_summary_metadata complete")
+        }
+
         return migrator
     }
     

@@ -195,7 +195,7 @@ struct ContentViewV2: View {
         dlvm.observeAllDocuments()
         documentListVM = dlvm
 
-        let ddvm = DocumentDetailViewModel(documentService: container.documentService, llmService: container.llmService)
+        let ddvm = DocumentDetailViewModel(documentService: container.documentService, llmService: container.llmService, settingsService: container.settingsService)
         documentDetailVM = ddvm
 
         navigationVM.restoreSelection()

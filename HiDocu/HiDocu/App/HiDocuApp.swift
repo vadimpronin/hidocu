@@ -23,6 +23,7 @@ struct HiDocuApp: App {
                 .task {
                     await container.trashService.autoCleanup()
                     await migrateMetadataYAMLIfNeeded()
+                    await container.llmService.refreshAvailableModels()
                 }
                 .alert("Import Failed", isPresented: $showImportError) {
                     Button("OK") {}

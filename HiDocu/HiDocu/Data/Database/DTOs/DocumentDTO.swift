@@ -25,6 +25,9 @@ struct DocumentDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
     var sortOrder: Int
     var createdAt: Date
     var modifiedAt: Date
+    var summaryGeneratedAt: Date?
+    var summaryModel: String?
+    var summaryEdited: Bool
 
     enum Columns {
         static let id = Column(CodingKeys.id)
@@ -41,6 +44,9 @@ struct DocumentDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         static let sortOrder = Column(CodingKeys.sortOrder)
         static let createdAt = Column(CodingKeys.createdAt)
         static let modifiedAt = Column(CodingKeys.modifiedAt)
+        static let summaryGeneratedAt = Column(CodingKeys.summaryGeneratedAt)
+        static let summaryModel = Column(CodingKeys.summaryModel)
+        static let summaryEdited = Column(CodingKeys.summaryEdited)
     }
 
     enum CodingKeys: String, CodingKey {
@@ -58,6 +64,9 @@ struct DocumentDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         case sortOrder = "sort_order"
         case createdAt = "created_at"
         case modifiedAt = "modified_at"
+        case summaryGeneratedAt = "summary_generated_at"
+        case summaryModel = "summary_model"
+        case summaryEdited = "summary_edited"
     }
 
     init(from domain: Document) {
@@ -75,6 +84,9 @@ struct DocumentDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         self.sortOrder = domain.sortOrder
         self.createdAt = domain.createdAt
         self.modifiedAt = domain.modifiedAt
+        self.summaryGeneratedAt = domain.summaryGeneratedAt
+        self.summaryModel = domain.summaryModel
+        self.summaryEdited = domain.summaryEdited
     }
 
     func toDomain() -> Document {
@@ -92,7 +104,10 @@ struct DocumentDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
             minimizeBeforeLLM: minimizeBeforeLLM,
             sortOrder: sortOrder,
             createdAt: createdAt,
-            modifiedAt: modifiedAt
+            modifiedAt: modifiedAt,
+            summaryGeneratedAt: summaryGeneratedAt,
+            summaryModel: summaryModel,
+            summaryEdited: summaryEdited
         )
     }
 }

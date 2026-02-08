@@ -279,6 +279,31 @@ final class DocumentService {
         doc.summaryText = content
         doc.summaryHash = sha256(content)
         doc.modifiedAt = Date()
+        if doc.summaryGeneratedAt != nil {
+            doc.summaryEdited = true
+        }
+        try await documentRepository.update(doc)
+        do { try fileSystemService.writeDocumentMetadata(doc) }
+        catch { AppLogger.fileSystem.warning("Failed to write metadata after summary update for document \(documentId): \(error.localizedDescription)") }
+    }
+
+    func writeSummary(
+        documentId: Int64,
+        diskPath: String,
+        content: String,
+        model: String,
+        generatedAt: Date,
+        edited: Bool
+    ) async throws {
+        try fileSystemService.writeDocumentSummary(diskPath: diskPath, content: content)
+
+        guard var doc = try await documentRepository.fetchById(documentId) else { return }
+        doc.summaryText = content
+        doc.summaryHash = sha256(content)
+        doc.summaryGeneratedAt = generatedAt
+        doc.summaryModel = model
+        doc.summaryEdited = edited
+        doc.modifiedAt = Date()
         try await documentRepository.update(doc)
         do { try fileSystemService.writeDocumentMetadata(doc) }
         catch { AppLogger.fileSystem.warning("Failed to write metadata after summary update for document \(documentId): \(error.localizedDescription)") }

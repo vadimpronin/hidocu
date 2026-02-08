@@ -677,6 +677,15 @@ final class FileSystemService {
         lines.append("minimize_before_llm: \(doc.minimizeBeforeLLM)")
         lines.append("created_at: \(Self.isoFormatter.string(from: doc.createdAt))")
         lines.append("modified_at: \(Self.isoFormatter.string(from: doc.modifiedAt))")
+        if let summaryGeneratedAt = doc.summaryGeneratedAt {
+            lines.append("summary_generated_at: \(Self.isoFormatter.string(from: summaryGeneratedAt))")
+        }
+        if let summaryModel = doc.summaryModel {
+            lines.append("summary_model: \(yamlQuoted(summaryModel))")
+        }
+        if doc.summaryGeneratedAt != nil {
+            lines.append("summary_edited: \(doc.summaryEdited)")
+        }
         return lines.joined(separator: "\n") + "\n"
     }
 
