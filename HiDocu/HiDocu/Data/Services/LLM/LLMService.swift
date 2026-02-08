@@ -298,7 +298,7 @@ final class LLMService {
         ]
 
         let options = LLMRequestOptions(
-            maxTokens: 4096,
+//            maxTokens: 4096,
             temperature: nil,
 //            systemPrompt: systemPrompt
         )

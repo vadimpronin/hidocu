@@ -21,11 +21,11 @@ struct LLMMessage: Sendable, Equatable {
 
 /// Configuration options for LLM API requests.
 struct LLMRequestOptions: Sendable, Equatable {
-    let maxTokens: Int
+    let maxTokens: Int?
     let temperature: Double?
     let systemPrompt: String?
 
-    init(maxTokens: Int = 4096, temperature: Double? = nil, systemPrompt: String? = nil) {
+    init(maxTokens: Int? = nil, temperature: Double? = nil, systemPrompt: String? = nil) {
         self.maxTokens = maxTokens
         self.temperature = temperature
         self.systemPrompt = systemPrompt

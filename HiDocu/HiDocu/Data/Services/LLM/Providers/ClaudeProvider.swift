@@ -180,7 +180,7 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
         // Build request body — matches Go reference (ConvertOpenAIRequestToClaude + applyCloaking)
         var requestBody: [String: Any] = [
             "model": model,
-            "max_tokens": 32000,
+            "max_tokens": options.maxTokens ?? 32000,
             "messages": conversationMessages,
             "metadata": [
                 "user_id": generateFakeUserID()

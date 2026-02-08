@@ -366,7 +366,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         var geminiRequest: [String: Any] = [
             "contents": contents,
             "generationConfig": [
-                "maxOutputTokens": options.maxTokens
+                "maxOutputTokens": options.maxTokens ?? 65536,
             ]
         ]
 
