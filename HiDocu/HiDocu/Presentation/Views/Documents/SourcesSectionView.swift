@@ -14,7 +14,7 @@ struct SourcesSectionView: View {
     @State private var editingSource: SourceWithDetails?
 
     var body: some View {
-        List {
+        LazyVStack(spacing: 0, pinnedViews: []) {
             ForEach(viewModel.sources) { detail in
                 DisclosureGroup {
                     ForEach(detail.transcripts) { transcript in
@@ -24,6 +24,8 @@ struct SourcesSectionView: View {
                             documentId: documentId,
                             viewModel: viewModel
                         )
+                        .padding(.leading, 16) // Indent transcript rows
+                        Divider() // Separator between transcripts
                     }
                 } label: {
                     HStack {
@@ -38,7 +40,10 @@ struct SourcesSectionView: View {
                             }
                         }
                     }
+                    .padding(.vertical, 8)
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 4)
                 .contextMenu {
                     Button("Edit Transcripts") {
                         editingSource = detail
@@ -49,6 +54,7 @@ struct SourcesSectionView: View {
                         }
                     }
                 }
+                Divider()
             }
         }
         .toolbar {

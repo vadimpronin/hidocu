@@ -38,8 +38,14 @@ struct DocumentDetailView: View {
             .padding(.bottom, 8)
 
             // Content Area
-            tabContent
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            ScrollView {
+                tabContent
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    // Strict View Identity: Force a fresh view hierarchy when switching tabs.
+                    .id(viewModel.selectedTab)
+            }
+            .coordinateSpace(name: "detailScroll") // Provide a stable coordinate system for Textual layout
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             // Status Bar
             HStack {
@@ -198,7 +204,7 @@ struct DocumentDetailView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity, minHeight: 400) // Ensure enough height for loader
                 } else {
                     MarkdownEditableView(
                         text: $viewModel.summaryText,
@@ -216,23 +222,23 @@ struct DocumentDetailView: View {
                 SourcesSectionView(viewModel: sourcesVM, documentId: doc.id)
             } else {
                 ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity, minHeight: 200)
             }
 
         case .info:
             if let doc = viewModel.document {
-                Form {
-                    Section("Document") {
+                VStack(alignment: .leading, spacing: 20) {
+                    GroupBox("Document") {
                         LabeledContent("Type", value: doc.documentType)
                         LabeledContent("Created", value: doc.createdAt, format: .dateTime)
                         LabeledContent("Modified", value: doc.modifiedAt, format: .dateTime)
                     }
-                    Section("Sizes") {
+                    GroupBox("Sizes") {
                         LabeledContent("Body", value: viewModel.bodyBytes.formattedFileSize)
                         LabeledContent("Summary", value: viewModel.summaryBytes.formattedFileSize)
                     }
                     if let summaryGeneratedAt = doc.summaryGeneratedAt {
-                        Section("Summary Generation") {
+                        GroupBox("Summary Generation") {
                             LabeledContent("Generated", value: summaryGeneratedAt, format: .dateTime)
                             if let summaryModel = doc.summaryModel {
                                 LabeledContent("Model", value: summaryModel)
@@ -240,11 +246,10 @@ struct DocumentDetailView: View {
                             LabeledContent("Manually Edited", value: doc.summaryEdited ? "Yes" : "No")
                         }
                     }
-                    Section("Storage") {
+                    GroupBox("Storage") {
                         LabeledContent("Disk Path", value: doc.diskPath)
                     }
                 }
-                .formStyle(.grouped)
                 .padding()
             }
         }
