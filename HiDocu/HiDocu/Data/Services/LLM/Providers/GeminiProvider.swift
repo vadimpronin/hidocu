@@ -238,16 +238,71 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         expiresAt.timeIntervalSinceNow < 300
     }
 
-    /// Returns hardcoded list of supported Gemini models.
+    /// Fetches available Gemini models from the retrieveUserQuota endpoint.
     ///
-    /// - Parameter accessToken: Valid access token (unused, kept for protocol conformance)
-    /// - Returns: Array of model identifiers
+    /// Calls the Cloud Code Assist API quota endpoint to get the current list of available models
+    /// with their quota information. Extracts model IDs from the response and deduplicates
+    /// (removing _vertex variants to show only the base model names).
+    ///
+    /// - Parameters:
+    ///   - accessToken: Valid access token
+    ///   - accountId: Account ID (unused, kept for protocol conformance)
+    /// - Returns: Sorted array of unique model identifiers
+    /// - Throws: `LLMError` if fetch fails
     func fetchModels(accessToken: String, accountId: String?) async throws -> [String] {
-        [
-            "gemini-2.5-flash",
-            "gemini-2.5-pro",
-            "gemini-2.0-flash"
+        let url = URL(string: "\(Self.apiBaseURL):retrieveUserQuota")!
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Self.cliUserAgent, forHTTPHeaderField: "User-Agent")
+        request.setValue(Self.cliApiClient, forHTTPHeaderField: "X-Goog-Api-Client")
+        request.setValue(Self.cliMetadata, forHTTPHeaderField: "Client-Metadata")
+
+        // Build request body with project ID
+        let body: [String: Any] = [
+            "project": "*"
         ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response): (Data, URLResponse)
+
+        do {
+            (data, response) = try await urlSession.data(for: request)
+        } catch {
+            logger.error("fetchModels network error: \(error.localizedDescription)")
+            throw LLMError.networkError(underlying: error.localizedDescription)
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw LLMError.invalidResponse(detail: "Not an HTTP response")
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            logger.error("fetchModels failed with status \(httpResponse.statusCode): \(errorMessage)")
+            throw LLMError.apiError(provider: .gemini, statusCode: httpResponse.statusCode, message: errorMessage)
+        }
+
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let buckets = json["buckets"] as? [[String: Any]] else {
+            throw LLMError.invalidResponse(detail: "Missing buckets in retrieveUserQuota response")
+        }
+
+        // Extract unique model IDs from buckets, removing _vertex variants
+        var modelIds = Set<String>()
+        for bucket in buckets {
+            if let modelId = bucket["modelId"] as? String, !modelId.isEmpty {
+                // Remove _vertex suffix to avoid duplicates (show base model names only)
+                let baseModel = modelId.hasSuffix("_vertex") ? String(modelId.dropLast(7)) : modelId
+                modelIds.insert(baseModel)
+            }
+        }
+
+        let sortedModels = modelIds.sorted()
+        logger.info("Fetched \(sortedModels.count) Gemini models from quota endpoint")
+        return sortedModels
     }
 
     /// Sends a chat completion request to the Cloud Code Assist API.
