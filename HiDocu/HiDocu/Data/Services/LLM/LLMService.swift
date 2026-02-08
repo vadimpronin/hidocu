@@ -169,7 +169,7 @@ final class LLMService {
     /// - Parameter provider: Provider to fetch models from
     /// - Returns: Array of model identifiers
     /// - Throws: `LLMError` if no accounts are configured or API call fails
-    func fetchModels(provider: LLMProvider) async throws -> [String] {
+    func fetchModels(provider: LLMProvider) async throws -> [ModelInfo] {
         AppLogger.llm.info("Fetching models for \(provider.rawValue)")
 
         // Find any active account for this provider
@@ -203,7 +203,7 @@ final class LLMService {
         for provider in LLMProvider.allCases {
             do {
                 let models = try await fetchModels(provider: provider)
-                allModels.append(contentsOf: models.map { AvailableModel(provider: provider, modelId: $0) })
+                allModels.append(contentsOf: models.map { AvailableModel(provider: provider, modelId: $0.id, displayName: $0.displayName) })
             } catch let error as LLMError {
                 if case .noAccountsConfigured = error { }
                 else { AppLogger.llm.warning("Failed to fetch models for \(provider.rawValue): \(error.localizedDescription)") }

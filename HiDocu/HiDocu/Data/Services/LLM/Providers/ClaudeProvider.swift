@@ -123,14 +123,55 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
         expiresAt.timeIntervalSinceNow < 300
     }
 
-    func fetchModels(accessToken: String, accountId: String?) async throws -> [String] {
-        // Claude OAuth tokens have a fixed set of models
-        AppLogger.llm.debug("Returning hardcoded Claude model list")
-        return [
-            "claude-sonnet-4-5-20250929",
-            "claude-opus-4-6",
-            "claude-haiku-4-5-20251001"
-        ]
+    func fetchModels(accessToken: String, accountId: String?) async throws -> [ModelInfo] {
+        AppLogger.llm.debug("Fetching model list from Claude API")
+        var request = URLRequest(url: URL(string: "\(Self.apiBaseURL)/v1/models")!)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.timeoutInterval = 300
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue(Self.apiVersion, forHTTPHeaderField: "Anthropic-Version")
+        request.setValue(Self.betaHeader, forHTTPHeaderField: "Anthropic-Beta")
+        request.setValue("true", forHTTPHeaderField: "Anthropic-Dangerous-Direct-Browser-Access")
+        request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
+        request.setValue("cli", forHTTPHeaderField: "X-App")
+        request.setValue("stream", forHTTPHeaderField: "X-Stainless-Helper-Method")
+        request.setValue("0", forHTTPHeaderField: "X-Stainless-Retry-Count")
+        request.setValue("v24.3.0", forHTTPHeaderField: "X-Stainless-Runtime-Version")
+        request.setValue("0.55.1", forHTTPHeaderField: "X-Stainless-Package-Version")
+        request.setValue("node", forHTTPHeaderField: "X-Stainless-Runtime")
+        request.setValue("js", forHTTPHeaderField: "X-Stainless-Lang")
+        request.setValue("arm64", forHTTPHeaderField: "X-Stainless-Arch")
+        request.setValue("MacOS", forHTTPHeaderField: "X-Stainless-Os")
+        request.setValue("60", forHTTPHeaderField: "X-Stainless-Timeout")
+        request.setValue("keep-alive", forHTTPHeaderField: "Connection")
+
+        let (data, response) = try await urlSession.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw LLMError.invalidResponse(detail: "Response is not HTTP")
+        }
+
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            let message = String(data: data, encoding: .utf8) ?? "Unknown error"
+            AppLogger.llm.error("Model list request failed with status \(httpResponse.statusCode): \(message)")
+            throw LLMError.apiError(provider: .claude, statusCode: httpResponse.statusCode, message: message)
+        }
+
+        // Parse {"data":[{"id":"...","display_name":"..."},...]}
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let models = json["data"] as? [[String: Any]] else {
+            throw LLMError.invalidResponse(detail: "Missing data array in models response")
+        }
+
+        let result = models.compactMap { entry -> ModelInfo? in
+            guard let id = entry["id"] as? String else { return nil }
+            let displayName = entry["display_name"] as? String ?? id
+            return ModelInfo(id: id, displayName: displayName)
+        }
+
+        AppLogger.llm.info("Fetched \(result.count) Claude models")
+        return result
     }
 
     func chat(

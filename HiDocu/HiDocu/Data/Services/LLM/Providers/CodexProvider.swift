@@ -126,7 +126,7 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
         expiresAt.timeIntervalSinceNow < 300
     }
 
-    func fetchModels(accessToken: String, accountId: String?) async throws -> [String] {
+    func fetchModels(accessToken: String, accountId: String?) async throws -> [ModelInfo] {
         AppLogger.llm.info("Fetching Codex models from API")
 
         var request = URLRequest(url: URL(string: "\(Self.apiBaseURL)/models?client_version=\(Self.clientVersion)")!)
@@ -168,7 +168,7 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
             .compactMap { $0["slug"] as? String }
 
         AppLogger.llm.info("Fetched \(visibleModels.count) visible Codex models")
-        return visibleModels
+        return visibleModels.map { ModelInfo(id: $0, displayName: $0) }
     }
 
     func chat(

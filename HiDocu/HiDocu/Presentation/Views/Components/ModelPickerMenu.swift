@@ -22,9 +22,9 @@ struct ModelPickerMenu: View {
                             selectedModelId = model.id
                         } label: {
                             if model.id == selectedModelId {
-                                Label(model.modelId, systemImage: "checkmark")
+                                Label(model.displayName, systemImage: "checkmark")
                             } else {
-                                Text(model.modelId)
+                                Text(model.displayName)
                             }
                         }
                     }
@@ -53,19 +53,19 @@ struct ModelPickerMenu: View {
         }
     }
 
-    /// Sorts models by numerical subnames first (left-to-right), then non-numerical subnames (left-to-right).
-    /// Subnames are extracted by splitting on any non-alphanumeric character.
-    /// E.g. "gpt-5.1-codex-max" → numerical: [5, 1], textual: ["gpt", "codex", "max"]
+    /// Sorts models by numerical subnames (descending), then textual subnames (ascending).
+    /// Uses `displayName` for sort keys so date suffixes in model IDs don't pollute the order.
+    /// Shorter numerical arrays are right-padded with 0 so "4" compares as "4.0" against "4.6".
     private func sortedModels(_ models: [AvailableModel]) -> [AvailableModel] {
         models.sorted { lhs, rhs in
-            let lKey = modelSortKey(lhs.modelId)
-            let rKey = modelSortKey(rhs.modelId)
+            let lKey = modelSortKey(lhs.displayName)
+            let rKey = modelSortKey(rhs.displayName)
 
-            for (l, r) in zip(lKey.numerical, rKey.numerical) {
+            let maxLen = max(lKey.numerical.count, rKey.numerical.count)
+            for i in 0..<maxLen {
+                let l = i < lKey.numerical.count ? lKey.numerical[i] : 0
+                let r = i < rKey.numerical.count ? rKey.numerical[i] : 0
                 if l != r { return l > r }
-            }
-            if lKey.numerical.count != rKey.numerical.count {
-                return lKey.numerical.count > rKey.numerical.count
             }
 
             for (l, r) in zip(lKey.textual, rKey.textual) {
@@ -75,8 +75,8 @@ struct ModelPickerMenu: View {
         }
     }
 
-    private func modelSortKey(_ modelId: String) -> (numerical: [Int], textual: [String]) {
-        let subnames = modelId
+    private func modelSortKey(_ name: String) -> (numerical: [Int], textual: [String]) {
+        let subnames = name
             .split { !$0.isLetter && !$0.isNumber }
             .map(String.init)
         let numerical = subnames.compactMap { Int($0) }

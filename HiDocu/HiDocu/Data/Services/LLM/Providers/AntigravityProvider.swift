@@ -198,7 +198,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         "chat_20706", "chat_23310", "gemini-2.5-flash-thinking", "gemini-3-pro-low", "gemini-2.5-pro"
     ]
 
-    func fetchModels(accessToken: String, accountId: String?) async throws -> [String] {
+    func fetchModels(accessToken: String, accountId: String?) async throws -> [ModelInfo] {
         let url = URL(string: "\(Self.apiBaseURL):fetchAvailableModels")!
 
         var request = URLRequest(url: url)
@@ -238,7 +238,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
             .sorted()
 
         AppLogger.llm.info("Fetched \(modelIds.count) Antigravity models")
-        return modelIds
+        return modelIds.map { ModelInfo(id: $0, displayName: $0) }
     }
 
     func chat(

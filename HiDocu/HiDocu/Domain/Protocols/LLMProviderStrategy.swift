@@ -33,9 +33,9 @@ protocol LLMProviderStrategy: Sendable {
     /// - Parameters:
     ///   - accessToken: Valid access token
     ///   - accountId: Optional provider-specific account ID (e.g., chatgpt_account_id for Codex)
-    /// - Returns: Array of model identifiers
+    /// - Returns: Array of model info pairs (id + display name)
     /// - Throws: `LLMError` if fetch fails
-    func fetchModels(accessToken: String, accountId: String?) async throws -> [String]
+    func fetchModels(accessToken: String, accountId: String?) async throws -> [ModelInfo]
 
     /// Sends a chat completion request to the provider's API.
     /// - Parameters:

@@ -247,7 +247,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
     ///   - accountId: Account ID (unused, kept for protocol conformance)
     /// - Returns: Sorted array of unique model identifiers
     /// - Throws: `LLMError` if fetch fails
-    func fetchModels(accessToken: String, accountId: String?) async throws -> [String] {
+    func fetchModels(accessToken: String, accountId: String?) async throws -> [ModelInfo] {
         let url = URL(string: "\(Self.apiBaseURL):retrieveUserQuota")!
 
         var request = URLRequest(url: url)
@@ -300,7 +300,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
 
         let sortedModels = modelIds.sorted()
         AppLogger.llm.info("Fetched \(sortedModels.count) Gemini models from quota endpoint")
-        return sortedModels
+        return sortedModels.map { ModelInfo(id: $0, displayName: $0) }
     }
 
     /// Sends a chat completion request to the Cloud Code Assist API.
