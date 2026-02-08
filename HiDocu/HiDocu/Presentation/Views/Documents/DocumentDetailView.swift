@@ -88,7 +88,7 @@ struct DocumentDetailView: View {
             .padding(.vertical, 6)
             .background(.bar)
         }
-        .onChange(of: viewModel.document?.id) { _, _ in
+        .task(id: viewModel.document?.id) {
             if viewModel.document != nil {
                 sourcesViewModel = SourcesViewModel(
                     documentService: container.documentService,
@@ -96,16 +96,8 @@ struct DocumentDetailView: View {
                     transcriptRepository: container.transcriptRepository,
                     recordingRepositoryV2: container.recordingRepositoryV2
                 )
-            }
-        }
-        .onAppear {
-            if viewModel.document != nil {
-                sourcesViewModel = SourcesViewModel(
-                    documentService: container.documentService,
-                    sourceRepository: container.sourceRepository,
-                    transcriptRepository: container.transcriptRepository,
-                    recordingRepositoryV2: container.recordingRepositoryV2
-                )
+            } else {
+                sourcesViewModel = nil
             }
         }
         .errorBanner($viewModel.errorMessage)
@@ -200,9 +192,10 @@ struct DocumentDetailView: View {
 
         case .sources:
             if let doc = viewModel.document, let sourcesVM = sourcesViewModel {
-                SourceBrowserView(viewModel: sourcesVM, documentId: doc.id, onBodyUpdated: {
+                TranscriptStudioView(viewModel: sourcesVM, documentId: doc.id, onBodyUpdated: {
                     viewModel.reloadBody()
                 })
+                .id(doc.id)
             } else {
                 ProgressView()
                     .frame(maxWidth: .infinity, minHeight: 200)

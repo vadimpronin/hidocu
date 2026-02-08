@@ -13,6 +13,7 @@ struct TranscriptDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
 
     var id: Int64?
     var sourceId: Int64
+    var documentId: Int64?
     var title: String?
     var fullText: String?
     var mdFilePath: String?
@@ -23,6 +24,7 @@ struct TranscriptDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
     enum Columns {
         static let id = Column(CodingKeys.id)
         static let sourceId = Column(CodingKeys.sourceId)
+        static let documentId = Column(CodingKeys.documentId)
         static let title = Column(CodingKeys.title)
         static let fullText = Column(CodingKeys.fullText)
         static let mdFilePath = Column(CodingKeys.mdFilePath)
@@ -34,6 +36,7 @@ struct TranscriptDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
     enum CodingKeys: String, CodingKey {
         case id
         case sourceId = "source_id"
+        case documentId = "document_id"
         case title
         case fullText = "full_text"
         case mdFilePath = "md_file_path"
@@ -45,6 +48,7 @@ struct TranscriptDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
     init(from domain: Transcript) {
         self.id = domain.id == 0 ? nil : domain.id
         self.sourceId = domain.sourceId
+        self.documentId = domain.documentId
         self.title = domain.title
         self.fullText = domain.fullText
         self.mdFilePath = domain.mdFilePath
@@ -57,6 +61,7 @@ struct TranscriptDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         Transcript(
             id: id ?? 0,
             sourceId: sourceId,
+            documentId: documentId,
             title: title,
             fullText: fullText,
             mdFilePath: mdFilePath,

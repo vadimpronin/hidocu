@@ -456,6 +456,38 @@ final class DatabaseManager: Sendable {
             AppLogger.database.info("Migration v9_summary_metadata complete")
         }
 
+        // v10: Document-level transcripts
+        migrator.registerMigration("v10_document_transcripts") { db in
+            // Add document_id column to transcripts
+            try db.execute(sql: """
+                ALTER TABLE transcripts ADD COLUMN document_id INTEGER REFERENCES documents(id) ON DELETE CASCADE
+                """)
+
+            // Backfill document_id from the source's document_id
+            try db.execute(sql: """
+                UPDATE transcripts SET document_id = (
+                    SELECT document_id FROM sources WHERE sources.id = transcripts.source_id
+                )
+                """)
+
+            // Drop legacy per-source primary index (replaced by document-level)
+            try db.execute(sql: "DROP INDEX IF EXISTS idx_transcripts_single_primary")
+
+            // Index on document_id for efficient fetchForDocument queries
+            try db.execute(sql: """
+                CREATE INDEX idx_transcripts_document_id
+                    ON transcripts(document_id) WHERE document_id IS NOT NULL
+                """)
+
+            // Unique index: one primary transcript per document
+            try db.execute(sql: """
+                CREATE UNIQUE INDEX idx_transcripts_document_primary
+                    ON transcripts(document_id) WHERE is_primary = 1 AND document_id IS NOT NULL
+                """)
+
+            AppLogger.database.info("Migration v10_document_transcripts complete")
+        }
+
         return migrator
     }
     

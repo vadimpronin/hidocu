@@ -398,7 +398,7 @@ final class DocumentService {
 
             // TEMPORARY: Create mock Lorem Ipsum transcripts for UI development.
             // Remove once real transcription pipeline is integrated.
-            try await createMockTranscripts(sourceId: source.id)
+            try await createMockTranscripts(sourceId: source.id, documentId: doc.id)
 
             AppLogger.fileSystem.info("Created document '\(title)' id=\(doc.id) with source \(source.id) for \(originalFilename)")
             return (doc, source)
@@ -415,7 +415,7 @@ final class DocumentService {
     // MARK: - TEMPORARY: Mock Transcripts
     // Remove this section once real transcription pipeline is integrated.
 
-    private func createMockTranscripts(sourceId: Int64) async throws {
+    private func createMockTranscripts(sourceId: Int64, documentId: Int64) async throws {
         let variants: [(title: String, text: String)] = [
             (
                 "Расшифровка (основная)",
@@ -477,6 +477,7 @@ final class DocumentService {
         for variant in variants {
             let transcript = Transcript(
                 sourceId: sourceId,
+                documentId: documentId,
                 title: variant.title,
                 fullText: variant.text
             )

@@ -20,7 +20,12 @@ struct SourceWithDetails: Identifiable {
 final class SourcesViewModel {
 
     var sources: [SourceWithDetails] = []
+    var documentTranscripts: [Transcript] = []
     var isLoading = false
+
+    var totalDurationSeconds: Int {
+        sources.compactMap { $0.recording?.durationSeconds }.reduce(0, +)
+    }
 
     private let documentService: DocumentService
     private let sourceRepository: any SourceRepository
@@ -41,6 +46,7 @@ final class SourcesViewModel {
 
     func loadSources(documentId: Int64) async {
         isLoading = true
+        sources.removeAll()
         defer { isLoading = false }
 
         do {
@@ -117,6 +123,7 @@ final class SourcesViewModel {
         do {
             guard var transcript = try await transcriptRepository.fetchById(id) else { return }
             transcript.fullText = text
+            transcript.modifiedAt = Date()
             try await transcriptRepository.update(transcript)
         } catch {
             AppLogger.general.error("Failed to update transcript: \(error.localizedDescription)")
@@ -134,6 +141,71 @@ final class SourcesViewModel {
             await loadSources(documentId: documentId)
         } catch {
             AppLogger.general.error("Failed to set primary: \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: - Document-Level Transcripts
+
+    func loadDocumentTranscripts(documentId: Int64) async {
+        documentTranscripts.removeAll()
+        do {
+            documentTranscripts = try await transcriptRepository.fetchForDocument(documentId)
+        } catch {
+            AppLogger.general.error("Failed to load document transcripts: \(error.localizedDescription)")
+        }
+    }
+
+    func addDocumentTranscript(documentId: Int64, text: String, title: String?) async {
+        do {
+            guard let firstSourceId = sources.first?.source.id else {
+                AppLogger.general.error("Cannot add transcript: no sources exist for document \(documentId)")
+                return
+            }
+            let transcript = Transcript(
+                sourceId: firstSourceId,
+                documentId: documentId,
+                title: title,
+                fullText: text
+            )
+            _ = try await transcriptRepository.insert(transcript)
+            await loadDocumentTranscripts(documentId: documentId)
+        } catch {
+            AppLogger.general.error("Failed to add document transcript: \(error.localizedDescription)")
+        }
+    }
+
+    func deleteDocumentTranscript(id: Int64, documentId: Int64) async {
+        guard documentTranscripts.count > 1 else { return }
+        do {
+            try await transcriptRepository.delete(id: id)
+            await loadDocumentTranscripts(documentId: documentId)
+        } catch {
+            AppLogger.general.error("Failed to delete document transcript: \(error.localizedDescription)")
+        }
+    }
+
+    func updateDocumentTranscriptText(id: Int64, text: String) async {
+        do {
+            guard var transcript = try await transcriptRepository.fetchById(id) else { return }
+            transcript.fullText = text
+            transcript.modifiedAt = Date()
+            try await transcriptRepository.update(transcript)
+        } catch {
+            AppLogger.general.error("Failed to update document transcript: \(error.localizedDescription)")
+        }
+    }
+
+    func setDocumentPrimary(transcriptId: Int64, documentId: Int64) async {
+        do {
+            try await transcriptRepository.setPrimaryForDocument(id: transcriptId, documentId: documentId)
+            // Copy primary transcript text to document body
+            if let transcript = try await transcriptRepository.fetchById(transcriptId),
+               let text = transcript.fullText {
+                try await documentService.writeBodyById(documentId: documentId, content: text)
+            }
+            await loadDocumentTranscripts(documentId: documentId)
+        } catch {
+            AppLogger.general.error("Failed to set document primary: \(error.localizedDescription)")
         }
     }
 }
