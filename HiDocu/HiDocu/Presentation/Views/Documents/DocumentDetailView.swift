@@ -104,12 +104,29 @@ struct DocumentDetailView: View {
     private var tabContent: some View {
         switch viewModel.selectedTab {
         case .body:
-            TextEditor(text: $viewModel.bodyText)
-                .font(.system(.body, design: .monospaced))
+            VStack(spacing: 0) {
+                HStack {
+                    Spacer()
+                    Button(viewModel.isBodyEditing ? "Done" : "Edit") {
+                        viewModel.isBodyEditing.toggle()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
                 .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(.bar)
+
+                Divider()
+
+                MarkdownEditableView(
+                    text: $viewModel.bodyText,
+                    isEditing: $viewModel.isBodyEditing
+                )
                 .onChange(of: viewModel.bodyText) { _, _ in
                     viewModel.bodyDidChange()
                 }
+            }
 
         case .summary:
             VStack(spacing: 0) {
@@ -182,19 +199,14 @@ struct DocumentDetailView: View {
                             .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if viewModel.isSummaryEditing || !viewModel.hasSummary {
-                    TextEditor(text: $viewModel.summaryText)
-                        .font(.system(.body, design: .monospaced))
-                        .padding(.horizontal, 12)
-                        .onChange(of: viewModel.summaryText) { _, _ in
-                            viewModel.summaryDidChange()
-                        }
                 } else {
-                    ScrollView {
-                        Text(viewModel.summaryText)
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(12)
+                    MarkdownEditableView(
+                        text: $viewModel.summaryText,
+                        isEditing: $viewModel.isSummaryEditing,
+                        placeholder: "No summary"
+                    )
+                    .onChange(of: viewModel.summaryText) { _, _ in
+                        viewModel.summaryDidChange()
                     }
                 }
             }

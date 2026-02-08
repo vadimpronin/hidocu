@@ -27,6 +27,7 @@ final class DocumentDetailViewModel {
     var errorMessage: String?
     var summaryGenerationState: SummaryGenerationState = .idle
     var isSummaryEditing: Bool = false
+    var isBodyEditing: Bool = false
     var selectedModelId: String = ""
 
     enum DetailTab: String, CaseIterable {
@@ -77,6 +78,8 @@ final class DocumentDetailViewModel {
         titleModified = false
         bodyModified = false
         summaryModified = false
+        isBodyEditing = false
+        isSummaryEditing = false
         updateByteCounts()
 
         // Determine initial model selection

@@ -65,6 +65,7 @@
 		C5C630A403A97F0B29ABD83C /* DocumentListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F5287EBB0531F111E6E01E6 /* DocumentListView.swift */; };
 		C614C88D8F7EA4968EB1C148 /* DocumentDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAADD95ECAC7FF3C0B18B887 /* DocumentDetailViewModel.swift */; };
 		CC0000C00000000C /* ModelPickerMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000B00000000B /* ModelPickerMenu.swift */; };
+		CC1000C00000000C /* MarkdownEditableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000C00000000C /* MarkdownEditableView.swift */; };
 		CE4EB2D09509DEC4A3A562E1 /* TranscriptDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = B930F1D2F342C5D58BD7B889 /* TranscriptDTO.swift */; };
 		D29B81C7FF9C622845D2E888 /* DeletionLogRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47BF7D3168C144CED0C36ED9 /* DeletionLogRepository.swift */; };
 		DE3B51E4417F4918F5022E40 /* RecordingV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB033465FB3E12E0BB749B1 /* RecordingV2.swift */; };
@@ -87,6 +88,7 @@
 		F0000026F0000026 /* JensenActor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000036F0000036 /* JensenActor.swift */; };
 		F0000050F0000050 /* JensenUSB in Frameworks */ = {isa = PBXBuildFile; productRef = F0000051F0000051 /* JensenUSB */; };
 		F0000052F0000052 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = F0000053F0000053 /* GRDB */; };
+		F0000054F0000054 /* Textual in Frameworks */ = {isa = PBXBuildFile; productRef = F0000055F0000055 /* Textual */; };
 		F0429AD0CCB220B79569960F /* Transcript.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120ABFADCBA34F60024F6346 /* Transcript.swift */; };
 		F0A00001F0A00001 /* HiDocuTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A00011F0A00011 /* HiDocuTests.swift */; };
 		F0A00002F0A00002 /* DatabaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A00012F0A00012 /* DatabaseTests.swift */; };
@@ -171,6 +173,7 @@
 		BC12039CA327089CC1010027 /* SettingsViewV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsViewV2.swift; sourceTree = "<group>"; };
 		BDA413EE9305C427988A7439 /* FolderRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FolderRepository.swift; sourceTree = "<group>"; };
 		CC0000B00000000B /* ModelPickerMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelPickerMenu.swift; sourceTree = "<group>"; };
+		DD0000C00000000C /* MarkdownEditableView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MarkdownEditableView.swift; sourceTree = "<group>"; };
 		D0A200194A4444435072733F /* ContentViewV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContentViewV2.swift; sourceTree = "<group>"; };
 		D69953C06FF92116AE18C2DE /* TrashService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TrashService.swift; sourceTree = "<group>"; };
 		DBA3562E4C531972E9D61F66 /* SourcesViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesViewModel.swift; sourceTree = "<group>"; };
@@ -220,6 +223,7 @@
 			files = (
 				F0000050F0000050 /* JensenUSB in Frameworks */,
 				F0000052F0000052 /* GRDB in Frameworks */,
+				F0000054F0000054 /* Textual in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -281,6 +285,7 @@
 				F8000010F8000010 /* ErrorBannerView.swift */,
 				07496990C2830BD1439D5351 /* BatteryIndicatorView.swift */,
 				CC0000B00000000B /* ModelPickerMenu.swift */,
+				DD0000C00000000C /* MarkdownEditableView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -580,6 +585,7 @@
 			packageProductDependencies = (
 				F0000051F0000051 /* JensenUSB */,
 				F0000053F0000053 /* GRDB */,
+				F0000055F0000055 /* Textual */,
 			);
 			productName = HiDocu;
 			productReference = F0000000F0000000 /* HiDocu.app */;
@@ -636,6 +642,7 @@
 			packageReferences = (
 				F6000000F6000000 /* XCLocalSwiftPackageReference "../JensenUSB" */,
 				F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB" */,
+				F6000002F6000002 /* XCRemoteSwiftPackageReference "textual" */,
 			);
 			productRefGroup = F2000099F2000099 /* Products */;
 			projectDirPath = "";
@@ -747,6 +754,7 @@
 				310961DA68DD2E6085C77B8F /* SettingsViewV2.swift in Sources */,
 				7C9C910ECDD42858F96B2447 /* BatteryIndicatorView.swift in Sources */,
 				CC0000C00000000C /* ModelPickerMenu.swift in Sources */,
+				CC1000C00000000C /* MarkdownEditableView.swift in Sources */,
 				6FBDED703B6FC6EC14A8324E /* PathSanitizer.swift in Sources */,
 				BB00000100000001 /* LLMProvider.swift in Sources */,
 				BB00000200000002 /* LLMAccount.swift in Sources */,
@@ -850,7 +858,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -908,7 +916,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
@@ -1009,7 +1017,7 @@
 					"$(SRCROOT)/HiDocu/Presentation/ViewModels",
 					"$(SRCROOT)/HiDocu/Presentation/Views/Device",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hidocu.HiDocuTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1031,7 +1039,7 @@
 					"$(SRCROOT)/HiDocu/Presentation/ViewModels",
 					"$(SRCROOT)/HiDocu/Presentation/Views/Device",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hidocu.HiDocuTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1089,6 +1097,14 @@
 				minimumVersion = 6.24.0;
 			};
 		};
+		F6000002F6000002 /* XCRemoteSwiftPackageReference "textual" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gonzalezreal/textual";
+			requirement = {
+				kind = upToNextMinorVersion;
+				minimumVersion = 0.3.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1100,6 +1116,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB" */;
 			productName = GRDB;
+		};
+		F0000055F0000055 /* Textual */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F6000002F6000002 /* XCRemoteSwiftPackageReference "textual" */;
+			productName = Textual;
 		};
 		F0A00053F0A00053 /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;

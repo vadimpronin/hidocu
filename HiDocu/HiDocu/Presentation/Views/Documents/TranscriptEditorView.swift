@@ -17,6 +17,7 @@ struct TranscriptEditorView: View {
     @State private var editedText = ""
     @State private var showAddSheet = false
     @State private var saveTask: Task<Void, Never>?
+    @State private var isTranscriptEditing: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -59,23 +60,40 @@ struct TranscriptEditorView: View {
                 .padding(.vertical, 6)
             }
 
-            // Editor
-            TextEditor(text: $editedText)
-                .font(.system(.body, design: .monospaced))
-                .padding(.horizontal, 8)
-                .onChange(of: editedText) { _, _ in
-                    guard let transcriptId = selectedTranscriptId else { return }
-                    saveTask?.cancel()
-                    saveTask = Task {
-                        try? await Task.sleep(for: .seconds(2))
-                        guard !Task.isCancelled else { return }
-                        await viewModel.updateTranscriptText(
-                            id: transcriptId,
-                            text: editedText,
-                            documentId: documentId
-                        )
-                    }
+            // Editor toolbar
+            HStack {
+                Spacer()
+                Button(isTranscriptEditing ? "Done" : "Edit") {
+                    isTranscriptEditing.toggle()
                 }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(.bar)
+
+            Divider()
+
+            // Editor
+            MarkdownEditableView(
+                text: $editedText,
+                isEditing: $isTranscriptEditing,
+                placeholder: "No transcript"
+            )
+            .onChange(of: editedText) { _, _ in
+                guard let transcriptId = selectedTranscriptId else { return }
+                saveTask?.cancel()
+                saveTask = Task {
+                    try? await Task.sleep(for: .seconds(2))
+                    guard !Task.isCancelled else { return }
+                    await viewModel.updateTranscriptText(
+                        id: transcriptId,
+                        text: editedText,
+                        documentId: documentId
+                    )
+                }
+            }
         }
         .onAppear {
             if let first = transcripts.first {
@@ -90,6 +108,7 @@ struct TranscriptEditorView: View {
     private func selectTranscript(_ transcript: Transcript) {
         selectedTranscriptId = transcript.id
         editedText = transcript.fullText ?? ""
+        isTranscriptEditing = false
     }
 }
 
