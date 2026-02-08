@@ -16,6 +16,7 @@ struct SourceDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
     var sourceType: String
     var recordingId: Int64?
     var diskPath: String
+    var audioPath: String?
     var displayName: String?
     var sortOrder: Int
     var addedAt: Date
@@ -26,6 +27,7 @@ struct SourceDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         static let sourceType = Column(CodingKeys.sourceType)
         static let recordingId = Column(CodingKeys.recordingId)
         static let diskPath = Column(CodingKeys.diskPath)
+        static let audioPath = Column(CodingKeys.audioPath)
         static let displayName = Column(CodingKeys.displayName)
         static let sortOrder = Column(CodingKeys.sortOrder)
         static let addedAt = Column(CodingKeys.addedAt)
@@ -37,6 +39,7 @@ struct SourceDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         case sourceType = "source_type"
         case recordingId = "recording_id"
         case diskPath = "disk_path"
+        case audioPath = "audio_path"
         case displayName = "display_name"
         case sortOrder = "sort_order"
         case addedAt = "added_at"
@@ -48,6 +51,7 @@ struct SourceDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         self.sourceType = domain.sourceType.rawValue
         self.recordingId = domain.recordingId
         self.diskPath = domain.diskPath
+        self.audioPath = domain.audioPath
         self.displayName = domain.displayName
         self.sortOrder = domain.sortOrder
         self.addedAt = domain.addedAt
@@ -60,6 +64,7 @@ struct SourceDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
             sourceType: SourceType(rawValue: sourceType) ?? .recording,
             recordingId: recordingId,
             diskPath: diskPath,
+            audioPath: audioPath,
             displayName: displayName,
             sortOrder: sortOrder,
             addedAt: addedAt

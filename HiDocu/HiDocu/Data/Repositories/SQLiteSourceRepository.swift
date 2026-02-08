@@ -67,6 +67,21 @@ final class SQLiteSourceRepository: SourceRepository, Sendable {
         }
     }
 
+    // MARK: - Synchronous (for startup backfill)
+
+    func fetchAllSync() throws -> [Source] {
+        try db.read { database in
+            try SourceDTO.fetchAll(database).map { $0.toDomain() }
+        }
+    }
+
+    func updateSync(_ source: Source) throws {
+        try db.write { database in
+            let dto = SourceDTO(from: source)
+            try dto.update(database)
+        }
+    }
+
     func existsByDisplayName(_ displayName: String) async throws -> Bool {
         try await db.asyncRead { database in
             let count = try SourceDTO

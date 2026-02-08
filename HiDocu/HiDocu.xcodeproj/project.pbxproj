@@ -108,6 +108,7 @@
 		C7458EEDB15A9101AE14A13A /* PromoteBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BFD426BB0B6D99B53CEE11E /* PromoteBanner.swift */; };
 		AC0B048F36B4BD35DAF3A6D5 /* TranscriptStatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25F73D445794CFE78B28411B /* TranscriptStatusBar.swift */; };
 		90464C9049A11C09988A7C66 /* AddTranscriptSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 770B5B44BD9261D588D42502 /* AddTranscriptSheet.swift */; };
+		A1B2C3D4E5F6G7H8I9J0K1L2 /* GenerateTranscriptSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = M3N4O5P6Q7R8S9T0U1V2W3X4 /* GenerateTranscriptSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -222,6 +223,7 @@
 		9BFD426BB0B6D99B53CEE11E /* PromoteBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromoteBanner.swift; sourceTree = "<group>"; };
 		25F73D445794CFE78B28411B /* TranscriptStatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptStatusBar.swift; sourceTree = "<group>"; };
 		770B5B44BD9261D588D42502 /* AddTranscriptSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTranscriptSheet.swift; sourceTree = "<group>"; };
+		M3N4O5P6Q7R8S9T0U1V2W3X4 /* GenerateTranscriptSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateTranscriptSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -263,6 +265,7 @@
 				9BFD426BB0B6D99B53CEE11E /* PromoteBanner.swift */,
 				25F73D445794CFE78B28411B /* TranscriptStatusBar.swift */,
 				770B5B44BD9261D588D42502 /* AddTranscriptSheet.swift */,
+				M3N4O5P6Q7R8S9T0U1V2W3X4 /* GenerateTranscriptSheet.swift */,
 			);
 			path = TranscriptStudio;
 			sourceTree = "<group>";
@@ -737,6 +740,7 @@
 				C7458EEDB15A9101AE14A13A /* PromoteBanner.swift in Sources */,
 				AC0B048F36B4BD35DAF3A6D5 /* TranscriptStatusBar.swift in Sources */,
 				90464C9049A11C09988A7C66 /* AddTranscriptSheet.swift in Sources */,
+				A1B2C3D4E5F6G7H8I9J0K1L2 /* GenerateTranscriptSheet.swift in Sources */,
 				DF3313BAB7828D8D8AB8304A /* DeletionLogEntry.swift in Sources */,
 				DE3B51E4417F4918F5022E40 /* RecordingV2.swift in Sources */,
 				3D6B099B9A5D77F71AADE23C /* FolderDTO.swift in Sources */,

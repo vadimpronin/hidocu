@@ -44,4 +44,15 @@ final class SQLiteAPILogRepository: APILogRepository, Sendable {
             return dtos.map { $0.toDomain() }
         }
     }
+
+    func fetchLatestForTranscript(transcriptId: Int64) async throws -> APILogEntry? {
+        try await db.asyncRead { database in
+            let dto = try APILogDTO
+                .filter(APILogDTO.Columns.transcriptId == transcriptId)
+                .order(APILogDTO.Columns.timestamp.desc)
+                .limit(1)
+                .fetchOne(database)
+            return dto?.toDomain()
+        }
+    }
 }

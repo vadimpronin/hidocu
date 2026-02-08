@@ -692,6 +692,30 @@ final class FileSystemService {
         return relativePath
     }
 
+    /// Read the `audio_path` value from a source's `source.yaml` metadata file.
+    ///
+    /// - Parameter sourceDiskPath: Relative path to source folder (e.g., "42.document/sources/7.source")
+    /// - Returns: The relative audio path (e.g., "Recordings/2026/01/file.hda"), or nil if not found.
+    func readSourceAudioPath(sourceDiskPath: String) -> String? {
+        let yamlURL = dataDirectory
+            .appendingPathComponent(sourceDiskPath, isDirectory: true)
+            .appendingPathComponent("source.yaml")
+        guard let content = try? String(contentsOf: yamlURL, encoding: .utf8) else { return nil }
+        for line in content.components(separatedBy: .newlines) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("audio_path:") {
+                var value = String(trimmed.dropFirst("audio_path:".count))
+                    .trimmingCharacters(in: .whitespaces)
+                // Strip surrounding quotes if present
+                if value.hasPrefix("\"") && value.hasSuffix("\"") && value.count >= 2 {
+                    value = String(value.dropFirst().dropLast())
+                }
+                return value.isEmpty ? nil : value
+            }
+        }
+        return nil
+    }
+
     /// Write source.yaml metadata file inside a source folder.
     ///
     /// - Parameters:

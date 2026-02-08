@@ -10,6 +10,7 @@
 import SwiftUI
 
 struct TranscriptStudioView: View {
+    @Environment(\.container) private var container
     @Bindable var viewModel: SourcesViewModel
     let documentId: Int64
     var onBodyUpdated: (() -> Void)?
@@ -19,9 +20,11 @@ struct TranscriptStudioView: View {
     @State private var editedText = ""
     @State private var showPromoteConfirmation = false
     @State private var showAddSheet = false
+    @State private var showGenerateSheet = false
     @State private var showRecordingPicker = false
     @State private var activeSourceIndex = 0
     @State private var saveTask: Task<Void, Never>?
+    @State private var failedTranscriptError: String?
 
     var body: some View {
         Group {
@@ -31,6 +34,7 @@ struct TranscriptStudioView: View {
                 mainContent
             }
         }
+        .errorBanner($viewModel.generationError)
         .task(id: ObjectIdentifier(viewModel)) {
             // Only trigger data loading. Selection is handled reactively
             // by .onChange(of: viewModel.documentTranscripts).
@@ -50,6 +54,20 @@ struct TranscriptStudioView: View {
         .sheet(isPresented: $showAddSheet) {
             AddTranscriptSheet(documentId: documentId, viewModel: viewModel)
         }
+        .sheet(isPresented: $showGenerateSheet) {
+            GenerateTranscriptSheet { model, count in
+                guard let container else { return }
+                Task {
+                    await viewModel.generateTranscripts(
+                        documentId: documentId,
+                        model: model,
+                        count: count,
+                        llmService: container.llmService,
+                        fileSystemService: container.fileSystemService
+                    )
+                }
+            }
+        }
         .confirmationDialog(
             "Replace Document Body",
             isPresented: $showPromoteConfirmation,
@@ -66,8 +84,10 @@ struct TranscriptStudioView: View {
             guard !newTranscripts.isEmpty else { return }
 
             if selectedTranscriptId == nil {
-                // Initial load — auto-select primary transcript (or first)
-                let target = newTranscripts.first(where: \.isPrimary) ?? newTranscripts.first
+                // Initial load — prefer .ready or .isPrimary, skip .transcribing
+                let target = newTranscripts.first(where: { $0.isPrimary && $0.status == .ready })
+                    ?? newTranscripts.first(where: { $0.status == .ready })
+                    ?? newTranscripts.first
                 if let target {
                     selectedTranscriptId = target.id
                     editedText = target.fullText ?? ""
@@ -79,9 +99,17 @@ struct TranscriptStudioView: View {
                 if !isEditing {
                     editedText = current.fullText ?? ""
                 }
+                // If transcript became .failed, fetch error
+                if current.status == .failed {
+                    Task {
+                        failedTranscriptError = await viewModel.fetchTranscriptError(transcriptId: current.id)
+                    }
+                }
             } else {
                 // Selected transcript was deleted — fall back
-                let target = newTranscripts.first(where: \.isPrimary) ?? newTranscripts.first
+                let target = newTranscripts.first(where: { $0.isPrimary && $0.status == .ready })
+                    ?? newTranscripts.first(where: { $0.status == .ready })
+                    ?? newTranscripts.first
                 if let target {
                     selectedTranscriptId = target.id
                     editedText = target.fullText ?? ""
@@ -90,6 +118,16 @@ struct TranscriptStudioView: View {
                     selectedTranscriptId = nil
                     editedText = ""
                 }
+            }
+        }
+        .onChange(of: selectedTranscriptId) { _, newId in
+            // Fetch error when selecting a failed transcript
+            if let newId, let transcript = viewModel.documentTranscripts.first(where: { $0.id == newId }), transcript.status == .failed {
+                Task {
+                    failedTranscriptError = await viewModel.fetchTranscriptError(transcriptId: newId)
+                }
+            } else {
+                failedTranscriptError = nil
             }
         }
     }
@@ -171,14 +209,24 @@ struct TranscriptStudioView: View {
                 onPromote: { transcriptId in
                     selectedTranscriptId = transcriptId
                     showPromoteConfirmation = true
-                }
+                },
+                onGenerate: { showGenerateSheet = true },
+                isGenerating: viewModel.isGeneratingTranscripts
             )
 
             Divider()
 
             // 3-6. Editor area with promote banner and status bar
-            if selectedTranscript != nil {
-                editorArea
+            if let transcript = selectedTranscript {
+                // Status-aware rendering
+                switch transcript.status {
+                case .transcribing:
+                    generatingPlaceholder
+                case .failed:
+                    failedTranscriptView(transcript)
+                case .ready:
+                    editorArea
+                }
             } else {
                 emptyTranscriptState
             }
@@ -230,6 +278,60 @@ struct TranscriptStudioView: View {
                 isEditing: $isEditing
             )
         }
+    }
+
+    // MARK: - Generating Placeholder
+
+    private var generatingPlaceholder: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+                .controlSize(.large)
+            Text("Generating transcript...")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+            Text("This may take several minutes for long recordings")
+                .font(.subheadline)
+                .foregroundStyle(.tertiary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Failed Transcript View
+
+    private func failedTranscriptView(_ transcript: Transcript) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 40))
+                .foregroundStyle(.orange)
+
+            Text("Transcript Generation Failed")
+                .font(.title3)
+                .foregroundStyle(.secondary)
+
+            if let errorMessage = failedTranscriptError {
+                Text(errorMessage)
+                    .font(.subheadline)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+            }
+
+            HStack(spacing: 12) {
+                Button("Delete") {
+                    Task {
+                        await viewModel.deleteDocumentTranscript(id: transcript.id, documentId: documentId)
+                    }
+                }
+                .buttonStyle(.bordered)
+
+                Button("Retry") {
+                    // TODO: Implement retry logic
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(true) // Disable for now
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Empty Transcript State

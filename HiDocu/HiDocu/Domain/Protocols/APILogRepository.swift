@@ -26,4 +26,10 @@ protocol APILogRepository: Sendable {
     /// - Returns: Array of log entries for the document
     /// - Throws: Database errors
     func fetchByDocument(documentId: Int64) async throws -> [APILogEntry]
+
+    /// Fetches the most recent API log entry for a specific transcript.
+    /// - Parameter transcriptId: Transcript identifier
+    /// - Returns: Most recent log entry for the transcript, or nil if none exists
+    /// - Throws: Database errors
+    func fetchLatestForTranscript(transcriptId: Int64) async throws -> APILogEntry?
 }

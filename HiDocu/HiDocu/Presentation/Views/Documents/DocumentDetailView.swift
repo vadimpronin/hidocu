@@ -94,6 +94,7 @@ struct DocumentDetailView: View {
                     documentService: container.documentService,
                     sourceRepository: container.sourceRepository,
                     transcriptRepository: container.transcriptRepository,
+                    apiLogRepository: container.apiLogRepository,
                     recordingRepositoryV2: container.recordingRepositoryV2
                 )
             } else {

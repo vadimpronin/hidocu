@@ -378,11 +378,15 @@ final class DocumentService {
         )
 
         do {
-            let source = try await addSource(
+            var source = try await addSource(
                 documentId: doc.id,
                 recordingId: nil,
                 displayName: originalFilename
             )
+
+            // Store audio path in the database for direct resolution
+            source.audioPath = audioRelativePath
+            try await sourceRepository.update(source)
 
             try fileSystemService.writeSourceYAML(
                 sourceDiskPath: source.diskPath,

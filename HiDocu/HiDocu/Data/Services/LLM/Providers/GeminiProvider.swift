@@ -350,9 +350,18 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
             case .system:
                 systemInstructions.append(message.content)
             case .user:
+                var parts: [[String: Any]] = [["text": message.content]]
+                for attachment in message.attachments {
+                    parts.append([
+                        "inlineData": [
+                            "mimeType": attachment.mimeType,
+                            "data": attachment.data.base64EncodedString()
+                        ]
+                    ])
+                }
                 contents.append([
                     "role": "user",
-                    "parts": [["text": message.content]]
+                    "parts": parts
                 ])
             case .assistant:
                 contents.append([
@@ -397,7 +406,8 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         // Create request with Cloud Code headers
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.timeoutInterval = 300
+        let hasAttachments = messages.contains { !$0.attachments.isEmpty }
+        request.timeoutInterval = hasAttachments ? 600 : 300
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
@@ -409,12 +419,15 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         // Execute request
         let (data, response): (Data, URLResponse)
 
+        let requestStart = Date()
         do {
             (data, response) = try await urlSession.data(for: request)
         } catch {
             AppLogger.llm.error("Chat request network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
         }
+        let elapsed = Date().timeIntervalSince(requestStart)
+        AppLogger.llm.info("Gemini response received in \(String(format: "%.1f", elapsed))s (\(data.count) bytes)")
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw LLMError.invalidResponse(detail: "Not an HTTP response")

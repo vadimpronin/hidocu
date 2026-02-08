@@ -7,6 +7,19 @@
 
 import Foundation
 
+/// An attachment for multi-modal LLM messages.
+/// Data is loaded eagerly by the caller to avoid file I/O at serialization time.
+struct LLMAttachment: Sendable {
+    let data: Data
+    let mimeType: String
+}
+
+extension LLMAttachment: Equatable {
+    static func == (lhs: LLMAttachment, rhs: LLMAttachment) -> Bool {
+        lhs.mimeType == rhs.mimeType && lhs.data.count == rhs.data.count
+    }
+}
+
 /// A single message in an LLM conversation.
 struct LLMMessage: Sendable, Equatable {
     enum Role: String, Sendable, Codable {
@@ -17,6 +30,13 @@ struct LLMMessage: Sendable, Equatable {
 
     let role: Role
     let content: String
+    let attachments: [LLMAttachment]
+
+    init(role: Role, content: String, attachments: [LLMAttachment] = []) {
+        self.role = role
+        self.content = content
+        self.attachments = attachments
+    }
 }
 
 /// Configuration options for LLM API requests.

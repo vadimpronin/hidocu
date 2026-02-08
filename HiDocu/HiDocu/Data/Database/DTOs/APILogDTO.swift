@@ -20,6 +20,7 @@ struct APILogDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
     var timestamp: Date
     var documentId: Int64?
     var sourceId: Int64?
+    var transcriptId: Int64?
     var status: String
     var error: String?
     var inputTokens: Int?
@@ -36,6 +37,7 @@ struct APILogDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         static let timestamp = Column(CodingKeys.timestamp)
         static let documentId = Column(CodingKeys.documentId)
         static let sourceId = Column(CodingKeys.sourceId)
+        static let transcriptId = Column(CodingKeys.transcriptId)
         static let status = Column(CodingKeys.status)
         static let error = Column(CodingKeys.error)
         static let inputTokens = Column(CodingKeys.inputTokens)
@@ -53,6 +55,7 @@ struct APILogDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         case timestamp
         case documentId = "document_id"
         case sourceId = "source_id"
+        case transcriptId = "transcript_id"
         case status
         case error
         case inputTokens = "input_tokens"
@@ -70,6 +73,7 @@ struct APILogDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         self.timestamp = domain.timestamp
         self.documentId = domain.documentId
         self.sourceId = domain.sourceId
+        self.transcriptId = domain.transcriptId
         self.status = domain.status
         self.error = domain.error
         self.inputTokens = domain.inputTokens
@@ -88,6 +92,7 @@ struct APILogDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
             timestamp: timestamp,
             documentId: documentId,
             sourceId: sourceId,
+            transcriptId: transcriptId,
             status: status,
             error: error,
             inputTokens: inputTokens,

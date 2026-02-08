@@ -365,6 +365,7 @@ final class LLMService {
             timestamp: Date(),
             documentId: document.id,
             sourceId: nil,
+            transcriptId: nil,
             status: "success",
             error: nil,
             inputTokens: response.inputTokens,
@@ -375,6 +376,286 @@ final class LLMService {
 
         AppLogger.llm.info("Summary generated successfully for document id=\(document.id)")
         return response
+    }
+
+    // MARK: - Audio Transcription
+
+    /// MIME type mapping for audio file extensions.
+    private static let audioMimeTypes: [String: String] = [
+        "hda": "audio/mpeg",
+        "mp3": "audio/mpeg",
+        "m4a": "audio/mp4",
+        "wav": "audio/wav",
+        "aac": "audio/aac",
+        "ogg": "audio/ogg",
+        "flac": "audio/flac",
+        "opus": "audio/opus",
+        "aiff": "audio/aiff"
+    ]
+
+    /// Maximum inline data size for Gemini API (conservative limit leaving room for prompt).
+    private static let maxInlineDataSize = 18 * 1024 * 1024 // 18 MB
+
+    /// Prepares audio attachments from sources for transcription.
+    ///
+    /// Loads audio data and validates total size. This method is called once
+    /// by the ViewModel and the result is shared across parallel transcript generation calls.
+    ///
+    /// - Parameters:
+    ///   - sources: Sources with recording details
+    ///   - fileSystemService: File system service to resolve file paths
+    /// - Returns: Array of LLM attachments with audio data
+    /// - Throws: `LLMError` if audio files are missing or exceed size limit
+    func prepareAudioAttachments(
+        sources: [SourceWithDetails],
+        fileSystemService: FileSystemService
+    ) throws -> [LLMAttachment] {
+        var attachments: [LLMAttachment] = []
+        var totalSize: Int = 0
+
+        for source in sources {
+            // Resolve audio path: DB audioPath → RecordingV2 filepath → source.yaml fallback
+            let audioRelativePath: String
+            let displayName: String
+
+            if let dbPath = source.source.audioPath {
+                audioRelativePath = dbPath
+                displayName = source.source.displayName ?? (dbPath as NSString).lastPathComponent
+            } else if let recording = source.recording {
+                audioRelativePath = recording.filepath
+                displayName = recording.filename
+            } else if let yamlPath = fileSystemService.readSourceAudioPath(sourceDiskPath: source.source.diskPath) {
+                audioRelativePath = yamlPath
+                displayName = source.source.displayName ?? (yamlPath as NSString).lastPathComponent
+            } else {
+                AppLogger.llm.warning("Source \(source.id) has no audio path, skipping")
+                continue
+            }
+
+            // Audio files live under dataDirectory (~/HiDocu), not storageDirectory
+            let fileURL = fileSystemService.dataDirectory
+                .appendingPathComponent(audioRelativePath)
+
+            guard FileManager.default.fileExists(atPath: fileURL.path) else {
+                AppLogger.llm.error("Audio file not found: \(fileURL.path)")
+                throw LLMError.invalidResponse(detail: "Audio file not found: \(displayName)")
+            }
+
+            let fileData: Data
+            do {
+                fileData = try Data(contentsOf: fileURL)
+            } catch {
+                AppLogger.llm.error("Failed to read audio file: \(error.localizedDescription)")
+                throw LLMError.invalidResponse(detail: "Failed to read audio file: \(displayName)")
+            }
+
+            totalSize += fileData.count
+
+            let ext = fileURL.pathExtension.lowercased()
+            let mimeType = Self.audioMimeTypes[ext] ?? "audio/mpeg"
+            attachments.append(LLMAttachment(data: fileData, mimeType: mimeType))
+        }
+
+        guard !attachments.isEmpty else {
+            throw LLMError.invalidResponse(detail: "No audio files found in sources")
+        }
+
+        let sizeMBLog = Double(totalSize) / (1024 * 1024)
+        AppLogger.llm.info("Loaded \(attachments.count) audio file(s), total \(String(format: "%.1f", sizeMBLog)) MB")
+
+        if totalSize > Self.maxInlineDataSize {
+            let sizeMB = totalSize / (1024 * 1024)
+            throw LLMError.invalidResponse(
+                detail: "Audio files total \(sizeMB) MB, exceeding the 18 MB inline limit. Use shorter recordings."
+            )
+        }
+
+        return attachments
+    }
+
+    /// Generates a single audio transcript using Gemini multimodal API.
+    ///
+    /// - Parameters:
+    ///   - attachments: Pre-loaded audio attachments
+    ///   - model: Gemini model identifier
+    ///   - transcriptId: Transcript ID for API log linking
+    ///   - documentId: Document ID for API log linking
+    ///   - sourceId: Source ID for API log linking
+    /// - Returns: Transcript text
+    /// - Throws: `LLMError` if generation fails
+    func generateSingleTranscript(
+        attachments: [LLMAttachment],
+        model: String,
+        transcriptId: Int64,
+        documentId: Int64?,
+        sourceId: Int64?
+    ) async throws -> String {
+        let startTime = Date()
+        AppLogger.llm.info("Generating transcript for transcriptId=\(transcriptId) using model: \(model)")
+
+        let prompt = """
+            Transcribe this audio of an interview in a mix of Russian and English.
+            Do not try to save tokens in output by dropping some parts of the conversation. Be exact to the word, include everything that's being said. Do not skip anything.
+            Ideal response will contain full transcript of the audio with properly identified speakers.
+            """
+
+        let message = LLMMessage(role: .user, content: prompt, attachments: attachments)
+        let messages = [message]
+        let options = LLMRequestOptions(temperature: nil)
+
+        // Select Gemini account and get credentials
+        let account = try await selectAccount(provider: .gemini)
+
+        guard let strategy = providers[.gemini] else {
+            throw LLMError.authenticationFailed(provider: .gemini, detail: "Gemini provider not configured")
+        }
+
+        // Helper: single chat call with 401 retry and rate-limit exclusion
+        let chatWithRetry: () async throws -> LLMResponse = {
+            let (accessToken, tokenData) = try await self.getValidAccessToken(for: account)
+            do {
+                return try await strategy.chat(
+                    messages: messages, model: model, accessToken: accessToken,
+                    options: options, tokenData: tokenData
+                )
+            } catch let error as LLMError {
+                if case .rateLimited = error {
+                    self.excludeAccount(account.id)
+                    throw error
+                }
+                if case .apiError(_, let statusCode, _) = error, statusCode == 401 {
+                    AppLogger.llm.warning("Received 401 during transcription, refreshing token and retrying")
+                    let (newToken, refreshedData) = try await self.refreshAndGetToken(for: account)
+                    return try await strategy.chat(
+                        messages: messages, model: model, accessToken: newToken,
+                        options: options, tokenData: refreshedData
+                    )
+                }
+                throw error
+            }
+        }
+
+        do {
+            let response = try await chatWithRetry()
+            try await accountRepository.updateLastUsed(id: account.id)
+
+            // Log successful request
+            logTranscriptionRequest(
+                response: response,
+                account: account,
+                startTime: startTime,
+                model: model,
+                transcriptId: transcriptId,
+                documentId: documentId,
+                sourceId: sourceId
+            )
+
+            AppLogger.llm.info("Generated transcript for transcriptId=\(transcriptId)")
+            return response.content
+        } catch {
+            // Log error before rethrowing
+            logTranscriptionError(
+                error: error,
+                account: account,
+                model: model,
+                startTime: startTime,
+                transcriptId: transcriptId,
+                documentId: documentId,
+                sourceId: sourceId
+            )
+            throw error
+        }
+    }
+
+    /// Logs a successful transcription API request.
+    private func logTranscriptionRequest(
+        response: LLMResponse,
+        account: LLMAccount,
+        startTime: Date,
+        model: String,
+        transcriptId: Int64,
+        documentId: Int64?,
+        sourceId: Int64?
+    ) {
+        let duration = Int(Date().timeIntervalSince(startTime) * 1000)
+        let logEntry = APILogEntry(
+            id: 0,
+            provider: .gemini,
+            llmAccountId: account.id,
+            model: model,
+            requestPayload: "[audio transcription]",
+            responsePayload: truncatePayload(response.content, maxBytes: 10_000),
+            timestamp: Date(),
+            documentId: documentId,
+            sourceId: sourceId,
+            transcriptId: transcriptId,
+            status: "success",
+            error: nil,
+            inputTokens: response.inputTokens,
+            outputTokens: response.outputTokens,
+            durationMs: duration
+        )
+        Task {
+            do {
+                _ = try await apiLogRepository.insert(logEntry)
+            } catch {
+                AppLogger.llm.warning("Failed to insert API log: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Logs a failed transcription API request.
+    private func logTranscriptionError(
+        error: Error,
+        account: LLMAccount,
+        model: String,
+        startTime: Date,
+        transcriptId: Int64,
+        documentId: Int64?,
+        sourceId: Int64?
+    ) {
+        let duration = Int(Date().timeIntervalSince(startTime) * 1000)
+        let status: String
+        let errorMessage: String
+
+        if let llmError = error as? LLMError {
+            switch llmError {
+            case .rateLimited:
+                status = "rate_limited"
+                errorMessage = llmError.localizedDescription
+            default:
+                status = "error"
+                errorMessage = llmError.localizedDescription
+            }
+        } else {
+            status = "error"
+            errorMessage = error.localizedDescription
+        }
+
+        let logEntry = APILogEntry(
+            id: 0,
+            provider: .gemini,
+            llmAccountId: account.id,
+            model: model,
+            requestPayload: "[audio transcription]",
+            responsePayload: nil,
+            timestamp: Date(),
+            documentId: documentId,
+            sourceId: sourceId,
+            transcriptId: transcriptId,
+            status: status,
+            error: errorMessage,
+            inputTokens: nil,
+            outputTokens: nil,
+            durationMs: duration
+        )
+        Task {
+            do {
+                _ = try await apiLogRepository.insert(logEntry)
+            } catch {
+                AppLogger.llm.warning("Failed to insert API log: \(error.localizedDescription)")
+            }
+        }
     }
 
     // MARK: - Token Management (Private)

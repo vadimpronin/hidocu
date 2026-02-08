@@ -13,6 +13,8 @@ struct VariantTabBar: View {
     var onAdd: () -> Void
     var onDelete: ((Int64) -> Void)?
     var onPromote: ((Int64) -> Void)?
+    var onGenerate: (() -> Void)?
+    var isGenerating: Bool = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -22,7 +24,7 @@ struct VariantTabBar: View {
                         variantPill(transcript)
                     }
 
-                    addButton
+                    addMenu
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
@@ -43,14 +45,33 @@ struct VariantTabBar: View {
             selectedId = transcript.id
         } label: {
             HStack(spacing: 4) {
-                if transcript.isPrimary {
-                    Image(systemName: "checkmark.circle.fill")
+                // Status-specific rendering
+                switch transcript.status {
+                case .transcribing:
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Generating...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                case .failed:
+                    Image(systemName: "exclamationmark.triangle.fill")
                         .font(.caption2)
-                        .foregroundStyle(.green)
+                        .foregroundStyle(.orange)
+                    Text(transcript.title ?? "Variant \(transcript.id)")
+                        .font(.subheadline)
+                        .fontWeight(isSelected ? .semibold : .regular)
+
+                case .ready:
+                    if transcript.isPrimary {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.green)
+                    }
+                    Text(transcript.title ?? "Variant \(transcript.id)")
+                        .font(.subheadline)
+                        .fontWeight(isSelected ? .semibold : .regular)
                 }
-                Text(transcript.title ?? "Variant \(transcript.id)")
-                    .font(.subheadline)
-                    .fontWeight(isSelected ? .semibold : .regular)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
@@ -66,36 +87,63 @@ struct VariantTabBar: View {
         }
         .buttonStyle(.plain)
         .contextMenu {
+            if transcript.status == .failed {
+                Button("Retry") {
+                    // TODO: Implement retry logic
+                }
+                Divider()
+            }
+
             Button("Use as Document Body") {
                 onPromote?(transcript.id)
             }
-            .disabled(transcript.isPrimary)
+            .disabled(transcript.isPrimary || transcript.status != .ready)
 
             Divider()
 
             Button("Delete Variant", role: .destructive) {
                 onDelete?(transcript.id)
             }
-            .disabled(transcripts.count <= 1)
+            .disabled(transcripts.count <= 1 || isGenerating)
         }
     }
 
-    // MARK: - Add Button
+    // MARK: - Add Menu
 
-    private var addButton: some View {
-        Button {
-            onAdd()
+    private var addMenu: some View {
+        Menu {
+            Button {
+                onAdd()
+            } label: {
+                Label("Add Manually", systemImage: "square.and.pencil")
+            }
+
+            Divider()
+
+            Button {
+                onGenerate?()
+            } label: {
+                Label("Generate with AI...", systemImage: "sparkles")
+            }
+            .disabled(isGenerating)
         } label: {
-            Image(systemName: "plus")
-                .font(.caption)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
-                .background {
-                    Capsule()
-                        .fill(Color.secondary.opacity(0.1))
+            Group {
+                if isGenerating {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Image(systemName: "plus")
+                        .font(.caption)
                 }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background {
+                Capsule()
+                    .fill(Color.secondary.opacity(0.1))
+            }
         }
-        .buttonStyle(.plain)
-        .help("Add Variant")
+        .menuStyle(.borderlessButton)
+        .help(isGenerating ? "Generating transcript..." : "Add Variant")
     }
 }

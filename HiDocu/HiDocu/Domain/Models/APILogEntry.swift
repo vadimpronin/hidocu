@@ -18,6 +18,7 @@ struct APILogEntry: Identifiable, Sendable {
     let timestamp: Date
     let documentId: Int64?
     let sourceId: Int64?
+    let transcriptId: Int64?
     let status: String // "success", "error", "rate_limited"
     let error: String?
     let inputTokens: Int?

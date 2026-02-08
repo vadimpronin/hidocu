@@ -18,6 +18,7 @@ struct Source: Identifiable, Sendable, Equatable, Hashable {
     var sourceType: SourceType
     var recordingId: Int64?
     var diskPath: String
+    var audioPath: String?
     var displayName: String?
     var sortOrder: Int
     var addedAt: Date
@@ -28,6 +29,7 @@ struct Source: Identifiable, Sendable, Equatable, Hashable {
         sourceType: SourceType = .recording,
         recordingId: Int64? = nil,
         diskPath: String,
+        audioPath: String? = nil,
         displayName: String? = nil,
         sortOrder: Int = 0,
         addedAt: Date = Date()
@@ -37,6 +39,7 @@ struct Source: Identifiable, Sendable, Equatable, Hashable {
         self.sourceType = sourceType
         self.recordingId = recordingId
         self.diskPath = diskPath
+        self.audioPath = audioPath
         self.displayName = displayName
         self.sortOrder = sortOrder
         self.addedAt = addedAt

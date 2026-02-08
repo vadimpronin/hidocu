@@ -7,6 +7,12 @@
 
 import Foundation
 
+enum TranscriptStatus: String, Sendable, Codable, Hashable {
+    case transcribing
+    case ready
+    case failed
+}
+
 struct Transcript: Identifiable, Sendable, Equatable, Hashable {
     let id: Int64
     let sourceId: Int64
@@ -15,6 +21,7 @@ struct Transcript: Identifiable, Sendable, Equatable, Hashable {
     var fullText: String?
     var mdFilePath: String?
     var isPrimary: Bool
+    var status: TranscriptStatus
     var createdAt: Date
     var modifiedAt: Date
 
@@ -26,6 +33,7 @@ struct Transcript: Identifiable, Sendable, Equatable, Hashable {
         fullText: String? = nil,
         mdFilePath: String? = nil,
         isPrimary: Bool = false,
+        status: TranscriptStatus = .ready,
         createdAt: Date = Date(),
         modifiedAt: Date = Date()
     ) {
@@ -36,6 +44,7 @@ struct Transcript: Identifiable, Sendable, Equatable, Hashable {
         self.fullText = fullText
         self.mdFilePath = mdFilePath
         self.isPrimary = isPrimary
+        self.status = status
         self.createdAt = createdAt
         self.modifiedAt = modifiedAt
     }

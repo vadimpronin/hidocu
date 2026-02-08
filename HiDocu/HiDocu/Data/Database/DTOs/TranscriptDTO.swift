@@ -18,6 +18,7 @@ struct TranscriptDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
     var fullText: String?
     var mdFilePath: String?
     var isPrimary: Bool
+    var status: String
     var createdAt: Date
     var modifiedAt: Date
 
@@ -29,6 +30,7 @@ struct TranscriptDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         static let fullText = Column(CodingKeys.fullText)
         static let mdFilePath = Column(CodingKeys.mdFilePath)
         static let isPrimary = Column(CodingKeys.isPrimary)
+        static let status = Column(CodingKeys.status)
         static let createdAt = Column(CodingKeys.createdAt)
         static let modifiedAt = Column(CodingKeys.modifiedAt)
     }
@@ -41,6 +43,7 @@ struct TranscriptDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         case fullText = "full_text"
         case mdFilePath = "md_file_path"
         case isPrimary = "is_primary"
+        case status
         case createdAt = "created_at"
         case modifiedAt = "modified_at"
     }
@@ -53,6 +56,7 @@ struct TranscriptDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         self.fullText = domain.fullText
         self.mdFilePath = domain.mdFilePath
         self.isPrimary = domain.isPrimary
+        self.status = domain.status.rawValue
         self.createdAt = domain.createdAt
         self.modifiedAt = domain.modifiedAt
     }
@@ -66,6 +70,7 @@ struct TranscriptDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
             fullText: fullText,
             mdFilePath: mdFilePath,
             isPrimary: isPrimary,
+            status: TranscriptStatus(rawValue: status) ?? .ready,
             createdAt: createdAt,
             modifiedAt: modifiedAt
         )

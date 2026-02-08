@@ -488,6 +488,22 @@ final class DatabaseManager: Sendable {
             AppLogger.database.info("Migration v10_document_transcripts complete")
         }
 
+        // v11: Add audio_path column to sources for direct audio file resolution
+        migrator.registerMigration("v11_source_audio_path") { db in
+            try db.execute(sql: "ALTER TABLE sources ADD COLUMN audio_path TEXT")
+
+            AppLogger.database.info("Migration v11_source_audio_path complete")
+        }
+
+        // v12: Transcript status tracking and API log linking
+        migrator.registerMigration("v12_transcript_status") { db in
+            try db.execute(sql: "ALTER TABLE transcripts ADD COLUMN status TEXT NOT NULL DEFAULT 'ready'")
+            try db.execute(sql: "ALTER TABLE api_logs ADD COLUMN transcript_id INTEGER REFERENCES transcripts(id) ON DELETE SET NULL")
+            try db.execute(sql: "CREATE INDEX idx_api_logs_transcript ON api_logs(transcript_id) WHERE transcript_id IS NOT NULL")
+
+            AppLogger.database.info("Migration v12_transcript_status complete")
+        }
+
         return migrator
     }
     
