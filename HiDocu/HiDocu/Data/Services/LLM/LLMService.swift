@@ -216,7 +216,7 @@ final class LLMService {
         let dateFormatter = DateFormatter()
         dateFormatter.dateStyle = .long
         dateFormatter.timeStyle = .none
-        let systemPrompt = promptTemplate
+        let summaryPrompt = promptTemplate
             .replacingOccurrences(of: "{{document_body}}", with: body)
             .replacingOccurrences(of: "{{document_title}}", with: document.title)
             .replacingOccurrences(of: "{{current_date}}", with: dateFormatter.string(from: Date()))
@@ -231,15 +231,14 @@ final class LLMService {
             throw LLMError.authenticationFailed(provider: provider, detail: "Provider not supported")
         }
 
-        // Build messages — use instruction-only since body is embedded in the system prompt
         let messages = [
-            LLMMessage(role: .user, content: "Please summarize this document according to the instructions.")
+            LLMMessage(role: .user, content: summaryPrompt)
         ]
 
         let options = LLMRequestOptions(
             maxTokens: 4096,
             temperature: nil,
-            systemPrompt: systemPrompt
+//            systemPrompt: systemPrompt
         )
 
         // Make API call with retry on 401
@@ -296,7 +295,7 @@ final class LLMService {
             provider: provider,
             llmAccountId: account.id,
             model: response.model,
-            requestPayload: truncatePayload(systemPrompt, maxBytes: 10_000),
+            requestPayload: truncatePayload(summaryPrompt, maxBytes: 10_000),
             responsePayload: truncatePayload(response.content, maxBytes: 10_000),
             timestamp: Date(),
             documentId: document.id,
