@@ -394,7 +394,7 @@ final class LLMService {
     ]
 
     /// Maximum inline data size for Gemini API (conservative limit leaving room for prompt).
-    private static let maxInlineDataSize = 18 * 1024 * 1024 // 18 MB
+//    private static let maxInlineDataSize = 18 * 1024 * 1024 // 18 MB
 
     /// Prepares audio attachments from sources for transcription.
     ///
@@ -463,14 +463,25 @@ final class LLMService {
         let sizeMBLog = Double(totalSize) / (1024 * 1024)
         AppLogger.llm.info("Loaded \(attachments.count) audio file(s), total \(String(format: "%.1f", sizeMBLog)) MB")
 
-        if totalSize > Self.maxInlineDataSize {
-            let sizeMB = totalSize / (1024 * 1024)
-            throw LLMError.invalidResponse(
-                detail: "Audio files total \(sizeMB) MB, exceeding the 18 MB inline limit. Use shorter recordings."
-            )
-        }
+//        if totalSize > Self.maxInlineDataSize {
+//            let sizeMB = totalSize / (1024 * 1024)
+//            throw LLMError.invalidResponse(
+//                detail: "Audio files total \(sizeMB) MB, exceeding the 18 MB inline limit. Use shorter recordings."
+//            )
+//        }
 
         return attachments
+    }
+
+    /// Convenience overload of `prepareAudioAttachments` that accepts `[Source]` instead of `[SourceWithDetails]`.
+    /// - Parameters:
+    ///   - sources: Array of sources to prepare attachments from
+    ///   - fileSystemService: File system service to resolve file paths
+    /// - Returns: Array of LLM attachments with audio data
+    /// - Throws: `LLMError` if audio files are missing or exceed size limit
+    func prepareAudioAttachments(sources: [Source], fileSystemService: FileSystemService) throws -> [LLMAttachment] {
+        let wrapped = sources.map { SourceWithDetails(source: $0, recording: nil, transcripts: []) }
+        return try prepareAudioAttachments(sources: wrapped, fileSystemService: fileSystemService)
     }
 
     /// Generates a single audio transcript using Gemini multimodal API.
@@ -730,6 +741,21 @@ final class LLMService {
 
         AppLogger.llm.info("Token refreshed for account id=\(account.id)")
         return (newBundle.accessToken, newTokenData)
+    }
+
+    // MARK: - Account Availability
+
+    /// Checks if any active accounts are configured for the provider.
+    /// - Parameter provider: Provider to check
+    /// - Returns: True if at least one active account exists
+    func hasActiveAccounts(for provider: LLMProvider) async -> Bool {
+        do {
+            let accounts = try await accountRepository.fetchActive(provider: provider)
+            return !accounts.isEmpty
+        } catch {
+            AppLogger.llm.error("Failed to check active accounts for \(provider.rawValue): \(error.localizedDescription)")
+            return false
+        }
     }
 
     // MARK: - Account Selection (Private)

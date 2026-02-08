@@ -171,15 +171,21 @@ final class RecordingImportServiceV2 {
     private let fileSystemService: FileSystemService
     private let documentService: DocumentService
     private let sourceRepository: any SourceRepository
+    private let transcriptRepository: any TranscriptRepository
+    private let llmService: LLMService
 
     init(
         fileSystemService: FileSystemService,
         documentService: DocumentService,
-        sourceRepository: any SourceRepository
+        sourceRepository: any SourceRepository,
+        transcriptRepository: any TranscriptRepository,
+        llmService: LLMService
     ) {
         self.fileSystemService = fileSystemService
         self.documentService = documentService
         self.sourceRepository = sourceRepository
+        self.transcriptRepository = transcriptRepository
+        self.llmService = llmService
         AppLogger.fileSystem.info("RecordingImportServiceV2 initialized")
     }
 
@@ -357,7 +363,7 @@ final class RecordingImportServiceV2 {
 
         // Create Document + Source
         do {
-            _ = try await documentService.createDocumentWithSource(
+            let (doc, source) = try await documentService.createDocumentWithSource(
                 title: title,
                 audioRelativePath: audioRelativePath,
                 originalFilename: filename,
@@ -368,6 +374,7 @@ final class RecordingImportServiceV2 {
                 recordingMode: fileInfo.mode?.rawValue,
                 recordedAt: recordingDate
             )
+            triggerAutoTranscription(documentId: doc.id, sourceId: source.id, source: source)
         } catch {
             // Cleanup orphaned audio file
             let audioURL = fileSystemService.dataDirectory.appendingPathComponent(audioRelativePath)
@@ -408,7 +415,7 @@ final class RecordingImportServiceV2 {
                 let title = Self.documentTitle(for: creationDate, durationSeconds: nil)
 
                 do {
-                    let (doc, _) = try await documentService.createDocumentWithSource(
+                    let (doc, source) = try await documentService.createDocumentWithSource(
                         title: title,
                         audioRelativePath: audioRelativePath,
                         originalFilename: filename,
@@ -420,6 +427,7 @@ final class RecordingImportServiceV2 {
                         recordedAt: creationDate
                     )
                     imported.append(doc)
+                    triggerAutoTranscription(documentId: doc.id, sourceId: source.id, source: source)
                 } catch {
                     // Cleanup orphaned audio
                     let audioURL = fileSystemService.dataDirectory.appendingPathComponent(audioRelativePath)
@@ -445,5 +453,131 @@ final class RecordingImportServiceV2 {
             return "Recording \(dateString) (\(minutes) min)"
         }
         return "Recording \(dateString)"
+    }
+
+    // MARK: - Auto-Transcription
+
+    private static let autoTranscriptionModel = "gemini-3-pro-preview"
+    private static let autoTranscriptionCount = 3
+
+    private func triggerAutoTranscription(documentId: Int64, sourceId: Int64, source: Source) {
+        Task.detached { [self] in
+            await self.performAutoTranscription(documentId: documentId, sourceId: sourceId, source: source)
+        }
+    }
+
+    private func performAutoTranscription(documentId: Int64, sourceId: Int64, source: Source) async {
+        let model = Self.autoTranscriptionModel
+        let count = Self.autoTranscriptionCount
+
+        // Check if Gemini accounts are configured
+        guard await llmService.hasActiveAccounts(for: .gemini) else {
+            AppLogger.llm.warning("No Gemini accounts configured, skipping auto-transcription for document \(documentId)")
+            return
+        }
+
+        // Prepare audio attachments
+        let attachments: [LLMAttachment]
+        do {
+            attachments = try await llmService.prepareAudioAttachments(sources: [source], fileSystemService: fileSystemService)
+        } catch {
+            AppLogger.llm.error("Failed to prepare audio for auto-transcription of document \(documentId): \(error.localizedDescription)")
+            return
+        }
+
+        // Create transcript stubs with .transcribing status
+        var transcriptIds: [Int64] = []
+        for index in 0..<count {
+            let title = count > 1 ? "AI Transcript \(index + 1)" : "AI Transcript"
+            let transcript = Transcript(
+                sourceId: sourceId,
+                documentId: documentId,
+                title: title,
+                fullText: nil,
+                status: .transcribing
+            )
+            do {
+                let inserted = try await transcriptRepository.insert(transcript)
+                transcriptIds.append(inserted.id)
+            } catch {
+                AppLogger.llm.error("Failed to create transcript stub for document \(documentId): \(error.localizedDescription)")
+            }
+        }
+
+        guard !transcriptIds.isEmpty else { return }
+
+        AppLogger.llm.info("Starting auto-transcription for document \(documentId): \(transcriptIds.count) variants")
+
+        // Generate transcripts in parallel; first success becomes primary.
+        // `for await` iterates sequentially so `primarySet` is safe without synchronization.
+        var primarySet = false
+
+        await withTaskGroup(of: (Int64, Result<String, Error>).self) { group in
+            for transcriptId in transcriptIds {
+                group.addTask {
+                    do {
+                        let text = try await self.llmService.generateSingleTranscript(
+                            attachments: attachments,
+                            model: model,
+                            transcriptId: transcriptId,
+                            documentId: documentId,
+                            sourceId: sourceId
+                        )
+                        return (transcriptId, .success(text))
+                    } catch {
+                        return (transcriptId, .failure(error))
+                    }
+                }
+            }
+
+            for await (transcriptId, result) in group {
+                do {
+                    guard var transcript = try await transcriptRepository.fetchById(transcriptId) else {
+                        AppLogger.llm.warning("Transcript \(transcriptId) deleted during generation")
+                        continue
+                    }
+
+                    switch result {
+                    case .success(let text):
+                        transcript.fullText = text
+                        transcript.status = .ready
+                        transcript.modifiedAt = Date()
+                        try await transcriptRepository.update(transcript)
+
+                        if !primarySet {
+                            primarySet = true
+                            try await transcriptRepository.setPrimaryForDocument(id: transcriptId, documentId: documentId)
+                            try await documentService.writeBodyById(documentId: documentId, content: text)
+                            AppLogger.llm.info("Primary transcript \(transcriptId) set for document \(documentId), body updated")
+
+                            // Trigger summary generation in background
+                            if let doc = try await documentService.fetchDocument(id: documentId) {
+                                Task {
+                                    do {
+                                        _ = try await self.llmService.generateSummary(for: doc)
+                                    } catch {
+                                        AppLogger.llm.error("Auto-summary generation failed for document \(documentId): \(error.localizedDescription)")
+                                    }
+                                }
+                            }
+                        }
+
+                    case .failure(let error):
+                        transcript.status = .failed
+                        transcript.modifiedAt = Date()
+                        try await transcriptRepository.update(transcript)
+                        AppLogger.llm.error("Auto-transcription failed for transcript \(transcriptId): \(error.localizedDescription)")
+                    }
+                } catch {
+                    AppLogger.llm.error("Failed to update transcript \(transcriptId) after generation: \(error.localizedDescription)")
+                }
+            }
+        }
+
+        if primarySet {
+            AppLogger.llm.info("Auto-transcription completed successfully for document \(documentId)")
+        } else {
+            AppLogger.llm.warning("All auto-transcripts failed for document \(documentId), body remains empty")
+        }
     }
 }

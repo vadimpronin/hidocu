@@ -161,10 +161,14 @@ final class SourcesViewModel {
         do {
             var transcripts = try await transcriptRepository.fetchForDocument(documentId)
 
-            // Mark stale .transcribing transcripts as .failed (app restart during generation)
-            // Skip actively generating ones (tracked in activeTranscriptIds)
+            // Mark stale .transcribing transcripts as .failed (app restart during generation).
+            // Skip actively generating ones (tracked in activeTranscriptIds) and
+            // recently created ones (likely auto-transcription in progress from import).
+            let staleThreshold: TimeInterval = 1800 // 30 minutes
             for i in transcripts.indices where transcripts[i].status == .transcribing {
                 guard !activeTranscriptIds.contains(transcripts[i].id) else { continue }
+                let age = Date().timeIntervalSince(transcripts[i].createdAt)
+                guard age > staleThreshold else { continue }
                 var transcript = transcripts[i]
                 transcript.status = .failed
                 try await transcriptRepository.update(transcript)

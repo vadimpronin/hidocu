@@ -114,12 +114,7 @@ final class AppDependencyContainer {
             fileSystemService: fileSystemService
         )
 
-        self.importServiceV2 = RecordingImportServiceV2(
-            fileSystemService: fileSystemService,
-            documentService: documentService,
-            sourceRepository: sourceRepository
-        )
-
+        // LLMService must be initialized before importServiceV2 (which depends on it)
         self.llmService = LLMService(
             keychainService: keychainService,
             accountRepository: llmAccountRepository,
@@ -130,6 +125,14 @@ final class AppDependencyContainer {
             codexProvider: CodexProvider(),
             geminiProvider: GeminiProvider(),
             antigravityProvider: AntigravityProvider()
+        )
+
+        self.importServiceV2 = RecordingImportServiceV2(
+            fileSystemService: fileSystemService,
+            documentService: documentService,
+            sourceRepository: sourceRepository,
+            transcriptRepository: transcriptRepository,
+            llmService: llmService
         )
 
         // Apply settings to file system service

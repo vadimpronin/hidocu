@@ -400,10 +400,6 @@ final class DocumentService {
                 recordedAt: recordedAt
             )
 
-            // TEMPORARY: Create mock Lorem Ipsum transcripts for UI development.
-            // Remove once real transcription pipeline is integrated.
-            try await createMockTranscripts(sourceId: source.id, documentId: doc.id)
-
             AppLogger.fileSystem.info("Created document '\(title)' id=\(doc.id) with source \(source.id) for \(originalFilename)")
             return (doc, source)
         } catch {
@@ -413,79 +409,6 @@ final class DocumentService {
                 at: fileSystemService.dataDirectory.appendingPathComponent(doc.diskPath, isDirectory: true)
             )
             throw error
-        }
-    }
-
-    // MARK: - TEMPORARY: Mock Transcripts
-    // Remove this section once real transcription pipeline is integrated.
-
-    private func createMockTranscripts(sourceId: Int64, documentId: Int64) async throws {
-        let variants: [(title: String, text: String)] = [
-            (
-                "Расшифровка (основная)",
-                """
-                Добрый день, коллеги. Давайте начнём с обсуждения текущего статуса проекта. \
-                За прошедшую неделю мы завершили интеграцию модуля аналитики и провели \
-                нагрузочное тестирование. Результаты показали стабильную работу при десяти \
-                тысячах одновременных подключений. Однако обнаружилась проблема с кэшированием \
-                на стороне клиента — при обновлении данных старые значения сохраняются до \
-                перезагрузки страницы.
-
-                Следующий вопрос — планирование релиза. Мы предлагаем перенести дату на две \
-                недели, чтобы успеть доработать документацию и провести приёмочное тестирование \
-                с заказчиком. Если возражений нет, зафиксируем новую дату — двадцать второе \
-                февраля.
-
-                По третьему пункту — бюджет. Расходы на инфраструктуру выросли на пятнадцать \
-                процентов из-за перехода на выделенные серверы. Нужно согласовать дополнительное \
-                финансирование с руководством до конца месяца.
-                """
-            ),
-            (
-                "Расшифровка (альт. модель)",
-                """
-                Добрый день, коллеги. Начнём обсуждение текущего статуса проекта. На прошлой \
-                неделе завершена интеграция аналитического модуля и проведено нагрузочное \
-                тестирование. Система стабильно работает при 10 000 одновременных подключений. \
-                Выявлена проблема с клиентским кэшированием: устаревшие данные отображаются \
-                до принудительной перезагрузки.
-
-                Далее — планирование релиза. Предложение: сдвинуть дату на 2 недели для \
-                завершения документации и приёмочного тестирования. Новая дата — 22 февраля.
-
-                Третий вопрос — бюджет. Затраты на инфраструктуру увеличились на 15% после \
-                миграции на выделенные серверы. Необходимо утвердить дополнительное \
-                финансирование до конца текущего месяца.
-                """
-            ),
-            (
-                "Transcript (English)",
-                """
-                Good afternoon, colleagues. Let's begin with the current project status. Over \
-                the past week, we completed the analytics module integration and conducted load \
-                testing. Results showed stable performance at ten thousand concurrent connections. \
-                However, we discovered a client-side caching issue — stale data persists until \
-                the page is manually reloaded.
-
-                Next item — release planning. We propose postponing the date by two weeks to \
-                finalize documentation and conduct acceptance testing with the client. If there \
-                are no objections, the new target date is February twenty-second.
-
-                Third topic — budget. Infrastructure costs increased by fifteen percent due to \
-                the migration to dedicated servers. We need to secure additional funding approval \
-                from management by the end of this month.
-                """
-            )
-        ]
-
-        for variant in variants {
-            let transcript = Transcript(
-                sourceId: sourceId,
-                documentId: documentId,
-                title: variant.title,
-                fullText: variant.text
-            )
-            _ = try await transcriptRepository.insert(transcript)
         }
     }
 
