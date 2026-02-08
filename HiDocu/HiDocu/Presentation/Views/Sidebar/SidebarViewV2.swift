@@ -82,7 +82,7 @@ struct SidebarViewV2: View {
                 }
             }
         }
-        .navigationSplitViewColumnWidth(min: 180, ideal: 220)
+        .navigationSplitViewColumnWidth(min: 220, ideal: 270)
         .sheet(isPresented: $isCreatingFolder) {
             NewFolderSheet(
                 name: $newFolderName,

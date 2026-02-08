@@ -111,7 +111,7 @@ struct ContentViewV2: View {
                     folderName: currentFolderName,
                     isAllDocumentsView: navigationVM.selectedSidebarItem == .allDocuments
                 )
-                .navigationSplitViewColumnWidth(min: 220, ideal: 280, max: 400)
+                .navigationSplitViewColumnWidth(min: 300, ideal: 400, max: 500)
             } else {
                 ProgressView()
             }
