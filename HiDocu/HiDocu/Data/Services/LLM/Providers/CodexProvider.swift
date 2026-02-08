@@ -165,10 +165,13 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
         let visibleModels = models
             .filter { ($0["visibility"] as? String) == "list" }
             .sorted { ($0["priority"] as? Int ?? Int.max) < ($1["priority"] as? Int ?? Int.max) }
-            .compactMap { $0["slug"] as? String }
 
         AppLogger.llm.info("Fetched \(visibleModels.count) visible Codex models")
-        return visibleModels.map { ModelInfo(id: $0, displayName: $0) }
+        return visibleModels.compactMap { model in
+            guard let slug = model["slug"] as? String else { return nil }
+            let displayName = model["display_name"] as? String ?? slug
+            return ModelInfo(id: slug, displayName: displayName)
+        }
     }
 
     func chat(
