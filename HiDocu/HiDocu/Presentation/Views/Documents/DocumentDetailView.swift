@@ -110,15 +110,41 @@ struct DocumentDetailView: View {
         switch viewModel.selectedTab {
         case .body:
             VStack(spacing: 0) {
-                MarkdownEditableView(
-                    text: $viewModel.bodyText,
-                    isEditing: $viewModel.isBodyEditing
-                )
-                .onChange(of: viewModel.bodyText) { _, _ in
-                    viewModel.bodyDidChange()
+                if viewModel.bodyGenerationState == .generating &&
+                   viewModel.bodyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    VStack(spacing: 8) {
+                        ProgressView()
+                        Text("Generating content...")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 400)
+                } else {
+                    if case .error(let message) = viewModel.bodyGenerationState {
+                        HStack(spacing: 4) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.yellow)
+                            Text(message)
+                                .font(.caption)
+                                .lineLimit(1)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                    }
+
+                    MarkdownEditableView(
+                        text: $viewModel.bodyText,
+                        isEditing: $viewModel.isBodyEditing
+                    )
+                    .onChange(of: viewModel.bodyText) { _, _ in
+                        viewModel.bodyDidChange()
+                    }
                 }
-                .toolbar {
-                    ToolbarItem(placement: .primaryAction) {
+            }
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    if viewModel.bodyGenerationState != .generating {
                         Button(viewModel.isBodyEditing ? "Done" : "Edit") {
                             viewModel.isBodyEditing.toggle()
                         }
@@ -149,7 +175,7 @@ struct DocumentDetailView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    .frame(maxWidth: .infinity, minHeight: 400) // Ensure enough height for loader
+                    .frame(maxWidth: .infinity, minHeight: 400)
                 } else {
                     MarkdownEditableView(
                         text: $viewModel.summaryText,
@@ -170,7 +196,7 @@ struct DocumentDetailView: View {
                             disabled: viewModel.summaryGenerationState == .generating
                         )
                     }
-                    
+
                     if case .generating = viewModel.summaryGenerationState {
                         Button("Cancel", systemImage: "xmark") {
                             viewModel.cancelGeneration()
@@ -179,7 +205,7 @@ struct DocumentDetailView: View {
                         Button("Regenerate", systemImage: "arrow.triangle.2.circlepath") {
                             viewModel.generateSummary()
                         }
-                        
+
                         Button(viewModel.isSummaryEditing ? "Done" : "Edit") {
                             viewModel.isSummaryEditing.toggle()
                         }

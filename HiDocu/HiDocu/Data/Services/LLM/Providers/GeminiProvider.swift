@@ -247,7 +247,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
     ///   - accountId: Account ID (unused, kept for protocol conformance)
     /// - Returns: Sorted array of unique model identifiers
     /// - Throws: `LLMError` if fetch fails
-    func fetchModels(accessToken: String, accountId: String?) async throws -> [ModelInfo] {
+    func fetchModels(accessToken: String, accountId: String?, tokenData: TokenData? = nil) async throws -> [ModelInfo] {
         let url = URL(string: "\(Self.apiBaseURL):retrieveUserQuota")!
 
         var request = URLRequest(url: url)
@@ -258,9 +258,10 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         request.setValue(Self.cliApiClient, forHTTPHeaderField: "X-Goog-Api-Client")
         request.setValue(Self.cliMetadata, forHTTPHeaderField: "Client-Metadata")
 
-        // Build request body with project ID
+        // Use actual project ID from token data; fall back to wildcard
+        let projectId = tokenData?.projectId ?? "*"
         let body: [String: Any] = [
-            "project": "*"
+            "project": projectId
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
@@ -557,10 +558,150 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
             return projectId.trimmingCharacters(in: .whitespaces)
         }
 
+        // Code Assist is not enabled, auto-activate it
+        AppLogger.llm.info("Code Assist not enabled, activating automatically")
+
+        // Extract default tier ID from allowedTiers
+        var tierID = "free-tier" // Default fallback
+        if let allowedTiers = json["allowedTiers"] as? [[String: Any]] {
+            for tier in allowedTiers {
+                if let isDefault = tier["isDefault"] as? Bool, isDefault,
+                   let id = tier["id"] as? String, !id.isEmpty {
+                    tierID = id
+                    AppLogger.llm.debug("Using default tier: \(tierID)")
+                    break
+                }
+            }
+        }
+
+        // Activate Code Assist and return the project ID
+        return try await activateCodeAssist(accessToken: accessToken, tierID: tierID)
+    }
+
+    /// Activates Code Assist by calling the onboardUser endpoint with polling.
+    ///
+    /// Polls the `onboardUser` endpoint up to 20 times with 3-second intervals,
+    /// waiting for the activation to complete and return a project ID.
+    ///
+    /// - Parameters:
+    ///   - accessToken: Valid access token
+    ///   - tierID: Tier ID to activate (typically extracted from allowedTiers in loadCodeAssist)
+    /// - Returns: Cloud AI Companion project ID after successful activation
+    /// - Throws: `LLMError` if activation fails or times out
+    private func activateCodeAssist(accessToken: String, tierID: String) async throws -> String {
+        AppLogger.llm.info("Activating Code Assist with tier: \(tierID)")
+
+        let url = URL(string: "\(Self.apiBaseURL):onboardUser")!
+        let maxAttempts = 20
+        let pollInterval = Duration.seconds(3)
+
+        let body: [String: Any] = [
+            "tierId": tierID,
+            "metadata": [
+                "ideType": "IDE_UNSPECIFIED",
+                "platform": "PLATFORM_UNSPECIFIED",
+                "pluginType": "GEMINI"
+            ]
+        ]
+
+        let bodyData: Data
+        do {
+            bodyData = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            throw LLMError.apiError(
+                provider: .gemini,
+                statusCode: 0,
+                message: "Failed to serialize onboardUser request body: \(error.localizedDescription)"
+            )
+        }
+
+        // Poll up to maxAttempts times
+        for attempt in 1...maxAttempts {
+            AppLogger.llm.debug("Code Assist activation attempt \(attempt)/\(maxAttempts)")
+
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            request.setValue(Self.cliUserAgent, forHTTPHeaderField: "User-Agent")
+            request.setValue(Self.cliApiClient, forHTTPHeaderField: "X-Goog-Api-Client")
+            request.setValue(Self.cliMetadata, forHTTPHeaderField: "Client-Metadata")
+            request.httpBody = bodyData
+
+            let (data, response): (Data, URLResponse)
+
+            do {
+                (data, response) = try await urlSession.data(for: request)
+            } catch {
+                AppLogger.llm.error("onboardUser network error: \(error.localizedDescription)")
+                throw LLMError.networkError(underlying: error.localizedDescription)
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw LLMError.invalidResponse(detail: "Not an HTTP response")
+            }
+
+            guard (200...299).contains(httpResponse.statusCode) else {
+                let errorText = String(data: data, encoding: .utf8) ?? "Unknown"
+                AppLogger.llm.error("onboardUser failed with status \(httpResponse.statusCode): \(errorText)")
+                throw LLMError.apiError(
+                    provider: .gemini,
+                    statusCode: httpResponse.statusCode,
+                    message: "Code Assist activation failed: \(errorText)"
+                )
+            }
+
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                throw LLMError.invalidResponse(detail: "Failed to parse onboardUser response")
+            }
+
+            // Check if activation is done
+            if let done = json["done"] as? Bool, done {
+                AppLogger.llm.info("Code Assist activation completed")
+
+                // Extract project ID from response.cloudaicompanionProject
+                guard let responseMap = json["response"] as? [String: Any] else {
+                    throw LLMError.apiError(
+                        provider: .gemini,
+                        statusCode: 0,
+                        message: "Missing response data in completed onboardUser response"
+                    )
+                }
+
+                // Handle string format
+                if let projectId = responseMap["cloudaicompanionProject"] as? String, !projectId.isEmpty {
+                    AppLogger.llm.info("Code Assist activated successfully, project ID: \(projectId)")
+                    return projectId.trimmingCharacters(in: .whitespaces)
+                }
+
+                // Handle object format with "id" field
+                if let projectMap = responseMap["cloudaicompanionProject"] as? [String: Any],
+                   let projectId = projectMap["id"] as? String, !projectId.isEmpty {
+                    AppLogger.llm.info("Code Assist activated successfully, project ID: \(projectId)")
+                    return projectId.trimmingCharacters(in: .whitespaces)
+                }
+
+                // Activation completed but project ID not found
+                throw LLMError.apiError(
+                    provider: .gemini,
+                    statusCode: 0,
+                    message: "Code Assist activation completed but project ID not found in response"
+                )
+            }
+
+            // Not done yet, wait before next attempt (unless this is the last attempt)
+            if attempt < maxAttempts {
+                AppLogger.llm.debug("Code Assist activation in progress, waiting 3 seconds...")
+                try await Task.sleep(for: pollInterval)
+            }
+        }
+
+        // Exceeded max attempts
+        AppLogger.llm.error("Code Assist activation timed out after \(maxAttempts) attempts")
         throw LLMError.apiError(
             provider: .gemini,
             statusCode: 0,
-            message: "Project ID not found in loadCodeAssist response"
+            message: "Code Assist activation timed out. Please try again."
         )
     }
 

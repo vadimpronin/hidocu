@@ -966,6 +966,20 @@ actor LLMQueueService {
         }
     }
 
+    /// Checks if pending or running transcription/judge jobs exist for the given document.
+    /// These are the jobs that produce document body content.
+    func hasPendingBodyJob(documentId: Int64) async -> Bool {
+        do {
+            let jobs = try await jobRepository.fetchForDocument(documentId)
+            return jobs.contains {
+                ($0.jobType == .transcription || $0.jobType == .judge) &&
+                ($0.status == .pending || $0.status == .running)
+            }
+        } catch {
+            return false
+        }
+    }
+
     // MARK: - Constants
 
     /// MIME type mapping for audio file extensions.

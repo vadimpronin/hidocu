@@ -25,7 +25,8 @@ final class DocumentDetailViewModel {
     var bodyBytes: Int = 0
     var summaryBytes: Int = 0
     var errorMessage: String?
-    var summaryGenerationState: SummaryGenerationState = .idle
+    var summaryGenerationState: ContentGenerationState = .idle
+    var bodyGenerationState: ContentGenerationState = .idle
     var isSummaryEditing: Bool = false
     var isBodyEditing: Bool = false
     var selectedModelId: String = ""
@@ -37,7 +38,7 @@ final class DocumentDetailViewModel {
         case info = "Info"
     }
 
-    enum SummaryGenerationState: Equatable {
+    enum ContentGenerationState: Equatable {
         case idle
         case generating
         case error(String)
@@ -56,7 +57,9 @@ final class DocumentDetailViewModel {
     @ObservationIgnored
     nonisolated(unsafe) private var saveTimer: Timer?
     @ObservationIgnored
-    private var generationTask: Task<Void, Never>?
+    private var summaryGenerationTask: Task<Void, Never>?
+    @ObservationIgnored
+    private var bodyGenerationTask: Task<Void, Never>?
 
     init(documentService: DocumentService, llmService: LLMService? = nil, llmQueueService: LLMQueueService? = nil, settingsService: SettingsService) {
         self.documentService = documentService
@@ -66,6 +69,14 @@ final class DocumentDetailViewModel {
     }
 
     func loadDocument(_ doc: Document) {
+        // Cancel any previous generation polling
+        bodyGenerationTask?.cancel()
+        bodyGenerationTask = nil
+        bodyGenerationState = .idle
+        summaryGenerationTask?.cancel()
+        summaryGenerationTask = nil
+        summaryGenerationState = .idle
+
         document = doc
         titleText = doc.title
         loadedTitle = doc.title
@@ -100,6 +111,7 @@ final class DocumentDetailViewModel {
 
         // Check if a summary job is already in progress from a previous session
         checkPendingSummaryJob()
+        checkPendingBodyJobs()
     }
 
     func reloadBody() {
@@ -121,6 +133,7 @@ final class DocumentDetailViewModel {
     }
 
     func bodyDidChange() {
+        guard bodyGenerationState != .generating else { return }
         let modified = bodyText != loadedBody
         bodyModified = modified
         updateByteCounts()
@@ -223,11 +236,25 @@ final class DocumentDetailViewModel {
     /// and updates state accordingly. Call on view appear or document load.
     func checkPendingSummaryJob() {
         guard let doc = document, let llmQueueService else { return }
-        generationTask = Task {
+        summaryGenerationTask = Task {
             let hasPending = await llmQueueService.hasPendingSummaryJob(documentId: doc.id)
             if hasPending && summaryGenerationState != .generating {
                 summaryGenerationState = .generating
                 await startSummaryPolling(documentId: doc.id)
+            }
+        }
+    }
+
+    /// Checks whether body-producing jobs (transcription/judge) are pending for this document.
+    func checkPendingBodyJobs() {
+        guard let doc = document, let llmQueueService,
+              bodyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        let initialBodyHash = doc.bodyHash
+        bodyGenerationTask = Task {
+            let hasPending = await llmQueueService.hasPendingBodyJob(documentId: doc.id)
+            if hasPending && bodyGenerationState != .generating {
+                bodyGenerationState = .generating
+                await startBodyPolling(documentId: doc.id, initialBodyHash: initialBodyHash)
             }
         }
     }
@@ -258,7 +285,7 @@ final class DocumentDetailViewModel {
             model = settings.defaultModel.isEmpty ? "claude-3-5-sonnet-20241022" : settings.defaultModel
         }
 
-        generationTask = Task {
+        summaryGenerationTask = Task {
             do {
                 _ = try await llmQueueService.enqueueSummary(
                     documentId: doc.id,
@@ -317,14 +344,54 @@ final class DocumentDetailViewModel {
         }
     }
 
+    /// Polls for body content completion by watching for bodyHash changes.
+    private func startBodyPolling(documentId: Int64, initialBodyHash: String?) async {
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled else { break }
+
+            // Check if body was written (bodyHash changed)
+            if let refreshed = try? await documentService.fetchDocument(id: documentId),
+               refreshed.bodyHash != initialBodyHash, refreshed.bodyHash != nil {
+                document = refreshed
+                bodyText = (try? documentService.readBody(diskPath: refreshed.diskPath)) ?? ""
+                loadedBody = bodyText
+                bodyModified = false
+                bodyGenerationState = .idle
+                isBodyEditing = false
+                updateByteCounts()
+
+                // Body appeared — check if summary job was auto-enqueued after judge
+                checkPendingSummaryJob()
+                return
+            }
+
+            // Check if jobs still exist
+            guard let llmQueueService else { break }
+            let hasPending = await llmQueueService.hasPendingBodyJob(documentId: documentId)
+            if !hasPending {
+                bodyGenerationState = .error("Content generation failed. Check job queue for details.")
+                return
+            }
+        }
+
+        if Task.isCancelled {
+            bodyGenerationState = .idle
+        }
+    }
+
     func cancelGeneration() {
-        generationTask?.cancel()
-        generationTask = nil
+        summaryGenerationTask?.cancel()
+        summaryGenerationTask = nil
         summaryGenerationState = .idle
+        bodyGenerationTask?.cancel()
+        bodyGenerationTask = nil
+        bodyGenerationState = .idle
     }
 
     deinit {
         saveTimer?.invalidate()
-        generationTask?.cancel()
+        summaryGenerationTask?.cancel()
+        bodyGenerationTask?.cancel()
     }
 }

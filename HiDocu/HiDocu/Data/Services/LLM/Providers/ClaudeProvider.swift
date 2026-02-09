@@ -123,7 +123,7 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
         expiresAt.timeIntervalSinceNow < 300
     }
 
-    func fetchModels(accessToken: String, accountId: String?) async throws -> [ModelInfo] {
+    func fetchModels(accessToken: String, accountId: String?, tokenData: TokenData? = nil) async throws -> [ModelInfo] {
         AppLogger.llm.debug("Fetching model list from Claude API")
         var request = URLRequest(url: URL(string: "\(Self.apiBaseURL)/v1/models")!)
         request.httpMethod = "GET"

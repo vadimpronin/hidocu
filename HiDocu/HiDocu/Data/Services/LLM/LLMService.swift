@@ -191,7 +191,7 @@ final class LLMService {
         }
 
         // Fetch models from provider
-        let models = try await strategy.fetchModels(accessToken: accessToken, accountId: tokenData.accountId)
+        let models = try await strategy.fetchModels(accessToken: accessToken, accountId: tokenData.accountId, tokenData: tokenData)
         AppLogger.llm.info("Fetched \(models.count) models for \(provider.rawValue)")
         return models
     }
