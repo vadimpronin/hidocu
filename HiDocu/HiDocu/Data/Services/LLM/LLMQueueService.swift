@@ -3,7 +3,7 @@
 //  HiDocu
 //
 //  Background job processor for LLM operations with persistent queue.
-//  Signal-based dispatch, per-provider concurrency limits, automatic retry and recovery.
+//  Signal-based dispatch, per-account concurrency limits, automatic retry and recovery.
 //
 
 import Foundation
@@ -12,7 +12,7 @@ import Foundation
 ///
 /// This actor:
 /// - Maintains a persistent job queue via `LLMJobRepository`
-/// - Processes jobs with per-provider concurrency limits
+/// - Processes jobs with per-account concurrency limits
 /// - Handles retries with exponential backoff
 /// - Recovers stale jobs on startup
 /// - Signals to wake up on new work or retry timeouts
@@ -37,9 +37,10 @@ actor LLMQueueService {
     // MARK: - Concurrency Limits
 
     private let maxConcurrentGlobal = 3
-    private let maxConcurrentPerProvider = 1
+    private let maxConcurrentPerAccount = 1
     private var runningJobs: [Int64: Task<Void, Never>] = [:]  // jobId -> task
-    private var runningProviders: [LLMProvider: Int] = [:]  // provider -> count
+    private var runningAccounts: [Int64: Int] = [:]  // accountId -> running job count
+    private var accountRoundRobin: [LLMProvider: Int] = [:]  // round-robin counters for fair distribution
 
     // MARK: - Cleanup
 
@@ -276,10 +277,7 @@ actor LLMQueueService {
         if let task = runningJobs[jobId] {
             task.cancel()
             runningJobs.removeValue(forKey: jobId)
-            runningProviders[job.provider, default: 1] -= 1
-            if runningProviders[job.provider, default: 0] <= 0 {
-                runningProviders.removeValue(forKey: job.provider)
-            }
+            decrementAccountCount(for: job.accountId)
         }
 
         // Update job status
@@ -303,10 +301,7 @@ actor LLMQueueService {
             if let task = runningJobs[job.id] {
                 task.cancel()
                 runningJobs.removeValue(forKey: job.id)
-                runningProviders[job.provider, default: 1] -= 1
-                if runningProviders[job.provider, default: 0] <= 0 {
-                    runningProviders.removeValue(forKey: job.provider)
-                }
+                decrementAccountCount(for: job.accountId)
             }
         }
 
@@ -397,15 +392,31 @@ actor LLMQueueService {
                     return runningJobs[job.id] == nil
                 }
 
+            var activeAccountsCache: [LLMProvider: [LLMAccount]] = [:]
             var started = 0
             for job in candidates {
                 guard started < slotsAvailable else { break }
 
-                // Re-check provider concurrency (it changes as we start jobs in this loop)
-                let providerCount = runningProviders[job.provider, default: 0]
-                guard providerCount < maxConcurrentPerProvider else { continue }
+                // Lazy-load active accounts for this provider
+                if activeAccountsCache[job.provider] == nil {
+                    activeAccountsCache[job.provider] = try await accountRepository.fetchActive(provider: job.provider)
+                }
 
-                await startJob(job)
+                // Find accounts not at their concurrency limit
+                guard let providerAccounts = activeAccountsCache[job.provider] else { continue }
+                let freeAccounts = providerAccounts.filter {
+                    runningAccounts[$0.id, default: 0] < maxConcurrentPerAccount
+                }
+                guard !freeAccounts.isEmpty else { continue }
+
+                // Round-robin among free accounts
+                let counter = accountRoundRobin[job.provider, default: 0]
+                let selected = freeAccounts[counter % freeAccounts.count]
+                accountRoundRobin[job.provider] = counter + 1
+
+                var jobWithAccount = job
+                jobWithAccount.accountId = selected.id
+                await startJob(jobWithAccount)
                 started += 1
             }
 
@@ -416,22 +427,26 @@ actor LLMQueueService {
         }
     }
 
+    /// Decrements the running job count for an account and removes the entry when it reaches zero.
+    private func decrementAccountCount(for accountId: Int64?) {
+        guard let accountId else { return }
+        let count = (runningAccounts[accountId] ?? 0) - 1
+        if count <= 0 {
+            runningAccounts.removeValue(forKey: accountId)
+        } else {
+            runningAccounts[accountId] = count
+        }
+    }
+
     /// Starts a job execution in the background.
-    /// Checks for available accounts before starting. If none are available,
-    /// reschedules without counting as an attempt.
+    /// The job must have `accountId` assigned by `pickUpJobs()` before calling this method.
     private func startJob(_ job: LLMJob) async {
-        // Check if any accounts are available for this provider
-        do {
-            let activeAccounts = try await accountRepository.fetchActive(provider: job.provider)
-            if activeAccounts.isEmpty {
-                await deferJobUntilAccountAvailable(job)
-                return
-            }
-        } catch {
-            // On error, proceed and let execution handle it
+        guard let accountId = job.accountId else {
+            AppLogger.llm.error("Job \(job.id) started without accountId, skipping")
+            return
         }
 
-        // Mark as running in DB (attemptCount incremented later based on outcome)
+        // Mark as running in DB (also persists accountId)
         var runningJob = job
         runningJob.status = .running
         runningJob.startedAt = Date()
@@ -442,49 +457,14 @@ actor LLMQueueService {
             return
         }
 
-        // Track concurrency
-        runningProviders[job.provider, default: 0] += 1
+        // Track concurrency by account
+        runningAccounts[accountId, default: 0] += 1
 
         // Spawn task
         let task = Task {
             await self.executeJob(runningJob)
         }
         runningJobs[job.id] = task
-    }
-
-    /// Defers a job until an account becomes available for its provider.
-    /// Does NOT count as an attempt. Finds the earliest `paused_until` to schedule retry.
-    private func deferJobUntilAccountAvailable(_ job: LLMJob) async {
-        var deferred = job
-        let now = Date()
-
-        // Find the earliest paused_until to know when an account becomes available
-        do {
-            let allAccounts = try await accountRepository.fetchAll(provider: job.provider)
-            let nextAvailable = allAccounts
-                .compactMap { $0.pausedUntil }
-                .filter { $0 > now }
-                .min()
-
-            if let nextAvailable {
-                // Retry shortly after the earliest account unpauses (add 5s buffer)
-                deferred.nextRetryAt = nextAvailable.addingTimeInterval(5)
-            } else {
-                // No paused accounts found (all accounts might be inactive/deleted) - retry in 5 min
-                deferred.nextRetryAt = now.addingTimeInterval(300)
-            }
-        } catch {
-            deferred.nextRetryAt = now.addingTimeInterval(300)
-        }
-
-        do {
-            try await jobRepository.update(deferred)
-        } catch {
-            AppLogger.llm.error("Failed to defer job \(job.id): \(error.localizedDescription)")
-        }
-
-        let delaySeconds = Int(deferred.nextRetryAt?.timeIntervalSince(now) ?? 300)
-        AppLogger.llm.info("Job \(job.id) deferred: no available accounts for \(job.provider.rawValue), will retry in \(delaySeconds)s")
     }
 
     /// Executes a single job.
@@ -518,10 +498,7 @@ actor LLMQueueService {
 
         // Cleanup tracking
         runningJobs.removeValue(forKey: job.id)
-        runningProviders[job.provider, default: 1] -= 1
-        if runningProviders[job.provider, default: 0] <= 0 {
-            runningProviders.removeValue(forKey: job.provider)
-        }
+        decrementAccountCount(for: job.accountId)
 
         // After a transcription job finishes, check if all are done and enqueue judge if ready.
         if job.jobType == .transcription, let documentId = job.documentId {
@@ -733,7 +710,8 @@ actor LLMQueueService {
             model: job.model,
             transcriptId: payload.transcriptId,
             documentId: job.documentId,
-            sourceId: job.sourceId
+            sourceId: job.sourceId,
+            accountId: job.accountId
         )
 
         // Update transcript record with result text
@@ -762,7 +740,7 @@ actor LLMQueueService {
         }
 
         // Call LLMService to generate summary
-        _ = try await self.llmService.generateSummary(for: document, modelOverride: payload.modelOverride)
+        _ = try await self.llmService.generateSummary(for: document, modelOverride: payload.modelOverride, accountId: job.accountId)
 
         AppLogger.llm.info("Summary generated for document \(payload.documentId)")
     }
@@ -792,7 +770,8 @@ actor LLMQueueService {
             transcripts: transcripts,
             documentId: payload.documentId,
             provider: job.provider,
-            model: job.model
+            model: job.model,
+            accountId: job.accountId
         )
 
         // Set the best transcript as primary

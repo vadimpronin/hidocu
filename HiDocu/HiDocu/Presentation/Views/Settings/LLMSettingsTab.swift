@@ -41,7 +41,6 @@ private struct LLMSettingsContent: View {
         Form {
             accountsSection
             modelSection
-            actionDefaultsSection
             promptTemplateSection
         }
         .formStyle(.grouped)
@@ -162,7 +161,7 @@ private struct LLMSettingsContent: View {
     @ViewBuilder
     private var modelSection: some View {
         Section("Model") {
-            LabeledContent("Default Model") {
+            LabeledContent("Summarization Model") {
                 HStack(spacing: 4) {
                     ModelPickerMenu(
                         models: viewModel.availableModels,
@@ -172,6 +171,29 @@ private struct LLMSettingsContent: View {
                     refreshModelsButton
                 }
             }
+            
+            LabeledContent("Transcription Model") {
+                HStack(spacing: 4) {
+                    ModelPickerMenu(
+                        models: viewModel.audioCapableModels,
+                        selectedModelId: $viewModel.selectedTranscriptionModelId
+                    )
+
+                    refreshModelsButton
+                }
+            }
+
+            LabeledContent("Judge Model") {
+                HStack(spacing: 4) {
+                    ModelPickerMenu(
+                        models: viewModel.availableModels,
+                        selectedModelId: $viewModel.selectedJudgeModelId
+                    )
+
+                    refreshModelsButton
+                }
+            }
+
         }
     }
 
@@ -192,27 +214,6 @@ private struct LLMSettingsContent: View {
     }
 
     @State private var isRefreshingModels = false
-
-    // MARK: - Action Defaults Section
-
-    @ViewBuilder
-    private var actionDefaultsSection: some View {
-        Section("Action Defaults") {
-            LabeledContent("Transcription Model") {
-                ModelPickerMenu(
-                    models: viewModel.audioCapableModels,
-                    selectedModelId: $viewModel.selectedTranscriptionModelId
-                )
-            }
-
-            LabeledContent("Judge Model") {
-                ModelPickerMenu(
-                    models: viewModel.availableModels,
-                    selectedModelId: $viewModel.selectedJudgeModelId
-                )
-            }
-        }
-    }
 
     // MARK: - Prompt Template Section
 

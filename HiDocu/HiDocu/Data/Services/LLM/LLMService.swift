@@ -289,9 +289,10 @@ final class LLMService {
     /// - Parameters:
     ///   - document: Document to summarize
     ///   - modelOverride: Optional provider:model override (e.g., "claude:claude-3-5-sonnet-20241022")
+    ///   - accountId: Optional specific account ID to use instead of automatic selection
     /// - Returns: LLM response with generated summary
     /// - Throws: `LLMError` if generation fails
-    func generateSummary(for document: Document, modelOverride: String? = nil) async throws -> LLMResponse {
+    func generateSummary(for document: Document, modelOverride: String? = nil, accountId: Int64? = nil) async throws -> LLMResponse {
         let startTime = Date()
         AppLogger.llm.info("Generating summary for document id=\(document.id)")
 
@@ -346,7 +347,7 @@ final class LLMService {
             .replacingOccurrences(of: "{{current_date}}", with: dateFormatter.string(from: Date()))
 
         // Select account
-        let account = try await selectAccount(provider: provider)
+        let account = try await resolveAccount(accountId: accountId, provider: provider)
 
         // Get valid access token and token data (single keychain load)
         let (accessToken, currentTokenData) = try await tokenManager.getValidAccessToken(for: account)
@@ -616,6 +617,7 @@ final class LLMService {
     ///   - transcriptId: Transcript ID for API log linking
     ///   - documentId: Document ID for API log linking
     ///   - sourceId: Source ID for API log linking
+    ///   - accountId: Optional specific account ID to use instead of automatic selection
     /// - Returns: Transcript text
     /// - Throws: `LLMError` if generation fails
     func generateSingleTranscript(
@@ -623,7 +625,8 @@ final class LLMService {
         model: String,
         transcriptId: Int64,
         documentId: Int64?,
-        sourceId: Int64?
+        sourceId: Int64?,
+        accountId: Int64? = nil
     ) async throws -> String {
         let startTime = Date()
         AppLogger.llm.info("Generating transcript for transcriptId=\(transcriptId) using model: \(model)")
@@ -639,7 +642,7 @@ final class LLMService {
         let options = LLMRequestOptions(temperature: nil)
 
         // Select Gemini account and get credentials
-        let account = try await selectAccount(provider: .gemini)
+        let account = try await resolveAccount(accountId: accountId, provider: .gemini)
 
         guard let strategy = providers[.gemini] else {
             throw LLMError.authenticationFailed(provider: .gemini, detail: "Gemini provider not configured")
@@ -808,7 +811,8 @@ final class LLMService {
         transcripts: [Transcript],
         documentId: Int64,
         provider: LLMProvider = .gemini,
-        model: String = "gemini-3-pro-preview" // TODO: use settings.llm.judgeModel when configurable
+        model: String = "gemini-3-pro-preview", // TODO: use settings.llm.judgeModel when configurable
+        accountId: Int64? = nil
     ) async throws -> JudgeResponse {
         let startTime = Date()
         AppLogger.llm.info("Evaluating \(transcripts.count) transcripts for document \(documentId)")
@@ -852,7 +856,7 @@ final class LLMService {
             """
 
         // Select account
-        let account = try await selectAccount(provider: provider)
+        let account = try await resolveAccount(accountId: accountId, provider: provider)
 
         // Get valid access token
         let (accessToken, currentTokenData) = try await tokenManager.getValidAccessToken(for: account)
@@ -1071,6 +1075,23 @@ final class LLMService {
     }
 
     // MARK: - Account Selection (Private)
+
+    /// Resolves an account: uses a specific account if `accountId` is provided,
+    /// otherwise falls back to automatic selection.
+    /// - Parameters:
+    ///   - accountId: Optional specific account ID to use
+    ///   - provider: Provider for automatic selection fallback
+    /// - Returns: Resolved account
+    /// - Throws: `LLMError.allAccountsExhausted` if account not found or all paused
+    private func resolveAccount(accountId: Int64?, provider: LLMProvider) async throws -> LLMAccount {
+        if let accountId {
+            guard let account = try await accountRepository.fetchById(accountId) else {
+                throw LLMError.allAccountsExhausted(provider)
+            }
+            return account
+        }
+        return try await selectAccount(provider: provider)
+    }
 
     /// Selects an account for the provider using quota-aware selection with round-robin fallback.
     /// - Parameter provider: Provider to select account for
