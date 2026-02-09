@@ -128,6 +128,14 @@ struct DocumentDetailView: View {
                                 .font(.caption)
                                 .lineLimit(1)
                                 .foregroundStyle(.secondary)
+                            Spacer()
+                            Button {
+                                viewModel.bodyGenerationState = .idle
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
@@ -162,6 +170,14 @@ struct DocumentDetailView: View {
                             .font(.caption)
                             .lineLimit(1)
                             .foregroundStyle(.secondary)
+                        Spacer()
+                        Button {
+                            viewModel.summaryGenerationState = .idle
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 8)

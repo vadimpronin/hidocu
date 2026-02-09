@@ -133,7 +133,6 @@ final class DocumentDetailViewModel {
     }
 
     func bodyDidChange() {
-        guard bodyGenerationState != .generating else { return }
         let modified = bodyText != loadedBody
         bodyModified = modified
         updateByteCounts()
@@ -246,6 +245,8 @@ final class DocumentDetailViewModel {
     }
 
     /// Checks whether body-producing jobs (transcription/judge) are pending for this document.
+    /// Only starts polling when the body is currently empty (initial transcription).
+    /// Re-transcription scenarios update body via SourcesViewModel flow.
     func checkPendingBodyJobs() {
         guard let doc = document, let llmQueueService,
               bodyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
@@ -380,13 +381,11 @@ final class DocumentDetailViewModel {
         }
     }
 
+    /// Cancels the summary generation polling (wired to summary tab Cancel button).
     func cancelGeneration() {
         summaryGenerationTask?.cancel()
         summaryGenerationTask = nil
         summaryGenerationState = .idle
-        bodyGenerationTask?.cancel()
-        bodyGenerationTask = nil
-        bodyGenerationState = .idle
     }
 
     deinit {
