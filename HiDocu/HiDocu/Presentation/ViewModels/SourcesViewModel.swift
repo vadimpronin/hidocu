@@ -238,24 +238,27 @@ final class SourcesViewModel {
 
     // MARK: - LLM Judge
 
-    func judgeTranscripts(documentId: Int64, llmService: LLMService) async {
+    func judgeTranscripts(documentId: Int64, llmQueueService: LLMQueueService, provider: LLMProvider, model: String) async {
         let readyTranscripts = documentTranscripts.filter { $0.status == .ready }
-        guard readyTranscripts.count >= 3 else { return }
+        guard readyTranscripts.count >= 2 else { return }
 
         isJudging = true
         defer { isJudging = false }
 
         do {
-            let judgeResponse = try await llmService.evaluateTranscripts(
-                transcripts: readyTranscripts,
-                documentId: documentId
+            let transcriptIds = readyTranscripts.map(\.id)
+            _ = try await llmQueueService.enqueueJudge(
+                documentId: documentId,
+                transcriptIds: transcriptIds,
+                provider: provider,
+                model: model,
+                priority: 0
             )
-
-            // evaluateTranscripts already validates and remaps IDs to real DB IDs
-            await setDocumentPrimary(transcriptId: judgeResponse.bestId, documentId: documentId)
+            AppLogger.llm.info("Enqueued judge job for document \(documentId)")
+            // Note: The queue processor will handle setting primary transcript
         } catch {
-            AppLogger.llm.error("Judge evaluation failed: \(error.localizedDescription)")
-            generationError = "Judge evaluation failed: \(error.localizedDescription)"
+            AppLogger.llm.error("Failed to enqueue judge job: \(error.localizedDescription)")
+            generationError = "Failed to enqueue judge job: \(error.localizedDescription)"
         }
     }
 
@@ -265,8 +268,9 @@ final class SourcesViewModel {
         documentId: Int64,
         model: String,
         count: Int,
-        llmService: LLMService,
-        fileSystemService: FileSystemService
+        llmQueueService: LLMQueueService,
+        fileSystemService: FileSystemService,
+        provider: LLMProvider
     ) async {
         guard !sources.isEmpty else {
             generationError = "No audio sources available for transcription"
@@ -280,16 +284,24 @@ final class SourcesViewModel {
 
         generationError = nil
 
-        // Step 1: Prepare audio attachments (throws on error -> banner)
-        let attachments: [LLMAttachment]
-        do {
-            attachments = try llmService.prepareAudioAttachments(
-                sources: sources,
-                fileSystemService: fileSystemService
-            )
-        } catch {
-            AppLogger.general.error("Failed to prepare audio attachments: \(error.localizedDescription)")
-            generationError = error.localizedDescription
+        // Step 1: Collect audio relative paths (not loading data)
+        var audioRelativePaths: [String] = []
+        for sourceDetail in sources {
+            let source = sourceDetail.source
+            // Resolve audio path: DB audioPath → RecordingV2 filepath → source.yaml fallback
+            if let dbPath = source.audioPath {
+                audioRelativePaths.append(dbPath)
+            } else if let recording = sourceDetail.recording {
+                audioRelativePaths.append(recording.filepath)
+            } else if let yamlPath = fileSystemService.readSourceAudioPath(sourceDiskPath: source.diskPath) {
+                audioRelativePaths.append(yamlPath)
+            } else {
+                AppLogger.general.warning("Source \(source.id) has no audio path, skipping")
+            }
+        }
+
+        guard !audioRelativePaths.isEmpty else {
+            generationError = "No audio files found in sources"
             return
         }
 
@@ -320,58 +332,28 @@ final class SourcesViewModel {
             return
         }
 
-        // Step 3: Generate transcripts in parallel
-        await withTaskGroup(of: (Int64, Result<String, Error>).self) { group in
+        // Step 3: Enqueue transcription jobs for each transcript
+        do {
             for transcriptId in transcriptIds {
-                group.addTask {
-                    do {
-                        let text = try await llmService.generateSingleTranscript(
-                            attachments: attachments,
-                            model: model,
-                            transcriptId: transcriptId,
-                            documentId: documentId,
-                            sourceId: firstSourceId
-                        )
-                        return (transcriptId, .success(text))
-                    } catch {
-                        return (transcriptId, .failure(error))
-                    }
-                }
+                _ = try await llmQueueService.enqueueTranscription(
+                    documentId: documentId,
+                    sourceId: firstSourceId,
+                    transcriptId: transcriptId,
+                    provider: provider,
+                    model: model,
+                    audioRelativePaths: audioRelativePaths,
+                    priority: 0
+                )
             }
-
-            // Step 4: Process results as they complete
-            for await (transcriptId, result) in group {
-                activeTranscriptIds.remove(transcriptId)
-                do {
-                    guard var transcript = try await transcriptRepository.fetchById(transcriptId) else {
-                        AppLogger.general.warning("Transcript \(transcriptId) deleted during generation")
-                        continue
-                    }
-
-                    switch result {
-                    case .success(let text):
-                        transcript.fullText = text
-                        transcript.status = .ready
-                        transcript.modifiedAt = Date()
-                        try await transcriptRepository.update(transcript)
-
-                    case .failure(let error):
-                        transcript.status = .failed
-                        transcript.modifiedAt = Date()
-                        try await transcriptRepository.update(transcript)
-                        AppLogger.general.error("Transcript generation failed for \(transcriptId): \(error.localizedDescription)")
-                    }
-                } catch {
-                    AppLogger.general.error("Failed to update transcript \(transcriptId): \(error.localizedDescription)")
-                }
-            }
+            AppLogger.general.info("Enqueued \(transcriptIds.count) transcription job(s) for document \(documentId)")
+        } catch {
+            AppLogger.general.error("Failed to enqueue transcription jobs: \(error.localizedDescription)")
+            generationError = error.localizedDescription
         }
 
-        // Ensure cleanup even if task group exits unexpectedly
-        activeTranscriptIds.subtract(transcriptIds)
-
-        // Step 5: Reload transcripts to reflect final states
-        await loadDocumentTranscripts(documentId: documentId)
+        // Note: The queue processor will handle updating transcript records with results
+        // and triggering judge evaluation when all transcripts are complete.
+        // UI will observe status changes via loadDocumentTranscripts().
     }
 
     /// Fetches the error message for a failed transcript from API logs.

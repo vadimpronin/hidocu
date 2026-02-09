@@ -72,6 +72,40 @@ final class LLMSettingsViewModel {
         }
     }
 
+    /// Combined selection identifier for transcription ("provider:modelId").
+    var selectedTranscriptionModelId: String {
+        get {
+            let provider = settingsService.settings.llm.defaultTranscriptionProvider
+            let model = settingsService.settings.llm.defaultTranscriptionModel
+            guard !model.isEmpty else { return "" }
+            return "\(provider):\(model)"
+        }
+        set {
+            let parts = newValue.split(separator: ":", maxSplits: 1)
+            if parts.count == 2 {
+                settingsService.updateTranscriptionProvider(String(parts[0]))
+                settingsService.updateTranscriptionModel(String(parts[1]))
+            }
+        }
+    }
+
+    /// Combined selection identifier for judge ("provider:modelId").
+    var selectedJudgeModelId: String {
+        get {
+            let provider = settingsService.settings.llm.defaultJudgeProvider
+            let model = settingsService.settings.llm.defaultJudgeModel
+            guard !model.isEmpty else { return "" }
+            return "\(provider):\(model)"
+        }
+        set {
+            let parts = newValue.split(separator: ":", maxSplits: 1)
+            if parts.count == 2 {
+                settingsService.updateJudgeProvider(String(parts[0]))
+                settingsService.updateJudgeModel(String(parts[1]))
+            }
+        }
+    }
+
     // MARK: - Initialization
 
     init(llmService: LLMService, settingsService: SettingsService) {
@@ -130,9 +164,23 @@ final class LLMSettingsViewModel {
     private func autoSelectModelIfNeeded() {
         let models = availableModels
         guard !models.isEmpty else { return }
+
+        // Auto-select default model
         let currentId = selectedModelId
         if currentId.isEmpty || !models.contains(where: { $0.id == currentId }) {
             selectedModelId = models[0].id
+        }
+
+        // Auto-select transcription model
+        let transcriptionId = selectedTranscriptionModelId
+        if transcriptionId.isEmpty || !models.contains(where: { $0.id == transcriptionId }) {
+            selectedTranscriptionModelId = models[0].id
+        }
+
+        // Auto-select judge model
+        let judgeId = selectedJudgeModelId
+        if judgeId.isEmpty || !models.contains(where: { $0.id == judgeId }) {
+            selectedJudgeModelId = models[0].id
         }
     }
 }

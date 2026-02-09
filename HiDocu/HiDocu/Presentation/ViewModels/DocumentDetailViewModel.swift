@@ -45,6 +45,7 @@ final class DocumentDetailViewModel {
 
     private let documentService: DocumentService
     private let llmService: LLMService?
+    private let llmQueueService: LLMQueueService?
     private let settingsService: SettingsService
     @ObservationIgnored
     private var loadedTitle = ""
@@ -57,9 +58,10 @@ final class DocumentDetailViewModel {
     @ObservationIgnored
     private var generationTask: Task<Void, Never>?
 
-    init(documentService: DocumentService, llmService: LLMService? = nil, settingsService: SettingsService) {
+    init(documentService: DocumentService, llmService: LLMService? = nil, llmQueueService: LLMQueueService? = nil, settingsService: SettingsService) {
         self.documentService = documentService
         self.llmService = llmService
+        self.llmQueueService = llmQueueService
         self.settingsService = settingsService
     }
 
@@ -96,6 +98,8 @@ final class DocumentDetailViewModel {
             }
         }
 
+        // Check if a summary job is already in progress from a previous session
+        checkPendingSummaryJob()
     }
 
     func reloadBody() {
@@ -203,7 +207,7 @@ final class DocumentDetailViewModel {
         summaryBytes = summaryText.utf8.count
     }
 
-    var hasLLMService: Bool { llmService != nil }
+    var hasLLMService: Bool { llmService != nil && llmQueueService != nil }
 
     var availableModels: [AvailableModel] {
         llmService?.availableModels ?? []
@@ -215,30 +219,101 @@ final class DocumentDetailViewModel {
         !summaryText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    /// Checks whether a summary job is already pending/running for this document
+    /// and updates state accordingly. Call on view appear or document load.
+    func checkPendingSummaryJob() {
+        guard let doc = document, let llmQueueService else { return }
+        generationTask = Task {
+            let hasPending = await llmQueueService.hasPendingSummaryJob(documentId: doc.id)
+            if hasPending && summaryGenerationState != .generating {
+                summaryGenerationState = .generating
+                await startSummaryPolling(documentId: doc.id)
+            }
+        }
+    }
+
     func generateSummary() {
-        guard let doc = document, let llmService else { return }
+        guard let doc = document, let llmQueueService else { return }
         saveTimer?.invalidate()
         saveTimer = nil
         summaryGenerationState = .generating
         let modelId = selectedModelId.isEmpty ? nil : selectedModelId
 
+        // Determine provider and model
+        let provider: LLMProvider
+        let model: String
+        if let override = modelId {
+            let parts = override.split(separator: ":", maxSplits: 1)
+            if parts.count == 2, let providerValue = LLMProvider(rawValue: String(parts[0])) {
+                provider = providerValue
+                model = String(parts[1])
+            } else {
+                let settings = settingsService.settings.llm
+                provider = LLMProvider(rawValue: settings.defaultProvider) ?? .claude
+                model = settings.defaultModel.isEmpty ? "claude-3-5-sonnet-20241022" : settings.defaultModel
+            }
+        } else {
+            let settings = settingsService.settings.llm
+            provider = LLMProvider(rawValue: settings.defaultProvider) ?? .claude
+            model = settings.defaultModel.isEmpty ? "claude-3-5-sonnet-20241022" : settings.defaultModel
+        }
+
         generationTask = Task {
             do {
-                let response = try await llmService.generateSummary(for: doc, modelOverride: modelId)
-                summaryText = response.content
-                loadedSummary = response.content
-                summaryModified = false
-                summaryGenerationState = .idle
-                isSummaryEditing = false
-                updateByteCounts()
-                if let refreshed = try await documentService.fetchDocument(id: doc.id) {
-                    document = refreshed
-                }
+                _ = try await llmQueueService.enqueueSummary(
+                    documentId: doc.id,
+                    provider: provider,
+                    model: model,
+                    modelOverride: modelId,
+                    priority: 0
+                )
+
+                await startSummaryPolling(documentId: doc.id)
             } catch is CancellationError {
                 summaryGenerationState = .idle
             } catch {
                 summaryGenerationState = .error(error.localizedDescription)
             }
+        }
+    }
+
+    /// Polls for summary completion, checking both the document and the job queue.
+    /// Runs indefinitely until the summary appears, the job fails/cancels, or the task is cancelled.
+    private func startSummaryPolling(documentId: Int64) async {
+        let enqueueTime = Date()
+
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled else { break }
+
+            // Check if summary was generated
+            if let refreshed = try? await documentService.fetchDocument(id: documentId),
+               let summaryGenAt = refreshed.summaryGeneratedAt,
+               summaryGenAt > enqueueTime {
+                document = refreshed
+                summaryText = (try? documentService.readSummary(diskPath: refreshed.diskPath)) ?? ""
+                loadedSummary = summaryText
+                summaryModified = false
+                summaryGenerationState = .idle
+                isSummaryEditing = false
+                updateByteCounts()
+                return
+            }
+
+            // Check if the job still exists and hasn't failed
+            guard let llmQueueService else { break }
+            let hasPending = await llmQueueService.hasPendingSummaryJob(documentId: documentId)
+            if !hasPending {
+                // Job is no longer pending/running - check if it failed
+                // (if it completed, we would have caught it above via summaryGeneratedAt)
+                summaryGenerationState = .error("Summary generation failed. Check job queue for details.")
+                return
+            }
+        }
+
+        // Cancelled
+        if Task.isCancelled {
+            summaryGenerationState = .idle
         }
     }
 

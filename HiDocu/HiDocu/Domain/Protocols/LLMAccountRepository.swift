@@ -60,4 +60,11 @@ protocol LLMAccountRepository: Sendable {
     /// - Parameter id: Account identifier
     /// - Throws: Database errors if account doesn't exist
     func updateLastUsed(id: Int64) async throws
+
+    /// Updates the pausedUntil timestamp for an account.
+    /// - Parameters:
+    ///   - id: Account identifier
+    ///   - pausedUntil: Date when the pause expires, or nil to unpause
+    /// - Throws: Database errors if account doesn't exist
+    func updatePausedUntil(id: Int64, pausedUntil: Date?) async throws
 }

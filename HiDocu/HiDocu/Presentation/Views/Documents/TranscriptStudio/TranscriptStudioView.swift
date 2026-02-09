@@ -57,13 +57,17 @@ struct TranscriptStudioView: View {
         .sheet(isPresented: $showGenerateSheet) {
             GenerateTranscriptSheet { model, count in
                 guard let container else { return }
+                // Determine provider from settings (defaultTranscriptionProvider)
+                let providerString = container.settingsService.settings.llm.defaultTranscriptionProvider
+                let provider = LLMProvider(rawValue: providerString) ?? .gemini
                 Task {
                     await viewModel.generateTranscripts(
                         documentId: documentId,
                         model: model,
                         count: count,
-                        llmService: container.llmService,
-                        fileSystemService: container.fileSystemService
+                        llmQueueService: container.llmQueueService,
+                        fileSystemService: container.fileSystemService,
+                        provider: provider
                     )
                 }
             }
@@ -213,10 +217,17 @@ struct TranscriptStudioView: View {
                 onGenerate: { showGenerateSheet = true },
                 onJudge: {
                     guard let container else { return }
+                    // Determine provider and model from settings (defaultJudgeProvider/Model)
+                    let settings = container.settingsService.settings.llm
+                    let providerString = settings.defaultJudgeProvider
+                    let provider = LLMProvider(rawValue: providerString) ?? .gemini
+                    let model = settings.defaultJudgeModel.isEmpty ? "gemini-3-pro-preview" : settings.defaultJudgeModel
                     Task {
                         await viewModel.judgeTranscripts(
                             documentId: documentId,
-                            llmService: container.llmService
+                            llmQueueService: container.llmQueueService,
+                            provider: provider,
+                            model: model
                         )
                     }
                 },

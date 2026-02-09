@@ -39,6 +39,9 @@ final class AppDependencyContainer {
     let deletionLogRepository: SQLiteDeletionLogRepository
     let llmAccountRepository: SQLiteLLMAccountRepository
     let apiLogRepository: SQLiteAPILogRepository
+    let llmUsageRepository: SQLiteLLMUsageRepository
+    let llmJobRepository: SQLiteLLMJobRepository
+    let llmModelLimitRepository: SQLiteLLMModelLimitRepository
 
     // MARK: - Services
 
@@ -49,7 +52,11 @@ final class AppDependencyContainer {
     let settingsService: SettingsService
     let importServiceV2: RecordingImportServiceV2
     let keychainService: KeychainService
+    let tokenManager: TokenManager
     let llmService: LLMService
+    let quotaService: QuotaService
+    let llmQueueState: LLMQueueState
+    let llmQueueService: LLMQueueService
 
     // MARK: - Initialization
 
@@ -79,6 +86,9 @@ final class AppDependencyContainer {
         self.deletionLogRepository = SQLiteDeletionLogRepository(databaseManager: databaseManager)
         self.llmAccountRepository = SQLiteLLMAccountRepository(databaseManager: databaseManager)
         self.apiLogRepository = SQLiteAPILogRepository(databaseManager: databaseManager)
+        self.llmUsageRepository = SQLiteLLMUsageRepository(databaseManager: databaseManager)
+        self.llmJobRepository = SQLiteLLMJobRepository(databaseManager: databaseManager)
+        self.llmModelLimitRepository = SQLiteLLMModelLimitRepository(databaseManager: databaseManager)
 
         // Initialize services
         self.settingsService = SettingsService()
@@ -114,17 +124,58 @@ final class AppDependencyContainer {
             fileSystemService: fileSystemService
         )
 
+        // Initialize provider strategies (shared between TokenManager and LLMService)
+        let claudeProvider = ClaudeProvider()
+        let codexProvider = CodexProvider()
+        let geminiProvider = GeminiProvider()
+        let antigravityProvider = AntigravityProvider()
+        let providerMap: [LLMProvider: any LLMProviderStrategy] = [
+            .claude: claudeProvider,
+            .codex: codexProvider,
+            .gemini: geminiProvider,
+            .antigravity: antigravityProvider
+        ]
+
+        // TokenManager must be initialized before LLMService
+        self.tokenManager = TokenManager(
+            keychainService: keychainService,
+            accountRepository: llmAccountRepository,
+            providers: providerMap
+        )
+
+        // QuotaService must be initialized before LLMService
+        self.quotaService = QuotaService(
+            tokenManager: tokenManager,
+            accountRepository: llmAccountRepository,
+            usageRepository: llmUsageRepository
+        )
+
         // LLMService must be initialized before importServiceV2 (which depends on it)
         self.llmService = LLMService(
+            tokenManager: tokenManager,
             keychainService: keychainService,
             accountRepository: llmAccountRepository,
             apiLogRepository: apiLogRepository,
             documentService: documentService,
             settingsService: settingsService,
-            claudeProvider: ClaudeProvider(),
-            codexProvider: CodexProvider(),
-            geminiProvider: GeminiProvider(),
-            antigravityProvider: AntigravityProvider()
+            quotaService: quotaService,
+            claudeProvider: claudeProvider,
+            codexProvider: codexProvider,
+            geminiProvider: geminiProvider,
+            antigravityProvider: antigravityProvider
+        )
+
+        // Initialize LLM queue state and service (must be before importServiceV2)
+        self.llmQueueState = LLMQueueState()
+        self.llmQueueService = LLMQueueService(
+            jobRepository: llmJobRepository,
+            llmService: llmService,
+            quotaService: quotaService,
+            transcriptRepository: transcriptRepository,
+            documentService: documentService,
+            fileSystemService: fileSystemService,
+            settingsService: settingsService,
+            state: llmQueueState
         )
 
         self.importServiceV2 = RecordingImportServiceV2(
@@ -132,7 +183,9 @@ final class AppDependencyContainer {
             documentService: documentService,
             sourceRepository: sourceRepository,
             transcriptRepository: transcriptRepository,
-            llmService: llmService
+            llmService: llmService,
+            llmQueueService: llmQueueService,
+            settingsService: settingsService
         )
 
         // Apply settings to file system service
@@ -145,6 +198,14 @@ final class AppDependencyContainer {
             sourceRepository: sourceRepository,
             fileSystemService: fileSystemService
         )
+
+        // Start periodic quota refresh
+        quotaService.startPeriodicRefresh()
+
+        // Start LLM queue processor
+        Task {
+            await llmQueueService.startProcessing()
+        }
 
         AppLogger.general.info("AppDependencyContainer initialized successfully")
     }

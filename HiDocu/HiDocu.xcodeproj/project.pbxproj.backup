@@ -6,14 +6,14 @@
 	objectVersion = 60;
 	objects = {
 
-/* Begin PBXBuildFile section */
+/* Begin PBXBuildFile section */		TM10000000000001 /* TokenManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = TM00000000000001 /* TokenManager.swift */; };
+		QB00000000000001 /* QuotaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = QS00000000000001 /* QuotaService.swift */; };
 		0119A84E4F2840779DA2E2B3 /* TimeInterval+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86F8B131B8884602A9CF022F /* TimeInterval+Extensions.swift */; };
 		022D1B3252A0A87CE530C60B /* RecordingV2DTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9D040E8C768C4EB7680B474 /* RecordingV2DTO.swift */; };
 		04DE6A3CDE2453D7D214B2CF /* SQLiteRecordingRepositoryV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = A29A4A2521C6F0977A6C729F /* SQLiteRecordingRepositoryV2.swift */; };
 		099ED2A72F348EBA00905EA4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 099ED2A52F348BBA00905EA4 /* Assets.xcassets */; };
 		0AF8675E8C569156DCE9CD4B /* ContentViewV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A200194A4444435072733F /* ContentViewV2.swift */; };
 		0EC792C8A6BE261D6C07D17F /* TrashService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D69953C06FF92116AE18C2DE /* TrashService.swift */; };
-		0ED011EB7EC2F9A051A66982 /* QuotaPopoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B943509DFD1D703D9B64291 /* QuotaPopoverView.swift */; };
 		126303CB56D1092A093FF1D6 /* SourcesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBA3562E4C531972E9D61F66 /* SourcesViewModel.swift */; };
 		20B7797FB09248004C7B5DF8 /* DocumentDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4937DF72E8C1DB57768B0B94 /* DocumentDTO.swift */; };
 		2D4B4E272B97C1411E75FA0C /* SQLiteDeletionLogRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA3834F987CA973FCD8506B /* SQLiteDeletionLogRepository.swift */; };
@@ -21,13 +21,10 @@
 		32C7299902FF667CC690A02A /* SQLiteTranscriptRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A04E6ED12F76D8DF4867E7 /* SQLiteTranscriptRepository.swift */; };
 		3664B05D38E1AED300889576 /* Document.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4C310BB2F07F16244282199 /* Document.swift */; };
 		3D6B099B9A5D77F71AADE23C /* FolderDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BE26D22ECF04CC038346BDC /* FolderDTO.swift */; };
-		3DE8D43D5E41E48342A9B174 /* JobMonitorPopoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02EA9E22A4AFD964CEEF863C /* JobMonitorPopoverView.swift */; };
-		
 		53438D90B497848BD250352E /* FolderTreeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEF1499B052B6ECD6B8CCF60 /* FolderTreeViewModel.swift */; };
 		5364D32C7080B14CCE496046 /* ContextService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C0838C39A86F5F4DC084A98 /* ContextService.swift */; };
 		5454FE8644F05C68769CE2B3 /* DeletionLogDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37BFD95EBB1B504ED68E3980 /* DeletionLogDTO.swift */; };
 		57CCCAE7FE29385655121C19 /* SourceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A98CB705C2B0017E531544B6 /* SourceRepository.swift */; };
-		59EDC159E09807316685383A /* AudioTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC75A3560352EBA261A78E28 /* AudioTimelineView.swift */; };
 		63DB1BE9930DC98549A59509 /* TrashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F542AE3F2464304DFD5DEFD6 /* TrashView.swift */; };
 		6653E1E533CD3337CF17CEB4 /* FolderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42EB92A51DFBFEB3BE82AB4E /* FolderService.swift */; };
 		68054ABA82DDCF81977052B3 /* DeviceDashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14B1464F9B61FF0B4ED761F6 /* DeviceDashboardViewModel.swift */; };
@@ -35,28 +32,26 @@
 		6FBDED703B6FC6EC14A8324E /* PathSanitizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF266F9B0F879544CB1FB848 /* PathSanitizer.swift */; };
 		7C544CC177A527E1114D7392 /* SourceDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBECEEA4D622EE030E4E9ED6 /* SourceDTO.swift */; };
 		7C9C910ECDD42858F96B2447 /* BatteryIndicatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07496990C2830BD1439D5351 /* BatteryIndicatorView.swift */; };
-		7E55DC0BB950CB6CC941F149 /* VariantTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C37075ADF55F93DD763F974 /* VariantTabBar.swift */; };
 		7FE08A5C64923C365769E369 /* Folder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA55DE2ACE96B64C6A54BE4E /* Folder.swift */; };
 		826884BB9C56944CC45A4128 /* DocumentRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12A960990416284D3F0FFA9C /* DocumentRepository.swift */; };
 		87474A9B92E8EEC01F279E7F /* DeviceDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09134FD2A3C89DFB7EA7BB0F /* DeviceDashboardView.swift */; };
 		8C1F7AFE2BA73F51196C0CE6 /* RecordingRepositoryV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93F40903E763C5CAAA849A16 /* RecordingRepositoryV2.swift */; };
 		8FC3622F4017BD0964C8FA82 /* FolderSettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114150E40F24A3004A2DF620 /* FolderSettingsSheet.swift */; };
-		90464C9049A11C09988A7C66 /* AddTranscriptSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 770B5B44BD9261D588D42502 /* AddTranscriptSheet.swift */; };
-		92AEDC85782DB00613E2A128 /* ToolbarJobMonitorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23ED289FB59AE3C4686E8DFC /* ToolbarJobMonitorView.swift */; };
 		9DDDA0CC7D5FA306672B6EE7 /* SettingsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1982272C3186149C008392DB /* SettingsService.swift */; };
-		A1B2C3D4E5F6G7H8I9J0K1L2 /* GenerateTranscriptSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = M3N4O5P6Q7R8S9T0U1V2W3X4 /* GenerateTranscriptSheet.swift */; };
 		A2626B02BDE9315C6B921544 /* DocumentListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CF5D0788A026355A829DC46 /* DocumentListViewModel.swift */; };
 		A42DC75AA8AEA317B8C3AF98 /* RecordingPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 627C906DFCEFBC8B5814A44A /* RecordingPickerView.swift */; };
 		A5B176A9AEBF7C402C7342DA /* SQLiteSourceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 438E368ED96312AD4F772D25 /* SQLiteSourceRepository.swift */; };
 		A6B8973348B1B36D7C152E9F /* FolderRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDA413EE9305C427988A7439 /* FolderRepository.swift */; };
 		A7E80828A8F4FECF9047CDEE /* SQLiteDocumentRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58E73F682433820EF6C487A9 /* SQLiteDocumentRepository.swift */; };
-		
-		AC0B048F36B4BD35DAF3A6D5 /* TranscriptStatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25F73D445794CFE78B28411B /* TranscriptStatusBar.swift */; };
 		AFA436901852E6303785837D /* NavigationViewModelV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = B89857DC3BCEF88B833F5CEF /* NavigationViewModelV2.swift */; };
 		B0FBD0073DA6FED0C951D973 /* Source.swift in Sources */ = {isa = PBXBuildFile; fileRef = 371F17CB8D6ADADD5D3AD590 /* Source.swift */; };
 		B748C5428CCF2AE46CDC0CDD /* SidebarViewV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A63BCA40C34F1107B6A60 /* SidebarViewV2.swift */; };
 		BB00000100000001 /* LLMProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000100000001 /* LLMProvider.swift */; };
 		BB00000200000002 /* LLMAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000200000002 /* LLMAccount.swift */; };
+		BM00000000000004 /* LLMModelLimit.swift in Sources */ = {isa = PBXBuildFile; fileRef = DM00000000000004 /* LLMModelLimit.swift */; };
+		BM00000000000003 /* LLMUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = DM00000000000003 /* LLMUsage.swift */; };
+		BM00000000000002 /* LLMJobPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = DM00000000000002 /* LLMJobPayload.swift */; };
+		BM00000000000001 /* LLMJob.swift in Sources */ = {isa = PBXBuildFile; fileRef = DM00000000000001 /* LLMJob.swift */; };
 		BB00000300000003 /* LLMMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000300000003 /* LLMMessage.swift */; };
 		BB00000400000004 /* APILogEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000400000004 /* APILogEntry.swift */; };
 		BB00000500000005 /* LLMError.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000500000005 /* LLMError.swift */; };
@@ -74,32 +69,24 @@
 		BB0000B00000000B /* JudgeResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000B00000000B /* JudgeResponse.swift */; };
 		BE6ECC1B25F71F50417558E0 /* RecordingImportServiceV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368BA73F8C08D273FE2B21C8 /* RecordingImportServiceV2.swift */; };
 		BFC601E7D452D90CD990621E /* DocumentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6226CD68D273A20A4EBB9B65 /* DocumentService.swift */; };
-		BM00000000000001 /* LLMJob.swift in Sources */ = {isa = PBXBuildFile; fileRef = DM00000000000001 /* LLMJob.swift */; };
-		BM00000000000002 /* LLMJobPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = DM00000000000002 /* LLMJobPayload.swift */; };
-		BM00000000000003 /* LLMUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = DM00000000000003 /* LLMUsage.swift */; };
-		BM00000000000004 /* LLMModelLimit.swift in Sources */ = {isa = PBXBuildFile; fileRef = DM00000000000004 /* LLMModelLimit.swift */; };
-		BTO0000000000001 /* LLMJobDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DTO0000000000001 /* LLMJobDTO.swift */; };
-		BTO0000000000002 /* LLMUsageDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DTO0000000000002 /* LLMUsageDTO.swift */; };
-		BTO0000000000003 /* LLMModelLimitDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DTO0000000000003 /* LLMModelLimitDTO.swift */; };
-		C28F8D0E49B151F81D6633B4 /* TranscriptStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 905223C42AFE09B648A3121F /* TranscriptStudioView.swift */; };
 		C5C630A403A97F0B29ABD83C /* DocumentListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F5287EBB0531F111E6E01E6 /* DocumentListView.swift */; };
 		C614C88D8F7EA4968EB1C148 /* DocumentDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAADD95ECAC7FF3C0B18B887 /* DocumentDetailViewModel.swift */; };
-		C7458EEDB15A9101AE14A13A /* PromoteBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BFD426BB0B6D99B53CEE11E /* PromoteBanner.swift */; };
 		CC0000C00000000C /* ModelPickerMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000B00000000B /* ModelPickerMenu.swift */; };
 		CC1000C00000000C /* MarkdownEditableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000C00000000C /* MarkdownEditableView.swift */; };
 		CE4EB2D09509DEC4A3A562E1 /* TranscriptDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = B930F1D2F342C5D58BD7B889 /* TranscriptDTO.swift */; };
 		D29B81C7FF9C622845D2E888 /* DeletionLogRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47BF7D3168C144CED0C36ED9 /* DeletionLogRepository.swift */; };
-		
 		DE3B51E4417F4918F5022E40 /* RecordingV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB033465FB3E12E0BB749B1 /* RecordingV2.swift */; };
 		DF3313BAB7828D8D8AB8304A /* DeletionLogEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1358CE1110F0A9D6089071F3 /* DeletionLogEntry.swift */; };
 		E6BB1D6635FBEC8625C57A77 /* DocumentDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDC92D8AF4F6028806551C10 /* DocumentDetailView.swift */; };
-		E9628EC90C9811DAA5FDE221 /* ToolbarQuotaIndicatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48AB4784CE383DE158F98103 /* ToolbarQuotaIndicatorView.swift */; };
 		EE00000100000001 /* LLMAccountDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000100000001 /* LLMAccountDTO.swift */; };
+		BTO0000000000003 /* LLMModelLimitDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DTO0000000000003 /* LLMModelLimitDTO.swift */; };
+		BTO0000000000002 /* LLMUsageDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DTO0000000000002 /* LLMUsageDTO.swift */; };
+		BTO0000000000001 /* LLMJobDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DTO0000000000001 /* LLMJobDTO.swift */; };
 		EE00000200000002 /* APILogDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000200000002 /* APILogDTO.swift */; };
 		EE00000300000003 /* SQLiteLLMAccountRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000300000003 /* SQLiteLLMAccountRepository.swift */; };
-		EE00000300000004 /* SQLiteLLMUsageRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000300000004 /* SQLiteLLMUsageRepository.swift */; };
-		EE00000300000005 /* SQLiteLLMJobRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000300000005 /* SQLiteLLMJobRepository.swift */; };
 		EE00000300000006 /* SQLiteLLMModelLimitRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000300000006 /* SQLiteLLMModelLimitRepository.swift */; };
+		EE00000300000005 /* SQLiteLLMJobRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000300000005 /* SQLiteLLMJobRepository.swift */; };
+		EE00000300000004 /* SQLiteLLMUsageRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000300000004 /* SQLiteLLMUsageRepository.swift */; };
 		EE00000400000004 /* SQLiteAPILogRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000400000004 /* SQLiteAPILogRepository.swift */; };
 		F0000001F0000001 /* HiDocuApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000011F0000011 /* HiDocuApp.swift */; };
 		F0000002F0000002 /* AppDependencyContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000012F0000012 /* AppDependencyContainer.swift */; };
@@ -121,7 +108,6 @@
 		F0A00003F0A00003 /* ImportLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A00013F0A00013 /* ImportLogicTests.swift */; };
 		F0A00052F0A00052 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = F0A00053F0A00053 /* GRDB */; };
 		F21116180C58EFA51A7A7459 /* SQLiteFolderRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 366665D1CFE1F75AFAAD9DF4 /* SQLiteFolderRepository.swift */; };
-		
 		F5A00001F5A00001 /* TranscriptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A00011F5A00011 /* TranscriptionTests.swift */; };
 		F8000020F8000020 /* ErrorBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8000010F8000010 /* ErrorBannerView.swift */; };
 		FF10000100000001 /* ClaudeProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000100000001 /* ClaudeProvider.swift */; };
@@ -131,10 +117,13 @@
 		FF10000500000005 /* LLMSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000500000005 /* LLMSettingsViewModel.swift */; };
 		FF10000600000006 /* LLMSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000600000006 /* LLMSettingsTab.swift */; };
 		FF10000700000007 /* AntigravityProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000700000007 /* AntigravityProvider.swift */; };
-		LQS1000000000001 /* LLMQueueState.swift in Sources */ = {isa = PBXBuildFile; fileRef = LQS0000000000001 /* LLMQueueState.swift */; };
-		LQV1000000000001 /* LLMQueueService.swift in Sources */ = {isa = PBXBuildFile; fileRef = LQV0000000000001 /* LLMQueueService.swift */; };
-		QB00000000000001 /* QuotaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = QS00000000000001 /* QuotaService.swift */; };
-		TM10000000000001 /* TokenManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = TM00000000000001 /* TokenManager.swift */; };
+		C28F8D0E49B151F81D6633B4 /* TranscriptStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 905223C42AFE09B648A3121F /* TranscriptStudioView.swift */; };
+		59EDC159E09807316685383A /* AudioTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC75A3560352EBA261A78E28 /* AudioTimelineView.swift */; };
+		7E55DC0BB950CB6CC941F149 /* VariantTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C37075ADF55F93DD763F974 /* VariantTabBar.swift */; };
+		C7458EEDB15A9101AE14A13A /* PromoteBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BFD426BB0B6D99B53CEE11E /* PromoteBanner.swift */; };
+		AC0B048F36B4BD35DAF3A6D5 /* TranscriptStatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25F73D445794CFE78B28411B /* TranscriptStatusBar.swift */; };
+		90464C9049A11C09988A7C66 /* AddTranscriptSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 770B5B44BD9261D588D42502 /* AddTranscriptSheet.swift */; };
+		A1B2C3D4E5F6G7H8I9J0K1L2 /* GenerateTranscriptSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = M3N4O5P6Q7R8S9T0U1V2W3X4 /* GenerateTranscriptSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -147,22 +136,18 @@
 		};
 /* End PBXContainerItemProxy section */
 
-/* Begin PBXFileReference section */
-		02EA9E22A4AFD964CEEF863C /* JobMonitorPopoverView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = JobMonitorPopoverView.swift; path = JobMonitorPopoverView.swift; sourceTree = "<group>"; };
+/* Begin PBXFileReference section */		TM00000000000001 /* TokenManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenManager.swift; sourceTree = "<group>"; };
+		QS00000000000001 /* QuotaService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaService.swift; sourceTree = "<group>"; };
 		07496990C2830BD1439D5351 /* BatteryIndicatorView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BatteryIndicatorView.swift; sourceTree = "<group>"; };
 		09134FD2A3C89DFB7EA7BB0F /* DeviceDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DeviceDashboardView.swift; path = HiDocu/Presentation/Views/Device/DeviceDashboardView.swift; sourceTree = SOURCE_ROOT; };
 		099ED2A52F348BBA00905EA4 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		0B943509DFD1D703D9B64291 /* QuotaPopoverView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QuotaPopoverView.swift; sourceTree = "<group>"; };
 		114150E40F24A3004A2DF620 /* FolderSettingsSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FolderSettingsSheet.swift; sourceTree = "<group>"; };
 		120ABFADCBA34F60024F6346 /* Transcript.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Transcript.swift; sourceTree = "<group>"; };
 		12A960990416284D3F0FFA9C /* DocumentRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentRepository.swift; sourceTree = "<group>"; };
 		1358CE1110F0A9D6089071F3 /* DeletionLogEntry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeletionLogEntry.swift; sourceTree = "<group>"; };
 		14B1464F9B61FF0B4ED761F6 /* DeviceDashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DeviceDashboardViewModel.swift; path = HiDocu/Presentation/ViewModels/DeviceDashboardViewModel.swift; sourceTree = SOURCE_ROOT; };
 		1982272C3186149C008392DB /* SettingsService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsService.swift; sourceTree = "<group>"; };
-		23ED289FB59AE3C4686E8DFC /* ToolbarJobMonitorView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ToolbarJobMonitorView.swift; sourceTree = "<group>"; };
-		25F73D445794CFE78B28411B /* TranscriptStatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptStatusBar.swift; sourceTree = "<group>"; };
 		2B0D1580CF48C34D6AA476C3 /* TranscriptRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TranscriptRepository.swift; sourceTree = "<group>"; };
-		2C37075ADF55F93DD763F974 /* VariantTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VariantTabBar.swift; sourceTree = "<group>"; };
 		364A63BCA40C34F1107B6A60 /* SidebarViewV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SidebarViewV2.swift; sourceTree = "<group>"; };
 		366665D1CFE1F75AFAAD9DF4 /* SQLiteFolderRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SQLiteFolderRepository.swift; sourceTree = "<group>"; };
 		368BA73F8C08D273FE2B21C8 /* RecordingImportServiceV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingImportServiceV2.swift; sourceTree = "<group>"; };
@@ -173,28 +158,25 @@
 		42EB92A51DFBFEB3BE82AB4E /* FolderService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FolderService.swift; sourceTree = "<group>"; };
 		438E368ED96312AD4F772D25 /* SQLiteSourceRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SQLiteSourceRepository.swift; sourceTree = "<group>"; };
 		47BF7D3168C144CED0C36ED9 /* DeletionLogRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeletionLogRepository.swift; sourceTree = "<group>"; };
-		48AB4784CE383DE158F98103 /* ToolbarQuotaIndicatorView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ToolbarQuotaIndicatorView.swift; sourceTree = "<group>"; };
 		4937DF72E8C1DB57768B0B94 /* DocumentDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentDTO.swift; sourceTree = "<group>"; };
-		
-		
 		58E73F682433820EF6C487A9 /* SQLiteDocumentRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SQLiteDocumentRepository.swift; sourceTree = "<group>"; };
 		5CF5D0788A026355A829DC46 /* DocumentListViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentListViewModel.swift; sourceTree = "<group>"; };
 		6226CD68D273A20A4EBB9B65 /* DocumentService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentService.swift; sourceTree = "<group>"; };
 		627C906DFCEFBC8B5814A44A /* RecordingPickerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingPickerView.swift; sourceTree = "<group>"; };
 		6BE26D22ECF04CC038346BDC /* FolderDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FolderDTO.swift; sourceTree = "<group>"; };
-		
-		770B5B44BD9261D588D42502 /* AddTranscriptSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTranscriptSheet.swift; sourceTree = "<group>"; };
 		86F8B131B8884602A9CF022F /* TimeInterval+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimeInterval+Extensions.swift"; sourceTree = "<group>"; };
 		8C0838C39A86F5F4DC084A98 /* ContextService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContextService.swift; sourceTree = "<group>"; };
-		905223C42AFE09B648A3121F /* TranscriptStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptStudioView.swift; sourceTree = "<group>"; };
 		93F40903E763C5CAAA849A16 /* RecordingRepositoryV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingRepositoryV2.swift; sourceTree = "<group>"; };
-		9BFD426BB0B6D99B53CEE11E /* PromoteBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromoteBanner.swift; sourceTree = "<group>"; };
 		9CB033465FB3E12E0BB749B1 /* RecordingV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingV2.swift; sourceTree = "<group>"; };
 		A29A4A2521C6F0977A6C729F /* SQLiteRecordingRepositoryV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SQLiteRecordingRepositoryV2.swift; sourceTree = "<group>"; };
 		A98CB705C2B0017E531544B6 /* SourceRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceRepository.swift; sourceTree = "<group>"; };
 		A9D040E8C768C4EB7680B474 /* RecordingV2DTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingV2DTO.swift; sourceTree = "<group>"; };
 		AA00000100000001 /* LLMProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProvider.swift; sourceTree = "<group>"; };
 		AA00000200000002 /* LLMAccount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMAccount.swift; sourceTree = "<group>"; };
+		DM00000000000004 /* LLMModelLimit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMModelLimit.swift; sourceTree = "<group>"; };
+		DM00000000000003 /* LLMUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMUsage.swift; sourceTree = "<group>"; };
+		DM00000000000002 /* LLMJobPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMJobPayload.swift; sourceTree = "<group>"; };
+		DM00000000000001 /* LLMJob.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMJob.swift; sourceTree = "<group>"; };
 		AA00000300000003 /* LLMMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMMessage.swift; sourceTree = "<group>"; };
 		AA00000400000004 /* APILogEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APILogEntry.swift; sourceTree = "<group>"; };
 		AA00000500000005 /* LLMError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMError.swift; sourceTree = "<group>"; };
@@ -218,29 +200,23 @@
 		BC12039CA327089CC1010027 /* SettingsViewV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsViewV2.swift; sourceTree = "<group>"; };
 		BDA413EE9305C427988A7439 /* FolderRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FolderRepository.swift; sourceTree = "<group>"; };
 		CC0000B00000000B /* ModelPickerMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelPickerMenu.swift; sourceTree = "<group>"; };
+		DD0000C00000000C /* MarkdownEditableView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MarkdownEditableView.swift; sourceTree = "<group>"; };
 		D0A200194A4444435072733F /* ContentViewV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContentViewV2.swift; sourceTree = "<group>"; };
 		D69953C06FF92116AE18C2DE /* TrashService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TrashService.swift; sourceTree = "<group>"; };
-		
 		DBA3562E4C531972E9D61F66 /* SourcesViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesViewModel.swift; sourceTree = "<group>"; };
 		DBECEEA4D622EE030E4E9ED6 /* SourceDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceDTO.swift; sourceTree = "<group>"; };
 		DD00000100000001 /* LLMAccountDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMAccountDTO.swift; sourceTree = "<group>"; };
+		DTO0000000000003 /* LLMModelLimitDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMModelLimitDTO.swift; sourceTree = "<group>"; };
+		DTO0000000000002 /* LLMUsageDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMUsageDTO.swift; sourceTree = "<group>"; };
+		DTO0000000000001 /* LLMJobDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMJobDTO.swift; sourceTree = "<group>"; };
 		DD00000200000002 /* APILogDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APILogDTO.swift; sourceTree = "<group>"; };
 		DD00000300000003 /* SQLiteLLMAccountRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteLLMAccountRepository.swift; sourceTree = "<group>"; };
-		DD00000300000004 /* SQLiteLLMUsageRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteLLMUsageRepository.swift; sourceTree = "<group>"; };
-		DD00000300000005 /* SQLiteLLMJobRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteLLMJobRepository.swift; sourceTree = "<group>"; };
 		DD00000300000006 /* SQLiteLLMModelLimitRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteLLMModelLimitRepository.swift; sourceTree = "<group>"; };
+		DD00000300000005 /* SQLiteLLMJobRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteLLMJobRepository.swift; sourceTree = "<group>"; };
+		DD00000300000004 /* SQLiteLLMUsageRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteLLMUsageRepository.swift; sourceTree = "<group>"; };
 		DD00000400000004 /* SQLiteAPILogRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteAPILogRepository.swift; sourceTree = "<group>"; };
-		DD0000C00000000C /* MarkdownEditableView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MarkdownEditableView.swift; sourceTree = "<group>"; };
 		DF266F9B0F879544CB1FB848 /* PathSanitizer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PathSanitizer.swift; sourceTree = "<group>"; };
-		DM00000000000001 /* LLMJob.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMJob.swift; sourceTree = "<group>"; };
-		DM00000000000002 /* LLMJobPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMJobPayload.swift; sourceTree = "<group>"; };
-		DM00000000000003 /* LLMUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMUsage.swift; sourceTree = "<group>"; };
-		DM00000000000004 /* LLMModelLimit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMModelLimit.swift; sourceTree = "<group>"; };
-		DTO0000000000001 /* LLMJobDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMJobDTO.swift; sourceTree = "<group>"; };
-		DTO0000000000002 /* LLMUsageDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMUsageDTO.swift; sourceTree = "<group>"; };
-		DTO0000000000003 /* LLMModelLimitDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMModelLimitDTO.swift; sourceTree = "<group>"; };
 		E4C310BB2F07F16244282199 /* Document.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Document.swift; sourceTree = "<group>"; };
-		EC75A3560352EBA261A78E28 /* AudioTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTimelineView.swift; sourceTree = "<group>"; };
 		F0000000F0000000 /* HiDocu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HiDocu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F0000011F0000011 /* HiDocuApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiDocuApp.swift; sourceTree = "<group>"; };
 		F0000012F0000012 /* AppDependencyContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencyContainer.swift; sourceTree = "<group>"; };
@@ -271,11 +247,13 @@
 		FF00000500000005 /* LLMSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMSettingsViewModel.swift; sourceTree = "<group>"; };
 		FF00000600000006 /* LLMSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMSettingsTab.swift; sourceTree = "<group>"; };
 		FF00000700000007 /* AntigravityProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityProvider.swift; sourceTree = "<group>"; };
-		LQS0000000000001 /* LLMQueueState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMQueueState.swift; sourceTree = "<group>"; };
-		LQV0000000000001 /* LLMQueueService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMQueueService.swift; sourceTree = "<group>"; };
+		905223C42AFE09B648A3121F /* TranscriptStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptStudioView.swift; sourceTree = "<group>"; };
+		EC75A3560352EBA261A78E28 /* AudioTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTimelineView.swift; sourceTree = "<group>"; };
+		2C37075ADF55F93DD763F974 /* VariantTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VariantTabBar.swift; sourceTree = "<group>"; };
+		9BFD426BB0B6D99B53CEE11E /* PromoteBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromoteBanner.swift; sourceTree = "<group>"; };
+		25F73D445794CFE78B28411B /* TranscriptStatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptStatusBar.swift; sourceTree = "<group>"; };
+		770B5B44BD9261D588D42502 /* AddTranscriptSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTranscriptSheet.swift; sourceTree = "<group>"; };
 		M3N4O5P6Q7R8S9T0U1V2W3X4 /* GenerateTranscriptSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateTranscriptSheet.swift; sourceTree = "<group>"; };
-		QS00000000000001 /* QuotaService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaService.swift; sourceTree = "<group>"; };
-		TM00000000000001 /* TokenManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -308,17 +286,6 @@
 			path = Device;
 			sourceTree = "<group>";
 		};
-		4BE3B9C61F7EC32C4CA2E163 /* Documents */ = {
-			isa = PBXGroup;
-			children = (
-				3F5287EBB0531F111E6E01E6 /* DocumentListView.swift */,
-				FDC92D8AF4F6028806551C10 /* DocumentDetailView.swift */,
-				627C906DFCEFBC8B5814A44A /* RecordingPickerView.swift */,
-				5D72292447C49CDF94138C43 /* TranscriptStudio */,
-			);
-			path = Documents;
-			sourceTree = "<group>";
-		};
 		5D72292447C49CDF94138C43 /* TranscriptStudio */ = {
 			isa = PBXGroup;
 			children = (
@@ -331,6 +298,17 @@
 				M3N4O5P6Q7R8S9T0U1V2W3X4 /* GenerateTranscriptSheet.swift */,
 			);
 			path = TranscriptStudio;
+			sourceTree = "<group>";
+		};
+		4BE3B9C61F7EC32C4CA2E163 /* Documents */ = {
+			isa = PBXGroup;
+			children = (
+				3F5287EBB0531F111E6E01E6 /* DocumentListView.swift */,
+				FDC92D8AF4F6028806551C10 /* DocumentDetailView.swift */,
+				627C906DFCEFBC8B5814A44A /* RecordingPickerView.swift */,
+				5D72292447C49CDF94138C43 /* TranscriptStudio */,
+			);
+			path = Documents;
 			sourceTree = "<group>";
 		};
 		6631DDC458171CC9C7062A5D /* Trash */ = {
@@ -351,8 +329,6 @@
 				FF00000400000004 /* LLMService.swift */,
 				TM00000000000001 /* TokenManager.swift */,
 				QS00000000000001 /* QuotaService.swift */,
-				LQS0000000000001 /* LLMQueueState.swift */,
-				LQV0000000000001 /* LLMQueueService.swift */,
 				FF20000100000001 /* Providers */,
 			);
 			path = LLM;
@@ -364,10 +340,8 @@
 				F8000010F8000010 /* ErrorBannerView.swift */,
 				07496990C2830BD1439D5351 /* BatteryIndicatorView.swift */,
 				CC0000B00000000B /* ModelPickerMenu.swift */,
-				DD0000C00000000C /* MarkdownEditableView.swift */,				02EA9E22A4AFD964CEEF863C /* JobMonitorPopoverView.swift */,
-				48AB4784CE383DE158F98103 /* ToolbarQuotaIndicatorView.swift */,
-				0B943509DFD1D703D9B64291 /* QuotaPopoverView.swift */,
-				23ED289FB59AE3C4686E8DFC /* ToolbarJobMonitorView.swift */,			);
+				DD0000C00000000C /* MarkdownEditableView.swift */,
+			);
 			path = Components;
 			sourceTree = "<group>";
 		};
@@ -735,8 +709,8 @@
 			);
 			mainGroup = F2000000F2000000;
 			packageReferences = (
-				F6000000F6000000 /* XCLocalSwiftPackageReference "JensenUSB" */,
-				F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+				F6000000F6000000 /* XCLocalSwiftPackageReference "../JensenUSB" */,
+				F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB" */,
 				F6000002F6000002 /* XCRemoteSwiftPackageReference "textual" */,
 			);
 			productRefGroup = F2000099F2000099 /* Products */;
@@ -894,13 +868,9 @@
 				FF10000400000004 /* LLMService.swift in Sources */,
 				TM10000000000001 /* TokenManager.swift in Sources */,
 				QB00000000000001 /* QuotaService.swift in Sources */,
-				LQS1000000000001 /* LLMQueueState.swift in Sources */,
-				LQV1000000000001 /* LLMQueueService.swift in Sources */,
 				FF10000500000005 /* LLMSettingsViewModel.swift in Sources */,
-				FF10000600000006 /* LLMSettingsTab.swift in Sources */,				3DE8D43D5E41E48342A9B174 /* JobMonitorPopoverView.swift in Sources */,
-				E9628EC90C9811DAA5FDE221 /* ToolbarQuotaIndicatorView.swift in Sources */,
-				0ED011EB7EC2F9A051A66982 /* QuotaPopoverView.swift in Sources */,
-				92AEDC85782DB00613E2A128 /* ToolbarJobMonitorView.swift in Sources */,			);
+				FF10000600000006 /* LLMSettingsTab.swift in Sources */,
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F1A00000F1A00000 /* Sources */ = {
@@ -1202,14 +1172,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		F6000000F6000000 /* XCLocalSwiftPackageReference "JensenUSB" */ = {
+		F6000000F6000000 /* XCLocalSwiftPackageReference "../JensenUSB" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../JensenUSB;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+		F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/groue/GRDB.swift";
 			requirement = {
@@ -1234,7 +1204,7 @@
 		};
 		F0000053F0000053 /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB" */;
 			productName = GRDB;
 		};
 		F0000055F0000055 /* Textual */ = {
@@ -1244,7 +1214,7 @@
 		};
 		F0A00053F0A00053 /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB" */;
 			productName = GRDB;
 		};
 /* End XCSwiftPackageProductDependency section */

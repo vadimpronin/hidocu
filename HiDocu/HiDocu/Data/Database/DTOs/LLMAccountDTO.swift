@@ -18,6 +18,7 @@ struct LLMAccountDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
     var isActive: Bool
     var lastUsedAt: Date?
     var createdAt: Date
+    var pausedUntil: Date?
 
     enum Columns {
         static let id = Column(CodingKeys.id)
@@ -27,6 +28,7 @@ struct LLMAccountDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         static let isActive = Column(CodingKeys.isActive)
         static let lastUsedAt = Column(CodingKeys.lastUsedAt)
         static let createdAt = Column(CodingKeys.createdAt)
+        static let pausedUntil = Column(CodingKeys.pausedUntil)
     }
 
     enum CodingKeys: String, CodingKey {
@@ -37,6 +39,7 @@ struct LLMAccountDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         case isActive = "is_active"
         case lastUsedAt = "last_used_at"
         case createdAt = "created_at"
+        case pausedUntil = "paused_until"
     }
 
     init(from domain: LLMAccount) {
@@ -47,6 +50,7 @@ struct LLMAccountDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         self.isActive = domain.isActive
         self.lastUsedAt = domain.lastUsedAt
         self.createdAt = domain.createdAt
+        self.pausedUntil = domain.pausedUntil
     }
 
     func toDomain() -> LLMAccount {
@@ -57,7 +61,8 @@ struct LLMAccountDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
             displayName: displayName,
             isActive: isActive,
             lastUsedAt: lastUsedAt,
-            createdAt: createdAt
+            createdAt: createdAt,
+            pausedUntil: pausedUntil
         )
     }
 }

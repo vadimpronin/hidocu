@@ -504,6 +504,74 @@ final class DatabaseManager: Sendable {
             AppLogger.database.info("Migration v12_transcript_status complete")
         }
 
+        // v13: LLM job queue and quota management
+        migrator.registerMigration("v13_llm_queue_and_quotas") { db in
+            // llm_model_limits: static model capabilities
+            try db.execute(sql: """
+                CREATE TABLE llm_model_limits (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    provider TEXT NOT NULL,
+                    model_id TEXT NOT NULL,
+                    max_input_tokens INTEGER,
+                    max_output_tokens INTEGER,
+                    supports_audio INTEGER NOT NULL DEFAULT 0,
+                    supports_images INTEGER NOT NULL DEFAULT 0,
+                    daily_request_limit INTEGER,
+                    tokens_per_minute INTEGER,
+                    UNIQUE(provider, model_id)
+                )
+                """)
+
+            // llm_usage: per-account/model usage tracking
+            try db.execute(sql: """
+                CREATE TABLE llm_usage (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    account_id INTEGER NOT NULL REFERENCES llm_accounts(id) ON DELETE CASCADE,
+                    model_id TEXT NOT NULL,
+                    remaining_fraction REAL,
+                    reset_at DATETIME,
+                    last_checked_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    input_tokens_used INTEGER NOT NULL DEFAULT 0,
+                    output_tokens_used INTEGER NOT NULL DEFAULT 0,
+                    request_count INTEGER NOT NULL DEFAULT 0,
+                    period_start DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(account_id, model_id)
+                )
+                """)
+
+            // llm_jobs: persistent job queue
+            try db.execute(sql: """
+                CREATE TABLE llm_jobs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    job_type TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'pending',
+                    priority INTEGER NOT NULL DEFAULT 0,
+                    provider TEXT NOT NULL,
+                    model TEXT NOT NULL,
+                    account_id INTEGER REFERENCES llm_accounts(id) ON DELETE SET NULL,
+                    payload TEXT NOT NULL,
+                    result_ref TEXT,
+                    error_message TEXT,
+                    attempt_count INTEGER NOT NULL DEFAULT 0,
+                    max_attempts INTEGER NOT NULL DEFAULT 3,
+                    next_retry_at DATETIME,
+                    document_id INTEGER REFERENCES documents(id) ON DELETE CASCADE,
+                    source_id INTEGER REFERENCES sources(id) ON DELETE CASCADE,
+                    transcript_id INTEGER REFERENCES transcripts(id) ON DELETE SET NULL,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    started_at DATETIME,
+                    completed_at DATETIME
+                )
+                """)
+            try db.execute(sql: "CREATE INDEX idx_llm_jobs_status ON llm_jobs(status, priority DESC, created_at ASC)")
+            try db.execute(sql: "CREATE INDEX idx_llm_jobs_document ON llm_jobs(document_id) WHERE document_id IS NOT NULL")
+
+            // Add paused_until to llm_accounts
+            try db.execute(sql: "ALTER TABLE llm_accounts ADD COLUMN paused_until DATETIME")
+
+            AppLogger.database.info("Migration v13_llm_queue_and_quotas complete")
+        }
+
         return migrator
     }
     

@@ -20,6 +20,7 @@ enum LLMError: LocalizedError, Sendable, Equatable {
     case generationCancelled
     case portInUse(port: UInt16)
     case oauthTimeout
+    case allAccountsExhausted(LLMProvider)
 
     var errorDescription: String? {
         switch self {
@@ -48,6 +49,8 @@ enum LLMError: LocalizedError, Sendable, Equatable {
             return "Port \(port) is already in use. Close other applications using this port and try again."
         case .oauthTimeout:
             return "OAuth authentication timed out. Please try again."
+        case .allAccountsExhausted(let provider):
+            return "All \(provider.displayName) accounts are rate-limited or paused. Please try again later."
         }
     }
 
@@ -75,6 +78,8 @@ enum LLMError: LocalizedError, Sendable, Equatable {
             return lhsPort == rhsPort
         case (.oauthTimeout, .oauthTimeout):
             return true
+        case (.allAccountsExhausted(let lhsProvider), .allAccountsExhausted(let rhsProvider)):
+            return lhsProvider == rhsProvider
         default:
             return false
         }

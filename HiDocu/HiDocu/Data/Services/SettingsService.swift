@@ -43,6 +43,10 @@ struct AppSettings: Codable, Sendable {
     struct LLMSettings: Codable, Sendable {
         var defaultProvider: String = "claude"
         var defaultModel: String = ""
+        var defaultTranscriptionProvider: String = "gemini"
+        var defaultTranscriptionModel: String = ""
+        var defaultJudgeProvider: String = "gemini"
+        var defaultJudgeModel: String = ""
         var summaryPromptTemplate: String = Self.defaultPromptTemplate
 
         static let defaultPromptTemplate: String = """
@@ -146,6 +150,26 @@ final class SettingsService {
 
     func updateSummaryPromptTemplate(_ template: String) {
         settings.llm.summaryPromptTemplate = template
+        save()
+    }
+
+    func updateTranscriptionProvider(_ provider: String) {
+        settings.llm.defaultTranscriptionProvider = provider
+        save()
+    }
+
+    func updateTranscriptionModel(_ model: String) {
+        settings.llm.defaultTranscriptionModel = model
+        save()
+    }
+
+    func updateJudgeProvider(_ provider: String) {
+        settings.llm.defaultJudgeProvider = provider
+        save()
+    }
+
+    func updateJudgeModel(_ model: String) {
+        settings.llm.defaultJudgeModel = model
         save()
     }
 }

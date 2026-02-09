@@ -14,11 +14,13 @@ final class LLMService {
 
     // MARK: - Dependencies
 
+    private let tokenManager: TokenManager
     private let keychainService: KeychainService
     private let accountRepository: any LLMAccountRepository
     private let apiLogRepository: any APILogRepository
     private let documentService: DocumentService
     private let settingsService: SettingsService
+    private let quotaService: QuotaService
 
     // MARK: - Provider Registry
 
@@ -35,27 +37,29 @@ final class LLMService {
     // MARK: - Round-Robin State
 
     private var roundRobinCounters: [LLMProvider: Int] = [:]
-    private var excludedAccounts: [Int64: Date] = [:]
-    private let excludeDuration: TimeInterval = 60 // 60 seconds backoff
 
     // MARK: - Initialization
 
     init(
+        tokenManager: TokenManager,
         keychainService: KeychainService,
         accountRepository: any LLMAccountRepository,
         apiLogRepository: any APILogRepository,
         documentService: DocumentService,
         settingsService: SettingsService,
+        quotaService: QuotaService,
         claudeProvider: any LLMProviderStrategy,
         codexProvider: any LLMProviderStrategy,
         geminiProvider: any LLMProviderStrategy,
         antigravityProvider: any LLMProviderStrategy
     ) {
+        self.tokenManager = tokenManager
         self.keychainService = keychainService
         self.accountRepository = accountRepository
         self.apiLogRepository = apiLogRepository
         self.documentService = documentService
         self.settingsService = settingsService
+        self.quotaService = quotaService
 
         self.providers = [
             .claude: claudeProvider,
@@ -179,7 +183,7 @@ final class LLMService {
         }
 
         // Get valid access token and token data (single keychain load)
-        let (accessToken, tokenData) = try await getValidAccessToken(for: account)
+        let (accessToken, tokenData) = try await tokenManager.getValidAccessToken(for: account)
 
         guard let strategy = providers[provider] else {
             throw LLMError.authenticationFailed(provider: provider, detail: "Provider not supported")
@@ -287,7 +291,7 @@ final class LLMService {
         let account = try await selectAccount(provider: provider)
 
         // Get valid access token and token data (single keychain load)
-        let (accessToken, currentTokenData) = try await getValidAccessToken(for: account)
+        let (accessToken, currentTokenData) = try await tokenManager.getValidAccessToken(for: account)
 
         guard let strategy = providers[provider] else {
             throw LLMError.authenticationFailed(provider: provider, detail: "Provider not supported")
@@ -314,15 +318,15 @@ final class LLMService {
                 tokenData: currentTokenData
             )
         } catch let error as LLMError {
-            // On rate limit, exclude account and rethrow
-            if case .rateLimited = error {
-                excludeAccount(account.id)
+            // On rate limit, record in quota service and rethrow
+            if case .rateLimited(_, let retryAfter) = error {
+                await quotaService.recordRateLimit(accountId: account.id, provider: provider, retryAfter: retryAfter)
                 throw error
             }
             // On 401, refresh token once and retry
             if case .apiError(_, let statusCode, _) = error, statusCode == 401 {
                 AppLogger.llm.warning("Received 401, refreshing token and retrying")
-                let (newAccessToken, refreshedTokenData) = try await refreshAndGetToken(for: account)
+                let (newAccessToken, refreshedTokenData) = try await tokenManager.refreshAndGetToken(for: account)
                 response = try await strategy.chat(
                     messages: messages,
                     model: model,
@@ -352,6 +356,14 @@ final class LLMService {
 
         // Update account last used
         try await accountRepository.updateLastUsed(id: account.id)
+
+        // Record usage
+        await quotaService.recordUsage(
+            accountId: account.id,
+            modelId: model,
+            inputTokens: response.inputTokens ?? 0,
+            outputTokens: response.outputTokens ?? 0
+        )
 
         // Log API call
         let duration = Int(Date().timeIntervalSince(startTime) * 1000)
@@ -521,22 +533,22 @@ final class LLMService {
             throw LLMError.authenticationFailed(provider: .gemini, detail: "Gemini provider not configured")
         }
 
-        // Helper: single chat call with 401 retry and rate-limit exclusion
+        // Helper: single chat call with 401 retry and rate-limit recording
         let chatWithRetry: () async throws -> LLMResponse = {
-            let (accessToken, tokenData) = try await self.getValidAccessToken(for: account)
+            let (accessToken, tokenData) = try await self.tokenManager.getValidAccessToken(for: account)
             do {
                 return try await strategy.chat(
                     messages: messages, model: model, accessToken: accessToken,
                     options: options, tokenData: tokenData
                 )
             } catch let error as LLMError {
-                if case .rateLimited = error {
-                    self.excludeAccount(account.id)
+                if case .rateLimited(_, let retryAfter) = error {
+                    await self.quotaService.recordRateLimit(accountId: account.id, provider: .gemini, retryAfter: retryAfter)
                     throw error
                 }
                 if case .apiError(_, let statusCode, _) = error, statusCode == 401 {
                     AppLogger.llm.warning("Received 401 during transcription, refreshing token and retrying")
-                    let (newToken, refreshedData) = try await self.refreshAndGetToken(for: account)
+                    let (newToken, refreshedData) = try await self.tokenManager.refreshAndGetToken(for: account)
                     return try await strategy.chat(
                         messages: messages, model: model, accessToken: newToken,
                         options: options, tokenData: refreshedData
@@ -549,6 +561,14 @@ final class LLMService {
         do {
             let response = try await chatWithRetry()
             try await accountRepository.updateLastUsed(id: account.id)
+
+            // Record usage
+            await quotaService.recordUsage(
+                accountId: account.id,
+                modelId: model,
+                inputTokens: response.inputTokens ?? 0,
+                outputTokens: response.outputTokens ?? 0
+            )
 
             // Log successful request
             logTranscriptionRequest(
@@ -723,7 +743,7 @@ final class LLMService {
         let account = try await selectAccount(provider: provider)
 
         // Get valid access token
-        let (accessToken, currentTokenData) = try await getValidAccessToken(for: account)
+        let (accessToken, currentTokenData) = try await tokenManager.getValidAccessToken(for: account)
 
         guard let strategy = providers[provider] else {
             throw LLMError.authenticationFailed(provider: provider, detail: "Provider not supported")
@@ -743,14 +763,14 @@ final class LLMService {
                 tokenData: currentTokenData
             )
         } catch let error as LLMError {
-            if case .rateLimited = error {
-                excludeAccount(account.id)
+            if case .rateLimited(_, let retryAfter) = error {
+                await quotaService.recordRateLimit(accountId: account.id, provider: provider, retryAfter: retryAfter)
                 logEvaluationError(error: error, account: account, model: model, startTime: startTime, documentId: documentId)
                 throw error
             }
             if case .apiError(_, let statusCode, _) = error, statusCode == 401 {
                 AppLogger.llm.warning("Received 401 during transcript evaluation, refreshing token and retrying")
-                let (newAccessToken, refreshedTokenData) = try await refreshAndGetToken(for: account)
+                let (newAccessToken, refreshedTokenData) = try await tokenManager.refreshAndGetToken(for: account)
                 response = try await strategy.chat(
                     messages: messages,
                     model: model,
@@ -765,6 +785,14 @@ final class LLMService {
         }
 
         try await accountRepository.updateLastUsed(id: account.id)
+
+        // Record usage
+        await quotaService.recordUsage(
+            accountId: account.id,
+            modelId: model,
+            inputTokens: response.inputTokens ?? 0,
+            outputTokens: response.outputTokens ?? 0
+        )
 
         // Extract and decode JSON
         guard let jsonString = extractJSON(from: response.content) else {
@@ -915,80 +943,6 @@ final class LLMService {
         }
     }
 
-    // MARK: - Token Management (Private)
-
-    /// Gets a valid access token and token data for an account, refreshing if expired.
-    /// - Parameter account: Account to get token for
-    /// - Returns: Tuple of valid access token and token data
-    /// - Throws: `LLMError` if token refresh fails
-    private func getValidAccessToken(for account: LLMAccount) async throws -> (accessToken: String, tokenData: TokenData) {
-        // Load token from keychain
-        guard let tokenData = try keychainService.loadToken(identifier: account.keychainIdentifier) else {
-            throw LLMError.authenticationFailed(
-                provider: account.provider,
-                detail: "No token found in keychain"
-            )
-        }
-
-        guard let strategy = providers[account.provider] else {
-            throw LLMError.authenticationFailed(
-                provider: account.provider,
-                detail: "Provider not supported"
-            )
-        }
-
-        // Check if token is expired
-        if strategy.isTokenExpired(tokenData.expiresAt) {
-            AppLogger.llm.info("Token expired for account id=\(account.id), refreshing")
-            return try await refreshAndGetToken(for: account)
-        }
-
-        return (tokenData.accessToken, tokenData)
-    }
-
-    /// Refreshes an account's access token and saves to keychain.
-    /// - Parameter account: Account to refresh token for
-    /// - Returns: Tuple of new access token and token data
-    /// - Throws: `LLMError` if refresh fails
-    private func refreshAndGetToken(for account: LLMAccount) async throws -> (accessToken: String, tokenData: TokenData) {
-        // Load current token
-        guard let currentToken = try keychainService.loadToken(identifier: account.keychainIdentifier) else {
-            throw LLMError.tokenRefreshFailed(
-                provider: account.provider,
-                detail: "No token found in keychain"
-            )
-        }
-
-        guard let strategy = providers[account.provider] else {
-            throw LLMError.tokenRefreshFailed(
-                provider: account.provider,
-                detail: "Provider not supported"
-            )
-        }
-
-        // Refresh token
-        let newBundle = try await strategy.refreshToken(currentToken.refreshToken)
-
-        // Save new token to keychain
-        let newTokenData = TokenData(
-            accessToken: newBundle.accessToken,
-            refreshToken: newBundle.refreshToken,
-            expiresAt: newBundle.expiresAt,
-            idToken: newBundle.idToken,
-            accountId: newBundle.accountId,
-            projectId: newBundle.projectId,
-            clientId: currentToken.clientId,
-            clientSecret: newBundle.clientSecret
-        )
-        try keychainService.saveToken(newTokenData, identifier: account.keychainIdentifier)
-
-        // Update lastUsedAt in database
-        try await accountRepository.updateLastUsed(id: account.id)
-
-        AppLogger.llm.info("Token refreshed for account id=\(account.id)")
-        return (newBundle.accessToken, newTokenData)
-    }
-
     // MARK: - Account Availability
 
     /// Checks if any active accounts are configured for the provider.
@@ -1006,44 +960,35 @@ final class LLMService {
 
     // MARK: - Account Selection (Private)
 
-    /// Selects an account for the provider using round-robin with exclusion.
+    /// Selects an account for the provider using quota-aware selection with round-robin fallback.
     /// - Parameter provider: Provider to select account for
     /// - Returns: Selected account
-    /// - Throws: `LLMError.noAccountsConfigured` if no accounts available
+    /// - Throws: `LLMError.allAccountsExhausted` if all accounts are paused or no accounts available
     private func selectAccount(provider: LLMProvider) async throws -> LLMAccount {
-        // Get active accounts
-        var accounts = try await accountRepository.fetchActive(provider: provider)
-
-        // Filter out temporarily excluded accounts
-        let now = Date()
-        accounts = accounts.filter { account in
-            if let excludedUntil = excludedAccounts[account.id] {
-                return now > excludedUntil
-            }
-            return true
-        }
+        // Get active accounts (already filters paused_until > now via repository)
+        let accounts = try await accountRepository.fetchActive(provider: provider)
 
         guard !accounts.isEmpty else {
-            throw LLMError.noAccountsConfigured(provider)
+            throw LLMError.allAccountsExhausted(provider)
         }
 
-        // Round-robin selection
+        // Try quota-aware selection first
+        if let bestAccount = await quotaService.bestAccount(for: provider) {
+            // Verify this account is in the active accounts list
+            if accounts.contains(where: { $0.id == bestAccount.id }) {
+                AppLogger.llm.info("Selected best-quota account id=\(bestAccount.id) for \(provider.rawValue)")
+                return bestAccount
+            }
+        }
+
+        // Fallback to round-robin if no quota data
         let counter = roundRobinCounters[provider, default: 0]
         let selectedIndex = counter % accounts.count
         let selected = accounts[selectedIndex]
-
-        // Increment counter
         roundRobinCounters[provider] = counter + 1
 
-        AppLogger.llm.info("Selected account id=\(selected.id) for \(provider.rawValue) (round-robin: \(counter))")
+        AppLogger.llm.info("Selected account id=\(selected.id) for \(provider.rawValue) (round-robin fallback: \(counter))")
         return selected
-    }
-
-    /// Temporarily excludes an account from selection (60s backoff).
-    /// - Parameter accountId: Account ID to exclude
-    private func excludeAccount(_ accountId: Int64) {
-        excludedAccounts[accountId] = Date().addingTimeInterval(self.excludeDuration)
-        AppLogger.llm.info("Excluded account id=\(accountId) for \(Int(self.excludeDuration))s")
     }
 
     // MARK: - Helpers

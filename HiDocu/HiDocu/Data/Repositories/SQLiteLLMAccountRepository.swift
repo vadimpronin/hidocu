@@ -37,8 +37,13 @@ final class SQLiteLLMAccountRepository: LLMAccountRepository, Sendable {
 
     func fetchActive(provider: LLMProvider) async throws -> [LLMAccount] {
         try await db.asyncRead { database in
+            let now = Date()
             let dtos = try LLMAccountDTO
-                .filter(LLMAccountDTO.Columns.provider == provider.rawValue && LLMAccountDTO.Columns.isActive == true)
+                .filter(
+                    LLMAccountDTO.Columns.provider == provider.rawValue &&
+                    LLMAccountDTO.Columns.isActive == true &&
+                    (LLMAccountDTO.Columns.pausedUntil == nil || LLMAccountDTO.Columns.pausedUntil <= now)
+                )
                 .order(LLMAccountDTO.Columns.email.asc)
                 .fetchAll(database)
             return dtos.map { $0.toDomain() }
@@ -87,6 +92,15 @@ final class SQLiteLLMAccountRepository: LLMAccountRepository, Sendable {
             try database.execute(
                 sql: "UPDATE llm_accounts SET last_used_at = ? WHERE id = ?",
                 arguments: [Date(), id]
+            )
+        }
+    }
+
+    func updatePausedUntil(id: Int64, pausedUntil: Date?) async throws {
+        try await db.asyncWrite { database in
+            try database.execute(
+                sql: "UPDATE llm_accounts SET paused_until = ? WHERE id = ?",
+                arguments: [pausedUntil, id]
             )
         }
     }

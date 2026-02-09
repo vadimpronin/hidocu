@@ -26,6 +26,12 @@ struct ContentViewV2: View {
             detailColumn
         }
         .frame(minWidth: 800, minHeight: 500)
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
+                ToolbarQuotaIndicatorView(quotaService: container.quotaService)
+                ToolbarJobMonitorView(queueState: container.llmQueueState)
+            }
+        }
         .onAppear { handleAppear() }
         .onDisappear { handleDisappear() }
         .onChange(of: navigationVM.selectedSidebarItem) { _, newValue in
@@ -198,7 +204,7 @@ struct ContentViewV2: View {
         dlvm.observeAllDocuments()
         documentListVM = dlvm
 
-        let ddvm = DocumentDetailViewModel(documentService: container.documentService, llmService: container.llmService, settingsService: container.settingsService)
+        let ddvm = DocumentDetailViewModel(documentService: container.documentService, llmService: container.llmService, llmQueueService: container.llmQueueService, settingsService: container.settingsService)
         documentDetailVM = ddvm
 
         navigationVM.restoreSelection()

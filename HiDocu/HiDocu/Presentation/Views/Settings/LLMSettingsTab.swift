@@ -40,6 +40,7 @@ private struct LLMSettingsContent: View {
         Form {
             accountsSection
             modelSection
+            actionDefaultsSection
             promptTemplateSection
         }
         .formStyle(.grouped)
@@ -190,6 +191,27 @@ private struct LLMSettingsContent: View {
     }
 
     @State private var isRefreshingModels = false
+
+    // MARK: - Action Defaults Section
+
+    @ViewBuilder
+    private var actionDefaultsSection: some View {
+        Section("Action Defaults") {
+            LabeledContent("Transcription Model") {
+                ModelPickerMenu(
+                    models: viewModel.availableModels,
+                    selectedModelId: $viewModel.selectedTranscriptionModelId
+                )
+            }
+
+            LabeledContent("Judge Model") {
+                ModelPickerMenu(
+                    models: viewModel.availableModels,
+                    selectedModelId: $viewModel.selectedJudgeModelId
+                )
+            }
+        }
+    }
 
     // MARK: - Prompt Template Section
 

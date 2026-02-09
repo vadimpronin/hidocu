@@ -173,19 +173,25 @@ final class RecordingImportServiceV2 {
     private let sourceRepository: any SourceRepository
     private let transcriptRepository: any TranscriptRepository
     private let llmService: LLMService
+    private let llmQueueService: LLMQueueService
+    private let settingsService: SettingsService
 
     init(
         fileSystemService: FileSystemService,
         documentService: DocumentService,
         sourceRepository: any SourceRepository,
         transcriptRepository: any TranscriptRepository,
-        llmService: LLMService
+        llmService: LLMService,
+        llmQueueService: LLMQueueService,
+        settingsService: SettingsService
     ) {
         self.fileSystemService = fileSystemService
         self.documentService = documentService
         self.sourceRepository = sourceRepository
         self.transcriptRepository = transcriptRepository
         self.llmService = llmService
+        self.llmQueueService = llmQueueService
+        self.settingsService = settingsService
         AppLogger.fileSystem.info("RecordingImportServiceV2 initialized")
     }
 
@@ -467,21 +473,27 @@ final class RecordingImportServiceV2 {
     }
 
     private func performAutoTranscription(documentId: Int64, sourceId: Int64, source: Source) async {
-        let model = Self.autoTranscriptionModel
+        // Get transcription settings
+        let settings = await MainActor.run { settingsService.settings.llm }
+        let providerString = settings.defaultTranscriptionProvider
+        let provider = LLMProvider(rawValue: providerString) ?? .gemini
+        let model = settings.defaultTranscriptionModel.isEmpty ? Self.autoTranscriptionModel : settings.defaultTranscriptionModel
         let count = Self.autoTranscriptionCount
 
-        // Check if Gemini accounts are configured
-        guard await llmService.hasActiveAccounts(for: .gemini) else {
-            AppLogger.llm.warning("No Gemini accounts configured, skipping auto-transcription for document \(documentId)")
+        // Check if accounts are configured for the provider
+        guard await llmService.hasActiveAccounts(for: provider) else {
+            AppLogger.llm.warning("No \(provider.rawValue) accounts configured, skipping auto-transcription for document \(documentId)")
             return
         }
 
-        // Prepare audio attachments
-        let attachments: [LLMAttachment]
-        do {
-            attachments = try await llmService.prepareAudioAttachments(sources: [source], fileSystemService: fileSystemService)
-        } catch {
-            AppLogger.llm.error("Failed to prepare audio for auto-transcription of document \(documentId): \(error.localizedDescription)")
+        // Collect audio relative paths (not loading data)
+        var audioRelativePaths: [String] = []
+        if let dbPath = source.audioPath {
+            audioRelativePaths.append(dbPath)
+        } else if let yamlPath = fileSystemService.readSourceAudioPath(sourceDiskPath: source.diskPath) {
+            audioRelativePaths.append(yamlPath)
+        } else {
+            AppLogger.llm.error("Source \(source.id) has no audio path, skipping auto-transcription")
             return
         }
 
@@ -508,128 +520,28 @@ final class RecordingImportServiceV2 {
 
         AppLogger.llm.info("Starting auto-transcription for document \(documentId): \(transcriptIds.count) variants")
 
-        // Generate transcripts in parallel, collect all results
-        var successfulTranscripts: [(id: Int64, text: String)] = []
-
-        await withTaskGroup(of: (Int64, Result<String, Error>).self) { group in
+        // Enqueue transcription jobs for each transcript
+        do {
             for transcriptId in transcriptIds {
-                group.addTask {
-                    do {
-                        let text = try await self.llmService.generateSingleTranscript(
-                            attachments: attachments,
-                            model: model,
-                            transcriptId: transcriptId,
-                            documentId: documentId,
-                            sourceId: sourceId
-                        )
-                        return (transcriptId, .success(text))
-                    } catch {
-                        return (transcriptId, .failure(error))
-                    }
-                }
-            }
-
-            for await (transcriptId, result) in group {
-                do {
-                    guard var transcript = try await transcriptRepository.fetchById(transcriptId) else {
-                        AppLogger.llm.warning("Transcript \(transcriptId) deleted during generation")
-                        continue
-                    }
-
-                    switch result {
-                    case .success(let text):
-                        transcript.fullText = text
-                        transcript.status = .ready
-                        transcript.modifiedAt = Date()
-                        try await transcriptRepository.update(transcript)
-                        successfulTranscripts.append((id: transcriptId, text: text))
-
-                    case .failure(let error):
-                        transcript.status = .failed
-                        transcript.modifiedAt = Date()
-                        try await transcriptRepository.update(transcript)
-                        AppLogger.llm.error("Auto-transcription failed for transcript \(transcriptId): \(error.localizedDescription)")
-                    }
-                } catch {
-                    AppLogger.llm.error("Failed to update transcript \(transcriptId) after generation: \(error.localizedDescription)")
-                }
-            }
-        }
-
-        // Select primary transcript
-        guard !successfulTranscripts.isEmpty else {
-            AppLogger.llm.warning("All auto-transcripts failed for document \(documentId), body remains empty")
-            return
-        }
-
-        let primaryId: Int64
-        let primaryText: String
-
-        if successfulTranscripts.count == 1 {
-            // Single success — set as primary directly (can't judge)
-            primaryId = successfulTranscripts[0].id
-            primaryText = successfulTranscripts[0].text
-            AppLogger.llm.info("Single transcript \(primaryId) set as primary for document \(documentId) (no judge needed)")
-        } else {
-            // 2+ successes — invoke the LLM judge
-            do {
-                var readyTranscripts: [Transcript] = []
-                for st in successfulTranscripts {
-                    if let t = try await transcriptRepository.fetchById(st.id) {
-                        readyTranscripts.append(t)
-                    }
-                }
-
-                let judgeResponse = try await llmService.evaluateTranscripts(
-                    transcripts: readyTranscripts,
-                    documentId: documentId
+                _ = try await llmQueueService.enqueueTranscription(
+                    documentId: documentId,
+                    sourceId: sourceId,
+                    transcriptId: transcriptId,
+                    provider: provider,
+                    model: model,
+                    audioRelativePaths: audioRelativePaths,
+                    priority: 0
                 )
-
-                // Validate bestId is in our set
-                if let best = successfulTranscripts.first(where: { $0.id == judgeResponse.bestId }) {
-                    primaryId = best.id
-                    primaryText = best.text
-                    AppLogger.llm.info("Judge selected transcript \(primaryId) as best for document \(documentId)")
-                } else {
-                    // bestId mismatch — fallback to first by ID
-                    let fallback = successfulTranscripts.sorted(by: { $0.id < $1.id })[0]
-                    primaryId = fallback.id
-                    primaryText = fallback.text
-                    AppLogger.llm.warning("Judge returned bestId=\(judgeResponse.bestId) not in transcript set, falling back to \(primaryId)")
-                }
-            } catch {
-                // Judge failed — fallback to first transcript by ID
-                let fallback = successfulTranscripts.sorted(by: { $0.id < $1.id })[0]
-                primaryId = fallback.id
-                primaryText = fallback.text
-                AppLogger.llm.error("Judge evaluation failed for document \(documentId): \(error.localizedDescription), falling back to transcript \(primaryId)")
             }
-        }
-
-        // Commit primary and write body
-        do {
-            try await transcriptRepository.setPrimaryForDocument(id: primaryId, documentId: documentId)
-            try await documentService.writeBodyById(documentId: documentId, content: primaryText)
-            AppLogger.llm.info("Primary transcript \(primaryId) set for document \(documentId), body updated")
+            AppLogger.llm.info("Enqueued \(transcriptIds.count) auto-transcription job(s) for document \(documentId)")
         } catch {
-            AppLogger.llm.error("Failed to set primary transcript for document \(documentId): \(error.localizedDescription)")
+            AppLogger.llm.error("Failed to enqueue auto-transcription jobs for document \(documentId): \(error.localizedDescription)")
         }
 
-        // Trigger summary generation in background
-        do {
-            if let doc = try await documentService.fetchDocument(id: documentId) {
-                Task {
-                    do {
-                        _ = try await self.llmService.generateSummary(for: doc)
-                    } catch {
-                        AppLogger.llm.error("Auto-summary generation failed for document \(documentId): \(error.localizedDescription)")
-                    }
-                }
-            }
-        } catch {
-            AppLogger.llm.error("Failed to fetch document \(documentId) for summary generation: \(error.localizedDescription)")
-        }
-
-        AppLogger.llm.info("Auto-transcription completed for document \(documentId)")
+        // Note: The queue processor will handle:
+        // - Generating transcripts and updating records
+        // - Auto-enqueuing judge job when all transcripts complete
+        // - Setting primary transcript after judge completes
+        // - Writing document body
     }
 }

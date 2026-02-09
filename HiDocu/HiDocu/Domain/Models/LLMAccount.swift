@@ -17,6 +17,7 @@ struct LLMAccount: Identifiable, Sendable, Equatable {
     var isActive: Bool
     var lastUsedAt: Date?
     var createdAt: Date
+    var pausedUntil: Date? // When set, account is paused due to rate limiting until this time
 
     /// Keychain identifier for retrieving this account's tokens.
     /// Format: com.hidocu.llm.{provider}.{id}
