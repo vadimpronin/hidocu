@@ -238,7 +238,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
             .sorted()
 
         AppLogger.llm.info("Fetched \(modelIds.count) Antigravity models")
-        return modelIds.map { ModelInfo(id: $0, displayName: $0) }
+        return modelIds.map { ModelInfo(id: $0, displayName: $0, acceptText: true, acceptAudio: true, acceptImage: true) }
     }
 
     func chat(

@@ -14,6 +14,9 @@ struct LLMModel: Identifiable, Sendable, Equatable {
     var provider: LLMProvider
     var modelId: String
     var displayName: String
+    var acceptText: Bool
+    var acceptAudio: Bool
+    var acceptImage: Bool
     var firstSeenAt: Date
     var lastSeenAt: Date
 }

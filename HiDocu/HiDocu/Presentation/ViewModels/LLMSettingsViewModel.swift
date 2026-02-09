@@ -45,6 +45,11 @@ final class LLMSettingsViewModel {
         llmService.availableModels
     }
 
+    /// Models that accept audio input (for transcription).
+    var audioCapableModels: [AvailableModel] {
+        llmService.availableModels.filter(\.acceptAudio)
+    }
+
     /// Combined selection identifier ("provider:modelId").
     /// Setting this updates both `defaultProvider` and `defaultModel` in settings.
     var selectedModelId: String {
@@ -177,10 +182,12 @@ final class LLMSettingsViewModel {
             selectedModelId = models[0].id
         }
 
-        // Auto-select transcription model
+        // Auto-select transcription model (audio-capable only)
+        let audioModels = audioCapableModels
         let transcriptionId = selectedTranscriptionModelId
-        if transcriptionId.isEmpty || !models.contains(where: { $0.id == transcriptionId }) {
-            selectedTranscriptionModelId = models[0].id
+        if !audioModels.isEmpty,
+           transcriptionId.isEmpty || !audioModels.contains(where: { $0.id == transcriptionId }) {
+            selectedTranscriptionModelId = audioModels[0].id
         }
 
         // Auto-select judge model

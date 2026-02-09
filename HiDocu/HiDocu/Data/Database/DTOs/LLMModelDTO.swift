@@ -15,6 +15,9 @@ struct LLMModelDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
     var provider: String
     var modelId: String
     var displayName: String
+    var acceptText: Bool
+    var acceptAudio: Bool
+    var acceptImage: Bool
     var firstSeenAt: Date
     var lastSeenAt: Date
 
@@ -23,6 +26,9 @@ struct LLMModelDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         static let provider = Column(CodingKeys.provider)
         static let modelId = Column(CodingKeys.modelId)
         static let displayName = Column(CodingKeys.displayName)
+        static let acceptText = Column(CodingKeys.acceptText)
+        static let acceptAudio = Column(CodingKeys.acceptAudio)
+        static let acceptImage = Column(CodingKeys.acceptImage)
         static let firstSeenAt = Column(CodingKeys.firstSeenAt)
         static let lastSeenAt = Column(CodingKeys.lastSeenAt)
     }
@@ -32,6 +38,9 @@ struct LLMModelDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         case provider
         case modelId = "model_id"
         case displayName = "display_name"
+        case acceptText = "accept_text"
+        case acceptAudio = "accept_audio"
+        case acceptImage = "accept_image"
         case firstSeenAt = "first_seen_at"
         case lastSeenAt = "last_seen_at"
     }
@@ -41,6 +50,9 @@ struct LLMModelDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         self.provider = domain.provider.rawValue
         self.modelId = domain.modelId
         self.displayName = domain.displayName
+        self.acceptText = domain.acceptText
+        self.acceptAudio = domain.acceptAudio
+        self.acceptImage = domain.acceptImage
         self.firstSeenAt = domain.firstSeenAt
         self.lastSeenAt = domain.lastSeenAt
     }
@@ -51,6 +63,9 @@ struct LLMModelDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
             provider: LLMProvider(rawValue: provider) ?? .claude,
             modelId: modelId,
             displayName: displayName,
+            acceptText: acceptText,
+            acceptAudio: acceptAudio,
+            acceptImage: acceptImage,
             firstSeenAt: firstSeenAt,
             lastSeenAt: lastSeenAt
         )

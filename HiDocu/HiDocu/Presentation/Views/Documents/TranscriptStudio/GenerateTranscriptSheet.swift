@@ -26,7 +26,7 @@ struct GenerateTranscriptSheet: View {
                 if let container {
                     LabeledContent("Model") {
                         ModelPickerMenu(
-                            models: container.llmService.availableModels,
+                            models: container.llmService.availableModels.filter(\.acceptAudio),
                             selectedModelId: $selectedModelId
                         )
                     }

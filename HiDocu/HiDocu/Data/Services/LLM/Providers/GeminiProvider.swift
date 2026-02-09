@@ -301,7 +301,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
 
         let sortedModels = modelIds.sorted()
         AppLogger.llm.info("Fetched \(sortedModels.count) Gemini models from quota endpoint")
-        return sortedModels.map { ModelInfo(id: $0, displayName: $0) }
+        return sortedModels.map { ModelInfo(id: $0, displayName: $0, acceptText: true, acceptAudio: true, acceptImage: true) }
     }
 
     /// Sends a chat completion request to the Cloud Code Assist API.

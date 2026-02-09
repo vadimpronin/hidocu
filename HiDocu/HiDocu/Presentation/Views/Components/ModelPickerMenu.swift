@@ -15,19 +15,24 @@ struct ModelPickerMenu: View {
 
     var body: some View {
         Menu {
-            ForEach(modelsGroupedByProvider, id: \.provider) { group in
-                Section(group.provider.displayName) {
-                    ForEach(group.models) { model in
-                        Button {
-                            selectedModelId = model.id
-                        } label: {
-                            HStack {
-                                if model.id == selectedModelId {
-                                    Image(systemName: "checkmark")
+            if models.isEmpty {
+                Text("No compatible models")
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(modelsGroupedByProvider, id: \.provider) { group in
+                    Section(group.provider.displayName) {
+                        ForEach(group.models) { model in
+                            Button {
+                                selectedModelId = model.id
+                            } label: {
+                                HStack {
+                                    if model.id == selectedModelId {
+                                        Image(systemName: "checkmark")
+                                    }
+                                    Text(model.displayName)
+                                    Spacer()
+                                    availabilityIndicator(for: model)
                                 }
-                                Text(model.displayName)
-                                Spacer()
-                                availabilityIndicator(for: model)
                             }
                         }
                     }

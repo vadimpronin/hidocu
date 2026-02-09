@@ -200,7 +200,7 @@ private struct LLMSettingsContent: View {
         Section("Action Defaults") {
             LabeledContent("Transcription Model") {
                 ModelPickerMenu(
-                    models: viewModel.availableModels,
+                    models: viewModel.audioCapableModels,
                     selectedModelId: $viewModel.selectedTranscriptionModelId
                 )
             }

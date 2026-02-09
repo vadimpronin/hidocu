@@ -581,6 +581,9 @@ final class DatabaseManager: Sendable {
                     provider TEXT NOT NULL,
                     model_id TEXT NOT NULL,
                     display_name TEXT NOT NULL,
+                    accept_text INTEGER NOT NULL DEFAULT 1,
+                    accept_audio INTEGER NOT NULL DEFAULT 0,
+                    accept_image INTEGER NOT NULL DEFAULT 0,
                     first_seen_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     last_seen_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE(provider, model_id)

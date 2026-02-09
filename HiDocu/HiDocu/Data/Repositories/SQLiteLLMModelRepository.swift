@@ -29,6 +29,9 @@ final class SQLiteLLMModelRepository: LLMModelRepository, Sendable {
                     m.provider,
                     m.model_id,
                     m.display_name,
+                    m.accept_text,
+                    m.accept_audio,
+                    m.accept_image,
                     COALESCE(SUM(CASE WHEN am.is_available = 1 AND a.is_active = 1 THEN 1 ELSE 0 END), 0) AS available_count,
                     COALESCE(pc.total_count, 0) AS total_count
                 FROM llm_models m
@@ -48,13 +51,19 @@ final class SQLiteLLMModelRepository: LLMModelRepository, Sendable {
                 }
                 let availableCount: Int = row["available_count"] ?? 0
                 let totalCount: Int = row["total_count"] ?? 0
+                let acceptText: Bool = row["accept_text"] ?? true
+                let acceptAudio: Bool = row["accept_audio"] ?? false
+                let acceptImage: Bool = row["accept_image"] ?? false
 
                 return AvailableModel(
                     provider: provider,
                     modelId: modelId,
                     displayName: displayName,
                     availableAccountCount: availableCount,
-                    totalAccountCount: totalCount
+                    totalAccountCount: totalCount,
+                    acceptText: acceptText,
+                    acceptAudio: acceptAudio,
+                    acceptImage: acceptImage
                 )
             }
         }
@@ -80,6 +89,9 @@ final class SQLiteLLMModelRepository: LLMModelRepository, Sendable {
                 let modelDbId: Int64
                 if var existing = existingModel {
                     existing.displayName = modelInfo.displayName
+                    existing.acceptText = modelInfo.acceptText
+                    existing.acceptAudio = modelInfo.acceptAudio
+                    existing.acceptImage = modelInfo.acceptImage
                     existing.lastSeenAt = now
                     try existing.update(database)
                     modelDbId = existing.id!
@@ -90,6 +102,9 @@ final class SQLiteLLMModelRepository: LLMModelRepository, Sendable {
                             provider: provider,
                             modelId: modelInfo.id,
                             displayName: modelInfo.displayName,
+                            acceptText: modelInfo.acceptText,
+                            acceptAudio: modelInfo.acceptAudio,
+                            acceptImage: modelInfo.acceptImage,
                             firstSeenAt: now,
                             lastSeenAt: now
                         )
@@ -122,11 +137,12 @@ final class SQLiteLLMModelRepository: LLMModelRepository, Sendable {
             }
 
             // Mark models NOT in fetchedModels as unavailable for this account+provider
-            let allProviderModelIds = try LLMModelDTO
-                .filter(LLMModelDTO.Columns.provider == providerStr)
-                .select(LLMModelDTO.Columns.id)
-                .fetchAll(database)
-                .compactMap(\.id)
+            let allProviderModelIds = try Int64.fetchAll(
+                database,
+                LLMModelDTO
+                    .filter(LLMModelDTO.Columns.provider == providerStr)
+                    .select(LLMModelDTO.Columns.id)
+            )
 
             let modelIdsToMarkUnavailable = Array(Set(allProviderModelIds).subtracting(upsertedModelIds))
             if !modelIdsToMarkUnavailable.isEmpty {
