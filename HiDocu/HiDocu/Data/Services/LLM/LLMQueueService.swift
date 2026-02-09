@@ -20,6 +20,7 @@ actor LLMQueueService {
     // MARK: - Dependencies
 
     private let jobRepository: any LLMJobRepository
+    private let accountRepository: any LLMAccountRepository
     private let llmService: LLMService  // @MainActor, called via await
     private let quotaService: QuotaService  // @MainActor
     private let transcriptRepository: any TranscriptRepository
@@ -50,6 +51,7 @@ actor LLMQueueService {
 
     init(
         jobRepository: any LLMJobRepository,
+        accountRepository: any LLMAccountRepository,
         llmService: LLMService,
         quotaService: QuotaService,
         transcriptRepository: any TranscriptRepository,
@@ -59,6 +61,7 @@ actor LLMQueueService {
         state: LLMQueueState
     ) {
         self.jobRepository = jobRepository
+        self.accountRepository = accountRepository
         self.llmService = llmService
         self.quotaService = quotaService
         self.transcriptRepository = transcriptRepository
@@ -320,6 +323,19 @@ actor LLMQueueService {
         signalContinuation?.yield()
     }
 
+    /// Notify the queue that accounts changed (added, removed, or unpaused).
+    /// Clears deferred retry times for the given provider so pending jobs become
+    /// immediately eligible, then wakes the processor.
+    func notifyAccountsChanged(provider: LLMProvider) async {
+        do {
+            try await jobRepository.clearDeferredRetry(provider: provider)
+            AppLogger.llm.info("Queue: Cleared deferred retries for \(provider.rawValue) after account change")
+        } catch {
+            AppLogger.llm.error("Queue: Failed to clear deferred retries: \(error.localizedDescription)")
+        }
+        signal()
+    }
+
     // MARK: - Processing Loop
 
     /// Main processing loop with signal-based wake-up.
@@ -373,19 +389,24 @@ actor LLMQueueService {
             let pendingJobs = try await jobRepository.fetchPending(limit: slotsAvailable)
             let retryableJobs = try await jobRepository.fetchRetryable(now: Date())
 
-            // Deduplicate by job ID (fetchPending now includes retryable jobs, but keep both
-            // queries for clarity; retryable may have been fetched with different criteria)
+            // Deduplicate by job ID
             var seen = Set<Int64>()
             let candidates = (pendingJobs + retryableJobs)
                 .filter { job in
                     guard seen.insert(job.id).inserted else { return false }
-                    guard runningJobs[job.id] == nil else { return false }
-                    let providerCount = runningProviders[job.provider, default: 0]
-                    return providerCount < maxConcurrentPerProvider
+                    return runningJobs[job.id] == nil
                 }
 
-            for job in candidates.prefix(slotsAvailable) {
+            var started = 0
+            for job in candidates {
+                guard started < slotsAvailable else { break }
+
+                // Re-check provider concurrency (it changes as we start jobs in this loop)
+                let providerCount = runningProviders[job.provider, default: 0]
+                guard providerCount < maxConcurrentPerProvider else { continue }
+
                 await startJob(job)
+                started += 1
             }
 
             // Update UI state
@@ -396,7 +417,20 @@ actor LLMQueueService {
     }
 
     /// Starts a job execution in the background.
+    /// Checks for available accounts before starting. If none are available,
+    /// reschedules without counting as an attempt.
     private func startJob(_ job: LLMJob) async {
+        // Check if any accounts are available for this provider
+        do {
+            let activeAccounts = try await accountRepository.fetchActive(provider: job.provider)
+            if activeAccounts.isEmpty {
+                await deferJobUntilAccountAvailable(job)
+                return
+            }
+        } catch {
+            // On error, proceed and let execution handle it
+        }
+
         // Mark as running in DB
         var runningJob = job
         runningJob.status = .running
@@ -417,6 +451,41 @@ actor LLMQueueService {
             await self.executeJob(runningJob)
         }
         runningJobs[job.id] = task
+    }
+
+    /// Defers a job until an account becomes available for its provider.
+    /// Does NOT count as an attempt. Finds the earliest `paused_until` to schedule retry.
+    private func deferJobUntilAccountAvailable(_ job: LLMJob) async {
+        var deferred = job
+        let now = Date()
+
+        // Find the earliest paused_until to know when an account becomes available
+        do {
+            let allAccounts = try await accountRepository.fetchAll(provider: job.provider)
+            let nextAvailable = allAccounts
+                .compactMap { $0.pausedUntil }
+                .filter { $0 > now }
+                .min()
+
+            if let nextAvailable {
+                // Retry shortly after the earliest account unpauses (add 5s buffer)
+                deferred.nextRetryAt = nextAvailable.addingTimeInterval(5)
+            } else {
+                // No paused accounts found (all accounts might be inactive/deleted) - retry in 5 min
+                deferred.nextRetryAt = now.addingTimeInterval(300)
+            }
+        } catch {
+            deferred.nextRetryAt = now.addingTimeInterval(300)
+        }
+
+        do {
+            try await jobRepository.update(deferred)
+        } catch {
+            AppLogger.llm.error("Failed to defer job \(job.id): \(error.localizedDescription)")
+        }
+
+        let delaySeconds = Int(deferred.nextRetryAt?.timeIntervalSince(now) ?? 300)
+        AppLogger.llm.info("Job \(job.id) deferred: no available accounts for \(job.provider.rawValue), will retry in \(delaySeconds)s")
     }
 
     /// Executes a single job.
@@ -441,9 +510,6 @@ actor LLMQueueService {
                 AppLogger.llm.error("Failed to mark job \(job.id) as completed: \(error.localizedDescription)")
             }
 
-            let completedCopy = completed
-            await MainActor.run { state.recordCompleted(completedCopy) }
-
         } catch let error as LLMError {
             await handleJobError(job, error: error)
         } catch {
@@ -467,26 +533,41 @@ actor LLMQueueService {
         var failedJob = job
         failedJob.errorMessage = error.localizedDescription
 
-        // Rate limit: record and schedule retry
+        // Rate limit or all-accounts-exhausted: record and use paused_until for retry timing
+        var isRateLimited = false
         if case .rateLimited(let provider, let retryAfter) = error {
+            isRateLimited = true
             if let accountId = job.accountId {
                 Task { @MainActor in
                     await self.quotaService.recordRateLimit(accountId: accountId, provider: provider, retryAfter: retryAfter)
                 }
             }
+        } else if case .allAccountsExhausted = error {
+            isRateLimited = true
         }
 
         if failedJob.attemptCount < failedJob.maxAttempts {
-            // Schedule retry with exponential backoff
-            let backoff = backoffInterval(attempt: failedJob.attemptCount)
             failedJob.status = .pending  // back to pending for retry
-            failedJob.nextRetryAt = Date().addingTimeInterval(backoff)
+
+            if isRateLimited {
+                // For rate limits, find when the earliest account unpauses
+                // and schedule retry then (instead of blind backoff)
+                let retryAt = await nextAccountAvailableDate(for: job.provider)
+                failedJob.nextRetryAt = retryAt
+                let delay = Int(retryAt.timeIntervalSince(Date()))
+                AppLogger.llm.info("Job \(job.id) rate-limited, retry when account available in \(delay)s (attempt \(failedJob.attemptCount)/\(failedJob.maxAttempts))")
+            } else {
+                // Non-rate-limit errors: use exponential backoff
+                let backoff = backoffInterval(attempt: failedJob.attemptCount)
+                failedJob.nextRetryAt = Date().addingTimeInterval(backoff)
+                AppLogger.llm.info("Job \(job.id) scheduled for retry after \(Int(backoff))s (attempt \(failedJob.attemptCount)/\(failedJob.maxAttempts))")
+            }
+
             do {
                 try await jobRepository.update(failedJob)
             } catch {
                 AppLogger.llm.error("Failed to schedule retry for job \(job.id): \(error.localizedDescription)")
             }
-            AppLogger.llm.info("Job \(job.id) scheduled for retry after \(Int(backoff))s (attempt \(failedJob.attemptCount)/\(failedJob.maxAttempts))")
         } else {
             // Max retries exceeded
             failedJob.status = .failed
@@ -496,10 +577,45 @@ actor LLMQueueService {
             } catch {
                 AppLogger.llm.error("Failed to mark job \(job.id) as failed: \(error.localizedDescription)")
             }
-            let failedCopy = failedJob
-            await MainActor.run { state.recordFailed(failedCopy) }
             AppLogger.llm.error("Job \(job.id) failed after \(failedJob.maxAttempts) attempts: \(error.localizedDescription)")
+
+            // If this is a transcription job, mark the transcript as failed
+            if job.jobType == .transcription {
+                do {
+                    let payloadData = Data(job.payload.utf8)
+                    let payload = try JSONDecoder().decode(TranscriptJobPayload.self, from: payloadData)
+
+                    if var transcript = try await transcriptRepository.fetchById(payload.transcriptId) {
+                        transcript.status = .failed
+                        transcript.modifiedAt = Date()
+                        try await transcriptRepository.update(transcript)
+                        AppLogger.llm.info("Marked transcript \(payload.transcriptId) as failed after job failure")
+                    }
+                } catch {
+                    AppLogger.llm.error("Failed to mark transcript as failed: \(error.localizedDescription)")
+                }
+            }
         }
+    }
+
+    /// Returns the date when the next account becomes available for a provider.
+    private func nextAccountAvailableDate(for provider: LLMProvider) async -> Date {
+        let now = Date()
+        do {
+            let allAccounts = try await accountRepository.fetchAll(provider: provider)
+            let nextAvailable = allAccounts
+                .compactMap { $0.pausedUntil }
+                .filter { $0 > now }
+                .min()
+
+            if let nextAvailable {
+                return nextAvailable.addingTimeInterval(5)  // 5s buffer after unpause
+            }
+        } catch {
+            // Fall through to default
+        }
+        // Fallback: 5 minutes
+        return now.addingTimeInterval(300)
     }
 
     /// Computes backoff interval for retry attempts.
@@ -530,9 +646,11 @@ actor LLMQueueService {
     private func updateState() async {
         do {
             let active = try await jobRepository.fetchActive()
-            let pending = try await jobRepository.fetchPending(limit: 100)
+            let pending = try await jobRepository.fetchAllPending(limit: 20)
+            let failed = try await jobRepository.fetchRecentFailed(limit: 5)
+            let completed = try await jobRepository.fetchRecentCompleted(limit: 5)
             await MainActor.run {
-                state.update(active: active, pendingCount: pending.count)
+                state.update(active: active, pendingJobs: pending, recentFailed: failed, recentCompleted: completed)
             }
         } catch {
             AppLogger.llm.error("Queue: Failed to update state: \(error.localizedDescription)")

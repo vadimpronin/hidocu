@@ -176,9 +176,10 @@ final class LLMService {
     func fetchModels(provider: LLMProvider) async throws -> [ModelInfo] {
         AppLogger.llm.info("Fetching models for \(provider.rawValue)")
 
-        // Find any active account for this provider
-        let accounts = try await accountRepository.fetchActive(provider: provider)
-        guard let account = accounts.first else {
+        // Use any account for this provider (including rate-limited ones)
+        // since model listing is not subject to generation rate limits
+        let accounts = try await accountRepository.fetchAll(provider: provider)
+        guard let account = accounts.first(where: { $0.isActive }) ?? accounts.first else {
             throw LLMError.noAccountsConfigured(provider)
         }
 

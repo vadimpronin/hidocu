@@ -14,8 +14,8 @@ final class LLMQueueState {
     /// Currently running jobs.
     private(set) var activeJobs: [LLMJob] = []
 
-    /// Number of pending jobs waiting to execute.
-    private(set) var pendingCount: Int = 0
+    /// Pending jobs waiting to execute (including deferred).
+    private(set) var pendingJobs: [LLMJob] = []
 
     /// Recently completed jobs (last 5).
     private(set) var recentCompleted: [LLMJob] = []
@@ -23,27 +23,20 @@ final class LLMQueueState {
     /// Recently failed jobs (last 5).
     private(set) var recentFailed: [LLMJob] = []
 
+    /// Number of pending jobs (convenience for badges).
+    var pendingCount: Int { pendingJobs.count }
+
     /// Whether any jobs are currently processing.
     var isProcessing: Bool { !activeJobs.isEmpty }
 
     /// Whether there are any jobs at all (active or pending).
-    var hasWork: Bool { isProcessing || pendingCount > 0 }
+    var hasWork: Bool { isProcessing || !pendingJobs.isEmpty }
 
-    /// Updates the state from the queue processor.
-    func update(active: [LLMJob], pendingCount: Int) {
+    /// Updates the state from the queue processor (DB-backed, survives restart).
+    func update(active: [LLMJob], pendingJobs: [LLMJob], recentFailed: [LLMJob], recentCompleted: [LLMJob]) {
         self.activeJobs = active
-        self.pendingCount = pendingCount
-    }
-
-    /// Records a completed job.
-    func recordCompleted(_ job: LLMJob) {
-        recentCompleted.insert(job, at: 0)
-        if recentCompleted.count > 5 { recentCompleted.removeLast() }
-    }
-
-    /// Records a failed job.
-    func recordFailed(_ job: LLMJob) {
-        recentFailed.insert(job, at: 0)
-        if recentFailed.count > 5 { recentFailed.removeLast() }
+        self.pendingJobs = pendingJobs
+        self.recentFailed = recentFailed
+        self.recentCompleted = recentCompleted
     }
 }

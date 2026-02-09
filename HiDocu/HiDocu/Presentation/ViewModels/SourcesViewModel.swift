@@ -202,7 +202,6 @@ final class SourcesViewModel {
     }
 
     func deleteDocumentTranscript(id: Int64, documentId: Int64) async {
-        guard documentTranscripts.count > 1 else { return }
         do {
             try await transcriptRepository.delete(id: id)
             await loadDocumentTranscripts(documentId: documentId)

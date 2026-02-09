@@ -27,6 +27,7 @@ final class LLMSettingsViewModel {
 
     private let llmService: LLMService
     private let settingsService: SettingsService
+    private let llmQueueService: LLMQueueService?
 
     // MARK: - Published State
 
@@ -108,9 +109,10 @@ final class LLMSettingsViewModel {
 
     // MARK: - Initialization
 
-    init(llmService: LLMService, settingsService: SettingsService) {
+    init(llmService: LLMService, settingsService: SettingsService, llmQueueService: LLMQueueService? = nil) {
         self.llmService = llmService
         self.settingsService = settingsService
+        self.llmQueueService = llmQueueService
     }
 
     // MARK: - Account Management
@@ -133,6 +135,10 @@ final class LLMSettingsViewModel {
             oauthState[provider] = .idle
             await loadAccounts()
             autoSelectModelIfNeeded()
+            // Wake queue so deferred jobs can use the new account
+            if let llmQueueService {
+                await llmQueueService.notifyAccountsChanged(provider: provider)
+            }
         } catch {
             AppLogger.general.error("Failed to add \(provider.rawValue) account: \(error.localizedDescription)")
             let errorMessage = "Authentication failed: \(error.localizedDescription)"

@@ -94,32 +94,26 @@ final class QuotaService {
 
     /// Refreshes quota for a specific provider.
     func refresh(provider: LLMProvider) async {
-        // Set loading state
-        if quotas[provider] == nil {
-            quotas[provider] = ProviderQuota(
-                provider: provider,
-                batteryLevel: 0.0,
-                isLoading: true,
-                lastUpdated: nil,
-                modelQuotas: []
-            )
-        } else {
-            quotas[provider]?.isLoading = true
-        }
-
         do {
             let accounts = try await accountRepository.fetchActive(provider: provider)
 
             if accounts.isEmpty {
-                // No accounts for this provider
+                // No accounts for this provider - hide from UI
+                quotas.removeValue(forKey: provider)
+                return
+            }
+
+            // Set loading state now that we know accounts exist
+            if quotas[provider] == nil {
                 quotas[provider] = ProviderQuota(
                     provider: provider,
                     batteryLevel: 0.0,
-                    isLoading: false,
-                    lastUpdated: Date(),
+                    isLoading: true,
+                    lastUpdated: nil,
                     modelQuotas: []
                 )
-                return
+            } else {
+                quotas[provider]?.isLoading = true
             }
 
             switch provider {

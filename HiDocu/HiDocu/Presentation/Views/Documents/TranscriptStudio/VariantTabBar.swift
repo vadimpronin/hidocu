@@ -107,7 +107,7 @@ struct VariantTabBar: View {
             Button("Delete Variant", role: .destructive) {
                 onDelete?(transcript.id)
             }
-            .disabled(transcripts.count <= 1 || isGenerating)
+            .disabled(isGenerating)
         }
     }
 

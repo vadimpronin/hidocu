@@ -121,4 +121,53 @@ final class SQLiteLLMJobRepository: LLMJobRepository, Sendable {
             )
         }
     }
+
+    func clearDeferredRetry(provider: LLMProvider) async throws {
+        try await db.asyncWrite { database in
+            try database.execute(
+                sql: """
+                    UPDATE llm_jobs
+                    SET next_retry_at = NULL
+                    WHERE status = ? AND provider = ? AND next_retry_at IS NOT NULL
+                    """,
+                arguments: [LLMJobStatus.pending.rawValue, provider.rawValue]
+            )
+        }
+    }
+
+    func fetchRecentFailed(limit: Int) async throws -> [LLMJob] {
+        try await db.asyncRead { database in
+            let dtos = try LLMJobDTO
+                .filter(LLMJobDTO.Columns.status == LLMJobStatus.failed.rawValue)
+                .order(LLMJobDTO.Columns.completedAt.desc)
+                .limit(limit)
+                .fetchAll(database)
+            return dtos.map { $0.toDomain() }
+        }
+    }
+
+    func fetchRecentCompleted(limit: Int) async throws -> [LLMJob] {
+        try await db.asyncRead { database in
+            let dtos = try LLMJobDTO
+                .filter(LLMJobDTO.Columns.status == LLMJobStatus.completed.rawValue)
+                .order(LLMJobDTO.Columns.completedAt.desc)
+                .limit(limit)
+                .fetchAll(database)
+            return dtos.map { $0.toDomain() }
+        }
+    }
+
+    func fetchAllPending(limit: Int) async throws -> [LLMJob] {
+        try await db.asyncRead { database in
+            let dtos = try LLMJobDTO
+                .filter(LLMJobDTO.Columns.status == LLMJobStatus.pending.rawValue)
+                .order(
+                    LLMJobDTO.Columns.priority.desc,
+                    LLMJobDTO.Columns.createdAt.asc
+                )
+                .limit(limit)
+                .fetchAll(database)
+            return dtos.map { $0.toDomain() }
+        }
+    }
 }

@@ -38,16 +38,11 @@ struct JobMonitorPopoverView: View {
                         }
                     }
 
-                    if queueState.pendingCount > 0 {
+                    if !queueState.pendingJobs.isEmpty {
                         JobSection(title: "Pending", icon: "clock.fill", color: .orange) {
-                            HStack {
-                                Text("\(queueState.pendingCount) jobs waiting")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Spacer()
+                            ForEach(queueState.pendingJobs) { job in
+                                JobRow(job: job, showDeferred: true)
                             }
-                            .padding(.horizontal)
-                            .padding(.vertical, 8)
                         }
                     }
 
@@ -67,7 +62,7 @@ struct JobMonitorPopoverView: View {
                         }
                     }
 
-                    if queueState.activeJobs.isEmpty && queueState.pendingCount == 0 &&
+                    if queueState.activeJobs.isEmpty && queueState.pendingJobs.isEmpty &&
                        queueState.recentFailed.isEmpty && queueState.recentCompleted.isEmpty {
                         Text("No jobs")
                             .foregroundStyle(.secondary)
@@ -116,6 +111,7 @@ private struct JobRow: View {
     let job: LLMJob
     var showProgress: Bool = false
     var showError: Bool = false
+    var showDeferred: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -146,6 +142,13 @@ private struct JobRow: View {
                             Text("Attempt \(job.attemptCount)/\(job.maxAttempts)")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
+                        }
+
+                        // Deferred indicator
+                        if showDeferred, let retryAt = job.nextRetryAt, retryAt > Date() {
+                            Text("retries \(Self.relativeFormatter.localizedString(for: retryAt, relativeTo: Date()))")
+                                .font(.caption2)
+                                .foregroundStyle(.orange)
                         }
 
                         // Timing

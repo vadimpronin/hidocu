@@ -24,7 +24,8 @@ struct LLMSettingsTab: View {
             guard viewModel == nil, let container else { return }
             viewModel = LLMSettingsViewModel(
                 llmService: container.llmService,
-                settingsService: container.settingsService
+                settingsService: container.settingsService,
+                llmQueueService: container.llmQueueService
             )
             await viewModel?.loadAccounts()
         }

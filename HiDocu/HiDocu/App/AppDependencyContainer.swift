@@ -169,6 +169,7 @@ final class AppDependencyContainer {
         self.llmQueueState = LLMQueueState()
         self.llmQueueService = LLMQueueService(
             jobRepository: llmJobRepository,
+            accountRepository: llmAccountRepository,
             llmService: llmService,
             quotaService: quotaService,
             transcriptRepository: transcriptRepository,

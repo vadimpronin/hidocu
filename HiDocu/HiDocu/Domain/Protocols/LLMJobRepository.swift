@@ -58,4 +58,28 @@ protocol LLMJobRepository: Sendable {
     /// - Parameter date: Cutoff date for deletion
     /// - Throws: Database errors
     func deleteCompleted(olderThan date: Date) async throws
+
+    /// Clears `nextRetryAt` for all pending jobs of the given provider,
+    /// making them immediately eligible for pickup.
+    /// - Parameter provider: The provider whose deferred jobs should be unblocked
+    /// - Throws: Database errors
+    func clearDeferredRetry(provider: LLMProvider) async throws
+
+    /// Fetches recent failed jobs ordered by completion time.
+    /// - Parameter limit: Maximum number of jobs to fetch
+    /// - Returns: Array of failed jobs, most recent first
+    /// - Throws: Database errors
+    func fetchRecentFailed(limit: Int) async throws -> [LLMJob]
+
+    /// Fetches recent completed jobs ordered by completion time.
+    /// - Parameter limit: Maximum number of jobs to fetch
+    /// - Returns: Array of completed jobs, most recent first
+    /// - Throws: Database errors
+    func fetchRecentCompleted(limit: Int) async throws -> [LLMJob]
+
+    /// Fetches all pending jobs regardless of retry timing (for UI display).
+    /// - Parameter limit: Maximum number of jobs to fetch
+    /// - Returns: Array of all pending jobs, ordered by priority then creation time
+    /// - Throws: Database errors
+    func fetchAllPending(limit: Int) async throws -> [LLMJob]
 }
