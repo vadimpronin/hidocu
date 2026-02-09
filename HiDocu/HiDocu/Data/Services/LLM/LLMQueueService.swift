@@ -431,11 +431,10 @@ actor LLMQueueService {
             // On error, proceed and let execution handle it
         }
 
-        // Mark as running in DB
+        // Mark as running in DB (attemptCount incremented later based on outcome)
         var runningJob = job
         runningJob.status = .running
         runningJob.startedAt = Date()
-        runningJob.attemptCount += 1
         do {
             try await jobRepository.update(runningJob)
         } catch {
@@ -500,8 +499,9 @@ actor LLMQueueService {
                 try await executeJudge(job)
             }
 
-            // Success
+            // Success — counts as an attempt (provider was reached)
             var completed = job
+            completed.attemptCount += 1
             completed.status = .completed
             completed.completedAt = Date()
             do {
@@ -529,35 +529,85 @@ actor LLMQueueService {
     }
 
     /// Handles job execution errors with retry logic.
+    ///
+    /// Only errors where we received a response from the provider count as attempts.
+    /// Network/local errors retry with escalating backoff without consuming attempts.
     private func handleJobError(_ job: LLMJob, error: LLMError) async {
         var failedJob = job
         failedJob.errorMessage = error.localizedDescription
 
-        // Rate limit or all-accounts-exhausted: record and use paused_until for retry timing
+        // Determine if we actually reached the provider (exhaustive — compiler enforces coverage)
+        let isProviderReached: Bool
+        switch error {
+        case .apiError, .rateLimited, .invalidResponse, .allAccountsExhausted:
+            isProviderReached = true
+        case .networkError, .tokenRefreshFailed, .authenticationFailed, .oauthTimeout,
+             .noAccountsConfigured, .portInUse:
+            isProviderReached = false
+        case .documentNotFound:
+            // Local data issue — fail immediately, no retry
+            failedJob.status = .failed
+            failedJob.completedAt = Date()
+            try? await jobRepository.update(failedJob)
+            AppLogger.llm.error("Job \(job.id) failed: document not found")
+            await markTranscriptFailedIfNeeded(job)
+            return
+        case .generationCancelled:
+            failedJob.status = .cancelled
+            failedJob.completedAt = Date()
+            try? await jobRepository.update(failedJob)
+            AppLogger.llm.info("Job \(job.id) cancelled")
+            return
+        }
+
+        // Only count as attempt if provider was actually reached
+        if isProviderReached {
+            failedJob.attemptCount += 1
+        }
+
+        // Rate limit handling: record and use paused_until for retry timing
+        // Note: accountId is typically nil on enqueued jobs — rate limits are also
+        // recorded inside LLMService when it catches them during execution.
         var isRateLimited = false
         if case .rateLimited(let provider, let retryAfter) = error {
             isRateLimited = true
             if let accountId = job.accountId {
-                Task { @MainActor in
-                    await self.quotaService.recordRateLimit(accountId: accountId, provider: provider, retryAfter: retryAfter)
-                }
+                await quotaService.recordRateLimit(accountId: accountId, provider: provider, retryAfter: retryAfter)
             }
         } else if case .allAccountsExhausted = error {
             isRateLimited = true
         }
 
+        // Network/local errors: retry with escalating backoff, never fail permanently
+        if !isProviderReached {
+            // Escalate: 30s, 60s, 120s, 300s (capped) based on consecutive network failures
+            // attemptCount stays at 0 for network errors, so use a derived counter
+            let networkRetries = max(0, failedJob.attemptCount == 0
+                ? Int(failedJob.nextRetryAt?.timeIntervalSince(failedJob.createdAt) ?? 0) / 30
+                : 0)
+            let delays: [TimeInterval] = [30, 60, 120, 300]
+            let delay = delays[min(networkRetries, delays.count - 1)]
+            failedJob.status = .pending
+            failedJob.nextRetryAt = Date().addingTimeInterval(delay)
+            do {
+                try await jobRepository.update(failedJob)
+            } catch {
+                AppLogger.llm.error("Failed to schedule network retry for job \(job.id): \(error.localizedDescription)")
+            }
+            AppLogger.llm.info("Job \(job.id) network error, retry in \(Int(delay))s (attempts unchanged at \(failedJob.attemptCount)): \(failedJob.errorMessage ?? "")")
+            return
+        }
+
+        // Provider-reached errors: retry with limit
         if failedJob.attemptCount < failedJob.maxAttempts {
             failedJob.status = .pending  // back to pending for retry
 
             if isRateLimited {
-                // For rate limits, find when the earliest account unpauses
-                // and schedule retry then (instead of blind backoff)
                 let retryAt = await nextAccountAvailableDate(for: job.provider)
                 failedJob.nextRetryAt = retryAt
                 let delay = Int(retryAt.timeIntervalSince(Date()))
                 AppLogger.llm.info("Job \(job.id) rate-limited, retry when account available in \(delay)s (attempt \(failedJob.attemptCount)/\(failedJob.maxAttempts))")
             } else {
-                // Non-rate-limit errors: use exponential backoff
                 let backoff = backoffInterval(attempt: failedJob.attemptCount)
                 failedJob.nextRetryAt = Date().addingTimeInterval(backoff)
                 AppLogger.llm.info("Job \(job.id) scheduled for retry after \(Int(backoff))s (attempt \(failedJob.attemptCount)/\(failedJob.maxAttempts))")
@@ -569,7 +619,7 @@ actor LLMQueueService {
                 AppLogger.llm.error("Failed to schedule retry for job \(job.id): \(error.localizedDescription)")
             }
         } else {
-            // Max retries exceeded
+            // Max retries exceeded — permanent failure
             failedJob.status = .failed
             failedJob.completedAt = Date()
             do {
@@ -578,23 +628,25 @@ actor LLMQueueService {
                 AppLogger.llm.error("Failed to mark job \(job.id) as failed: \(error.localizedDescription)")
             }
             AppLogger.llm.error("Job \(job.id) failed after \(failedJob.maxAttempts) attempts: \(error.localizedDescription)")
+            await markTranscriptFailedIfNeeded(job)
+        }
+    }
 
-            // If this is a transcription job, mark the transcript as failed
-            if job.jobType == .transcription {
-                do {
-                    let payloadData = Data(job.payload.utf8)
-                    let payload = try JSONDecoder().decode(TranscriptJobPayload.self, from: payloadData)
+    /// If the job is a transcription job, marks the associated transcript as failed.
+    private func markTranscriptFailedIfNeeded(_ job: LLMJob) async {
+        guard job.jobType == .transcription else { return }
+        do {
+            let payloadData = Data(job.payload.utf8)
+            let payload = try JSONDecoder().decode(TranscriptJobPayload.self, from: payloadData)
 
-                    if var transcript = try await transcriptRepository.fetchById(payload.transcriptId) {
-                        transcript.status = .failed
-                        transcript.modifiedAt = Date()
-                        try await transcriptRepository.update(transcript)
-                        AppLogger.llm.info("Marked transcript \(payload.transcriptId) as failed after job failure")
-                    }
-                } catch {
-                    AppLogger.llm.error("Failed to mark transcript as failed: \(error.localizedDescription)")
-                }
+            if var transcript = try await transcriptRepository.fetchById(payload.transcriptId) {
+                transcript.status = .failed
+                transcript.modifiedAt = Date()
+                try await transcriptRepository.update(transcript)
+                AppLogger.llm.info("Marked transcript \(payload.transcriptId) as failed after job failure")
             }
+        } catch {
+            AppLogger.llm.error("Failed to mark transcript as failed: \(error.localizedDescription)")
         }
     }
 

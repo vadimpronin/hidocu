@@ -322,6 +322,7 @@ final class LLMService {
             // On rate limit, record in quota service and rethrow
             if case .rateLimited(_, let retryAfter) = error {
                 await quotaService.recordRateLimit(accountId: account.id, provider: provider, retryAfter: retryAfter)
+                logSummaryError(error: error, account: account, model: model, startTime: startTime, documentId: document.id)
                 throw error
             }
             // On 401, refresh token once and retry
@@ -336,6 +337,7 @@ final class LLMService {
                     tokenData: refreshedTokenData
                 )
             } else {
+                logSummaryError(error: error, account: account, model: model, startTime: startTime, documentId: document.id)
                 throw error
             }
         }
@@ -389,6 +391,58 @@ final class LLMService {
 
         AppLogger.llm.info("Summary generated successfully for document id=\(document.id)")
         return response
+    }
+
+    /// Logs a failed summary API request.
+    private func logSummaryError(
+        error: Error,
+        account: LLMAccount,
+        model: String,
+        startTime: Date,
+        documentId: Int64
+    ) {
+        let duration = Int(Date().timeIntervalSince(startTime) * 1000)
+        let status: String
+        let errorMessage: String
+
+        if let llmError = error as? LLMError {
+            switch llmError {
+            case .rateLimited:
+                status = "rate_limited"
+                errorMessage = llmError.localizedDescription
+            default:
+                status = "error"
+                errorMessage = llmError.localizedDescription
+            }
+        } else {
+            status = "error"
+            errorMessage = error.localizedDescription
+        }
+
+        let logEntry = APILogEntry(
+            id: 0,
+            provider: account.provider,
+            llmAccountId: account.id,
+            model: model,
+            requestPayload: "[summary generation]",
+            responsePayload: extractResponseBody(from: error),
+            timestamp: Date(),
+            documentId: documentId,
+            sourceId: nil,
+            transcriptId: nil,
+            status: status,
+            error: errorMessage,
+            inputTokens: nil,
+            outputTokens: nil,
+            durationMs: duration
+        )
+        Task {
+            do {
+                _ = try await apiLogRepository.insert(logEntry)
+            } catch {
+                AppLogger.llm.warning("Failed to insert API log: \(error.localizedDescription)")
+            }
+        }
     }
 
     // MARK: - Audio Transcription
@@ -670,7 +724,7 @@ final class LLMService {
             llmAccountId: account.id,
             model: model,
             requestPayload: "[audio transcription]",
-            responsePayload: nil,
+            responsePayload: extractResponseBody(from: error),
             timestamp: Date(),
             documentId: documentId,
             sourceId: sourceId,
@@ -924,7 +978,7 @@ final class LLMService {
             llmAccountId: account.id,
             model: model,
             requestPayload: "[transcript evaluation]",
-            responsePayload: nil,
+            responsePayload: extractResponseBody(from: error),
             timestamp: Date(),
             documentId: documentId,
             sourceId: nil,
@@ -1005,5 +1059,20 @@ final class LLMService {
 
         let truncated = String(payload.prefix(maxBytes))
         return truncated + "... [truncated]"
+    }
+
+    /// Extracts the raw response body from an LLMError, if available.
+    private func extractResponseBody(from error: Error) -> String? {
+        guard let llmError = error as? LLMError else { return nil }
+        switch llmError {
+        case .apiError(_, _, let message):
+            return truncatePayload(message, maxBytes: 10_000)
+        case .rateLimited(let provider, let retryAfter):
+            return "Rate limited by \(provider.rawValue), retry after \(retryAfter.map { "\(Int($0))s" } ?? "unknown")"
+        case .tokenRefreshFailed(_, let detail):
+            return truncatePayload(detail, maxBytes: 10_000)
+        default:
+            return nil
+        }
     }
 }
