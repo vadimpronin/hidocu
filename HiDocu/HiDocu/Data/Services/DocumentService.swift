@@ -17,6 +17,7 @@ final class DocumentService {
     private let deletionLogRepository: any DeletionLogRepository
     private let folderRepository: any FolderRepository
     private let fileSystemService: FileSystemService
+    private var llmQueueService: LLMQueueService?
 
     init(
         documentRepository: any DocumentRepository,
@@ -32,6 +33,11 @@ final class DocumentService {
         self.deletionLogRepository = deletionLogRepository
         self.folderRepository = folderRepository
         self.fileSystemService = fileSystemService
+    }
+
+    /// Set after init to break circular dependency with LLMQueueService.
+    func setLLMQueueService(_ service: LLMQueueService) {
+        self.llmQueueService = service
     }
 
     // MARK: - Document CRUD
@@ -106,6 +112,13 @@ final class DocumentService {
 
     func deleteDocument(id: Int64) async throws {
         guard let doc = try await documentRepository.fetchById(id) else { return }
+
+        // Cancel all pending/running LLM jobs for this document (best-effort)
+        do {
+            try await llmQueueService?.cancelAllForDocument(id)
+        } catch {
+            AppLogger.llm.warning("Failed to cancel LLM jobs for document \(id): \(error.localizedDescription)")
+        }
 
         // Resolve folder path for deletion_log
         let folderPath: String?

@@ -18,6 +18,7 @@ final class LLMService {
     private let keychainService: KeychainService
     private let accountRepository: any LLMAccountRepository
     private let apiLogRepository: any APILogRepository
+    private let modelRepository: any LLMModelRepository
     private let documentService: DocumentService
     private let settingsService: SettingsService
     private let quotaService: QuotaService
@@ -34,6 +35,9 @@ final class LLMService {
     /// Guard against concurrent refresh calls.
     private var isRefreshingModels = false
 
+    /// Tracks whether a refresh was requested while one was in progress.
+    private var pendingRefresh = false
+
     // MARK: - Round-Robin State
 
     private var roundRobinCounters: [LLMProvider: Int] = [:]
@@ -45,6 +49,7 @@ final class LLMService {
         keychainService: KeychainService,
         accountRepository: any LLMAccountRepository,
         apiLogRepository: any APILogRepository,
+        modelRepository: any LLMModelRepository,
         documentService: DocumentService,
         settingsService: SettingsService,
         quotaService: QuotaService,
@@ -57,6 +62,7 @@ final class LLMService {
         self.keychainService = keychainService
         self.accountRepository = accountRepository
         self.apiLogRepository = apiLogRepository
+        self.modelRepository = modelRepository
         self.documentService = documentService
         self.settingsService = settingsService
         self.quotaService = quotaService
@@ -197,33 +203,84 @@ final class LLMService {
     }
 
     /// Refreshes the cached list of available models from all providers.
+    /// Fetches from ALL active accounts per provider, syncs results to the database,
+    /// then reloads the in-memory cache from DB.
     /// Silently skips providers with no configured accounts.
     /// Deduplicates concurrent calls — only one refresh runs at a time.
     func refreshAvailableModels() async {
-        guard !isRefreshingModels else { return }
+        guard !isRefreshingModels else {
+            pendingRefresh = true
+            return
+        }
         isRefreshingModels = true
-        defer { isRefreshingModels = false }
-        AppLogger.llm.info("Refreshing available models cache")
-        var allModels: [AvailableModel] = []
+        defer {
+            isRefreshingModels = false
+            if pendingRefresh {
+                pendingRefresh = false
+                Task { await refreshAvailableModels() }
+            }
+        }
+        AppLogger.llm.info("Refreshing available models from all accounts")
+
         for provider in LLMProvider.allCases {
             do {
-                let models = try await fetchModels(provider: provider)
-                allModels.append(contentsOf: models.map { AvailableModel(provider: provider, modelId: $0.id, displayName: $0.displayName) })
+                let accountResults = try await fetchModelsFromAllAccounts(provider: provider)
+                for result in accountResults {
+                    try await modelRepository.syncModelsForAccount(
+                        accountId: result.accountId,
+                        provider: provider,
+                        fetchedModels: result.models
+                    )
+                }
             } catch let error as LLMError {
-                if case .noAccountsConfigured = error { }
-                else { AppLogger.llm.warning("Failed to fetch models for \(provider.rawValue): \(error.localizedDescription)") }
+                if case .noAccountsConfigured = error { /* skip */ }
+                else { AppLogger.llm.warning("Failed to refresh models for \(provider.rawValue): \(error.localizedDescription)") }
             } catch {
-                AppLogger.llm.warning("Failed to fetch models for \(provider.rawValue): \(error.localizedDescription)")
+                AppLogger.llm.warning("Failed to refresh models for \(provider.rawValue): \(error.localizedDescription)")
             }
         }
-        availableModels = allModels.sorted {
-            if $0.provider.rawValue != $1.provider.rawValue {
-                return $0.provider.rawValue < $1.provider.rawValue
-            }
-            return $0.modelId < $1.modelId
+
+        // Reload from DB after sync
+        await reloadModelsFromDB()
+    }
+
+    /// Loads the available models from the database (fast, no API calls).
+    /// Call on startup for instant display, and after each API refresh.
+    func reloadModelsFromDB() async {
+        do {
+            availableModels = try await modelRepository.fetchAllAvailableModels()
+            AppLogger.llm.info("Loaded \(self.availableModels.count) models from DB")
+        } catch {
+            AppLogger.llm.error("Failed to load models from DB: \(error.localizedDescription)")
         }
-        let count = availableModels.count
-        AppLogger.llm.info("Cached \(count) available models")
+    }
+
+    /// Fetches models from ALL active accounts for a provider.
+    /// Tolerates individual account failures — logs warnings and continues.
+    private func fetchModelsFromAllAccounts(provider: LLMProvider) async throws -> [(accountId: Int64, models: [ModelInfo])] {
+        let accounts = try await accountRepository.fetchAll(provider: provider)
+        let activeAccounts = accounts.filter { $0.isActive }
+        guard !activeAccounts.isEmpty else {
+            throw LLMError.noAccountsConfigured(provider)
+        }
+
+        guard let strategy = providers[provider] else {
+            throw LLMError.authenticationFailed(provider: provider, detail: "Provider not supported")
+        }
+
+        var results: [(accountId: Int64, models: [ModelInfo])] = []
+        for account in activeAccounts {
+            do {
+                let (accessToken, tokenData) = try await tokenManager.getValidAccessToken(for: account)
+                let models = try await strategy.fetchModels(
+                    accessToken: accessToken, accountId: tokenData.accountId, tokenData: tokenData
+                )
+                results.append((accountId: account.id, models: models))
+            } catch {
+                AppLogger.llm.warning("Failed to fetch models for account \(account.id) (\(provider.rawValue)): \(error.localizedDescription)")
+            }
+        }
+        return results
     }
 
     // MARK: - Summary Generation

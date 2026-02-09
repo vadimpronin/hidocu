@@ -572,6 +572,39 @@ final class DatabaseManager: Sendable {
             AppLogger.database.info("Migration v13_llm_queue_and_quotas complete")
         }
 
+        // v14: Persist LLM models with account-model many-to-many relationship
+        migrator.registerMigration("v14_llm_models") { db in
+            // llm_models: every model ever seen from any provider
+            try db.execute(sql: """
+                CREATE TABLE llm_models (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    provider TEXT NOT NULL,
+                    model_id TEXT NOT NULL,
+                    display_name TEXT NOT NULL,
+                    first_seen_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    last_seen_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(provider, model_id)
+                )
+                """)
+            try db.execute(sql: "CREATE INDEX idx_llm_models_provider ON llm_models(provider)")
+
+            // llm_account_models: junction table tracking which accounts can access which models
+            try db.execute(sql: """
+                CREATE TABLE llm_account_models (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    account_id INTEGER NOT NULL REFERENCES llm_accounts(id) ON DELETE CASCADE,
+                    model_id INTEGER NOT NULL REFERENCES llm_models(id) ON DELETE CASCADE,
+                    is_available INTEGER NOT NULL DEFAULT 1,
+                    last_checked_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(account_id, model_id)
+                )
+                """)
+            try db.execute(sql: "CREATE INDEX idx_llm_account_models_model ON llm_account_models(model_id)")
+            try db.execute(sql: "CREATE INDEX idx_llm_account_models_account ON llm_account_models(account_id)")
+
+            AppLogger.database.info("Migration v14_llm_models complete")
+        }
+
         return migrator
     }
     

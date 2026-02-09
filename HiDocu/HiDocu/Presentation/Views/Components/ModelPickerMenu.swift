@@ -21,29 +21,64 @@ struct ModelPickerMenu: View {
                         Button {
                             selectedModelId = model.id
                         } label: {
-                            if model.id == selectedModelId {
-                                Label(model.displayName, systemImage: "checkmark")
-                            } else {
+                            HStack {
+                                if model.id == selectedModelId {
+                                    Image(systemName: "checkmark")
+                                }
                                 Text(model.displayName)
+                                Spacer()
+                                availabilityIndicator(for: model)
                             }
                         }
                     }
                 }
             }
         } label: {
-            HStack(spacing: 4) {
-                Text(selectedDisplayName)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.caption2)
-            }
+            selectedDisplayLabel
         }
         .menuStyle(.borderlessButton)
         .disabled(disabled)
     }
 
+    // MARK: - Availability Indicators
+
+    @ViewBuilder
+    private func availabilityIndicator(for model: AvailableModel) -> some View {
+        if model.isUnavailable {
+            Image(systemName: "xmark.circle.fill")
+                .foregroundColor(.red)
+                .font(.caption2)
+                .help("Not available on any account")
+        } else if model.isPartiallyAvailable {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.orange)
+                .font(.caption2)
+                .help("Available on \(model.availableAccountCount) of \(model.totalAccountCount) accounts")
+        }
+    }
+
     // MARK: - Private Helpers
+
+    @ViewBuilder
+    private var selectedDisplayLabel: some View {
+        HStack(spacing: 4) {
+            if let model = models.first(where: { $0.id == selectedModelId }) {
+                Text(model.displayName)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                availabilityIndicator(for: model)
+            } else if !selectedModelId.isEmpty {
+                Text(selectedModelId)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            } else {
+                Text("Select Model")
+                    .lineLimit(1)
+            }
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.caption2)
+        }
+    }
 
     private var modelsGroupedByProvider: [(provider: LLMProvider, models: [AvailableModel])] {
         let grouped = Dictionary(grouping: models, by: \.provider)
@@ -82,15 +117,5 @@ struct ModelPickerMenu: View {
         let numerical = subnames.compactMap { Int($0) }
         let textual = subnames.filter { Int($0) == nil }
         return (numerical, textual)
-    }
-
-    private var selectedDisplayName: String {
-        if let model = models.first(where: { $0.id == selectedModelId }) {
-            return model.displayName
-        }
-        if !selectedModelId.isEmpty {
-            return selectedModelId
-        }
-        return "Select Model"
     }
 }

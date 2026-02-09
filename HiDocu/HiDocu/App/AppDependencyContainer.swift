@@ -42,6 +42,7 @@ final class AppDependencyContainer {
     let llmUsageRepository: SQLiteLLMUsageRepository
     let llmJobRepository: SQLiteLLMJobRepository
     let llmModelLimitRepository: SQLiteLLMModelLimitRepository
+    let llmModelRepository: SQLiteLLMModelRepository
 
     // MARK: - Services
 
@@ -89,6 +90,7 @@ final class AppDependencyContainer {
         self.llmUsageRepository = SQLiteLLMUsageRepository(databaseManager: databaseManager)
         self.llmJobRepository = SQLiteLLMJobRepository(databaseManager: databaseManager)
         self.llmModelLimitRepository = SQLiteLLMModelLimitRepository(databaseManager: databaseManager)
+        self.llmModelRepository = SQLiteLLMModelRepository(databaseManager: databaseManager)
 
         // Initialize services
         self.settingsService = SettingsService()
@@ -156,6 +158,7 @@ final class AppDependencyContainer {
             keychainService: keychainService,
             accountRepository: llmAccountRepository,
             apiLogRepository: apiLogRepository,
+            modelRepository: llmModelRepository,
             documentService: documentService,
             settingsService: settingsService,
             quotaService: quotaService,
@@ -178,6 +181,9 @@ final class AppDependencyContainer {
             settingsService: settingsService,
             state: llmQueueState
         )
+
+        // Wire LLMQueueService into DocumentService (post-init to break circular dependency)
+        documentService.setLLMQueueService(llmQueueService)
 
         self.importServiceV2 = RecordingImportServiceV2(
             fileSystemService: fileSystemService,
