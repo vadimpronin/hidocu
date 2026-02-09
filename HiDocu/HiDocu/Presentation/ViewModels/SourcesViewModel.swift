@@ -24,6 +24,7 @@ final class SourcesViewModel {
     var isLoading = false
     var generationError: String?
     var showGenerateSheet = false
+    var isJudging = false
     private var activeTranscriptIds: Set<Int64> = []
 
     var isGeneratingTranscripts: Bool {
@@ -232,6 +233,29 @@ final class SourcesViewModel {
             await loadDocumentTranscripts(documentId: documentId)
         } catch {
             AppLogger.general.error("Failed to set document primary: \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: - LLM Judge
+
+    func judgeTranscripts(documentId: Int64, llmService: LLMService) async {
+        let readyTranscripts = documentTranscripts.filter { $0.status == .ready }
+        guard readyTranscripts.count >= 3 else { return }
+
+        isJudging = true
+        defer { isJudging = false }
+
+        do {
+            let judgeResponse = try await llmService.evaluateTranscripts(
+                transcripts: readyTranscripts,
+                documentId: documentId
+            )
+
+            // evaluateTranscripts already validates and remaps IDs to real DB IDs
+            await setDocumentPrimary(transcriptId: judgeResponse.bestId, documentId: documentId)
+        } catch {
+            AppLogger.llm.error("Judge evaluation failed: \(error.localizedDescription)")
+            generationError = "Judge evaluation failed: \(error.localizedDescription)"
         }
     }
 

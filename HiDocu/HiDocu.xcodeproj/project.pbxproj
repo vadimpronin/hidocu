@@ -58,6 +58,7 @@
 		BB0000110000000B /* OAuthCallbackServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000110000000B /* OAuthCallbackServer.swift */; };
 		BB0000120000000C /* SSEParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000120000000C /* SSEParser.swift */; };
 		BB0000A00000000A /* AvailableModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000A00000000A /* AvailableModel.swift */; };
+		BB0000B00000000B /* JudgeResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000B00000000B /* JudgeResponse.swift */; };
 		BE6ECC1B25F71F50417558E0 /* RecordingImportServiceV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368BA73F8C08D273FE2B21C8 /* RecordingImportServiceV2.swift */; };
 		BFC601E7D452D90CD990621E /* DocumentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6226CD68D273A20A4EBB9B65 /* DocumentService.swift */; };
 		C5C630A403A97F0B29ABD83C /* DocumentListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F5287EBB0531F111E6E01E6 /* DocumentListView.swift */; };
@@ -168,6 +169,7 @@
 		AA0000110000000B /* OAuthCallbackServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthCallbackServer.swift; sourceTree = "<group>"; };
 		AA0000120000000C /* SSEParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSEParser.swift; sourceTree = "<group>"; };
 		AA0000A00000000A /* AvailableModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvailableModel.swift; sourceTree = "<group>"; };
+		AA0000B00000000B /* JudgeResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JudgeResponse.swift; sourceTree = "<group>"; };
 		AAA3834F987CA973FCD8506B /* SQLiteDeletionLogRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SQLiteDeletionLogRepository.swift; sourceTree = "<group>"; };
 		AAADD95ECAC7FF3C0B18B887 /* DocumentDetailViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentDetailViewModel.swift; sourceTree = "<group>"; };
 		AEF1499B052B6ECD6B8CCF60 /* FolderTreeViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FolderTreeViewModel.swift; sourceTree = "<group>"; };
@@ -410,6 +412,7 @@
 				AA00000400000004 /* APILogEntry.swift */,
 				AA00000500000005 /* LLMError.swift */,
 				AA0000A00000000A /* AvailableModel.swift */,
+				AA0000B00000000B /* JudgeResponse.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -791,6 +794,7 @@
 				BB00000500000005 /* LLMError.swift in Sources */,
 				BB00000600000006 /* LLMProviderStrategy.swift in Sources */,
 				BB0000A00000000A /* AvailableModel.swift in Sources */,
+				BB0000B00000000B /* JudgeResponse.swift in Sources */,
 				BB00000700000007 /* LLMAccountRepository.swift in Sources */,
 				BB00000800000008 /* APILogRepository.swift in Sources */,
 				BB00000900000009 /* PKCEHelper.swift in Sources */,

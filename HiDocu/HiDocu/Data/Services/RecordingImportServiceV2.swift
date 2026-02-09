@@ -508,9 +508,8 @@ final class RecordingImportServiceV2 {
 
         AppLogger.llm.info("Starting auto-transcription for document \(documentId): \(transcriptIds.count) variants")
 
-        // Generate transcripts in parallel; first success becomes primary.
-        // `for await` iterates sequentially so `primarySet` is safe without synchronization.
-        var primarySet = false
+        // Generate transcripts in parallel, collect all results
+        var successfulTranscripts: [(id: Int64, text: String)] = []
 
         await withTaskGroup(of: (Int64, Result<String, Error>).self) { group in
             for transcriptId in transcriptIds {
@@ -543,24 +542,7 @@ final class RecordingImportServiceV2 {
                         transcript.status = .ready
                         transcript.modifiedAt = Date()
                         try await transcriptRepository.update(transcript)
-
-                        if !primarySet {
-                            primarySet = true
-                            try await transcriptRepository.setPrimaryForDocument(id: transcriptId, documentId: documentId)
-                            try await documentService.writeBodyById(documentId: documentId, content: text)
-                            AppLogger.llm.info("Primary transcript \(transcriptId) set for document \(documentId), body updated")
-
-                            // Trigger summary generation in background
-                            if let doc = try await documentService.fetchDocument(id: documentId) {
-                                Task {
-                                    do {
-                                        _ = try await self.llmService.generateSummary(for: doc)
-                                    } catch {
-                                        AppLogger.llm.error("Auto-summary generation failed for document \(documentId): \(error.localizedDescription)")
-                                    }
-                                }
-                            }
-                        }
+                        successfulTranscripts.append((id: transcriptId, text: text))
 
                     case .failure(let error):
                         transcript.status = .failed
@@ -574,10 +556,80 @@ final class RecordingImportServiceV2 {
             }
         }
 
-        if primarySet {
-            AppLogger.llm.info("Auto-transcription completed successfully for document \(documentId)")
-        } else {
+        // Select primary transcript
+        guard !successfulTranscripts.isEmpty else {
             AppLogger.llm.warning("All auto-transcripts failed for document \(documentId), body remains empty")
+            return
         }
+
+        let primaryId: Int64
+        let primaryText: String
+
+        if successfulTranscripts.count == 1 {
+            // Single success — set as primary directly (can't judge)
+            primaryId = successfulTranscripts[0].id
+            primaryText = successfulTranscripts[0].text
+            AppLogger.llm.info("Single transcript \(primaryId) set as primary for document \(documentId) (no judge needed)")
+        } else {
+            // 2+ successes — invoke the LLM judge
+            do {
+                var readyTranscripts: [Transcript] = []
+                for st in successfulTranscripts {
+                    if let t = try await transcriptRepository.fetchById(st.id) {
+                        readyTranscripts.append(t)
+                    }
+                }
+
+                let judgeResponse = try await llmService.evaluateTranscripts(
+                    transcripts: readyTranscripts,
+                    documentId: documentId
+                )
+
+                // Validate bestId is in our set
+                if let best = successfulTranscripts.first(where: { $0.id == judgeResponse.bestId }) {
+                    primaryId = best.id
+                    primaryText = best.text
+                    AppLogger.llm.info("Judge selected transcript \(primaryId) as best for document \(documentId)")
+                } else {
+                    // bestId mismatch — fallback to first by ID
+                    let fallback = successfulTranscripts.sorted(by: { $0.id < $1.id })[0]
+                    primaryId = fallback.id
+                    primaryText = fallback.text
+                    AppLogger.llm.warning("Judge returned bestId=\(judgeResponse.bestId) not in transcript set, falling back to \(primaryId)")
+                }
+            } catch {
+                // Judge failed — fallback to first transcript by ID
+                let fallback = successfulTranscripts.sorted(by: { $0.id < $1.id })[0]
+                primaryId = fallback.id
+                primaryText = fallback.text
+                AppLogger.llm.error("Judge evaluation failed for document \(documentId): \(error.localizedDescription), falling back to transcript \(primaryId)")
+            }
+        }
+
+        // Commit primary and write body
+        do {
+            try await transcriptRepository.setPrimaryForDocument(id: primaryId, documentId: documentId)
+            try await documentService.writeBodyById(documentId: documentId, content: primaryText)
+            AppLogger.llm.info("Primary transcript \(primaryId) set for document \(documentId), body updated")
+        } catch {
+            AppLogger.llm.error("Failed to set primary transcript for document \(documentId): \(error.localizedDescription)")
+        }
+
+        // Trigger summary generation in background
+        do {
+            if let doc = try await documentService.fetchDocument(id: documentId) {
+                Task {
+                    do {
+                        _ = try await self.llmService.generateSummary(for: doc)
+                    } catch {
+                        AppLogger.llm.error("Auto-summary generation failed for document \(documentId): \(error.localizedDescription)")
+                    }
+                }
+            }
+        } catch {
+            AppLogger.llm.error("Failed to fetch document \(documentId) for summary generation: \(error.localizedDescription)")
+        }
+
+        AppLogger.llm.info("Auto-transcription completed for document \(documentId)")
     }
 }

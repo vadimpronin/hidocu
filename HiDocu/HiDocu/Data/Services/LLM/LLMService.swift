@@ -669,6 +669,252 @@ final class LLMService {
         }
     }
 
+    // MARK: - Transcript Evaluation
+
+    /// Evaluates multiple transcript variants and returns a judge response identifying the best one.
+    func evaluateTranscripts(
+        transcripts: [Transcript],
+        documentId: Int64,
+        provider: LLMProvider = .gemini,
+        model: String = "gemini-3-pro-preview" // TODO: use settings.llm.judgeModel when configurable
+    ) async throws -> JudgeResponse {
+        let startTime = Date()
+        AppLogger.llm.info("Evaluating \(transcripts.count) transcripts for document \(documentId)")
+
+        // Filter transcripts with valid text
+        let minTextLength = 50
+        var indexToTranscriptId: [Int64: Int64] = [:] // promptIndex -> transcriptId
+        var promptParts: [String] = []
+        var promptIndex: Int64 = 1
+
+        for transcript in transcripts {
+            guard let text = transcript.fullText,
+                  text.trimmingCharacters(in: .whitespacesAndNewlines).count >= minTextLength else {
+                AppLogger.llm.info("Skipping transcript \(transcript.id) from evaluation (empty or too short)")
+                continue
+            }
+            indexToTranscriptId[promptIndex] = transcript.id
+            promptParts.append("<transcript id=\"\(promptIndex)\">\n\(text)\n</transcript>")
+            promptIndex += 1
+        }
+
+        guard indexToTranscriptId.count >= 2 else {
+            throw LLMError.invalidResponse(detail: "Need at least 2 valid transcripts to evaluate, got \(indexToTranscriptId.count)")
+        }
+
+        let prompt = """
+            Compare \(indexToTranscriptId.count) transcripts:
+
+            \(promptParts.joined(separator: "\n\n"))
+
+            One of them is odd, may contain mistakes, hallucinations or have some information missing or wrongly identified speakers.
+            Which one is odd?
+            And which one is the best?
+            Respond in json like this:
+            {
+              "reasoning_about_the_odd_one": "<reasoning>",
+              "odd_id": <number>,
+              "reasoning_about_the_best_one": "<reasoning>",
+              "best_id": <number>
+            }
+            """
+
+        // Select account
+        let account = try await selectAccount(provider: provider)
+
+        // Get valid access token
+        let (accessToken, currentTokenData) = try await getValidAccessToken(for: account)
+
+        guard let strategy = providers[provider] else {
+            throw LLMError.authenticationFailed(provider: provider, detail: "Provider not supported")
+        }
+
+        let messages = [LLMMessage(role: .user, content: prompt)]
+        let options = LLMRequestOptions(temperature: nil)
+
+        // Make API call with retry on 401
+        let response: LLMResponse
+        do {
+            response = try await strategy.chat(
+                messages: messages,
+                model: model,
+                accessToken: accessToken,
+                options: options,
+                tokenData: currentTokenData
+            )
+        } catch let error as LLMError {
+            if case .rateLimited = error {
+                excludeAccount(account.id)
+                logEvaluationError(error: error, account: account, model: model, startTime: startTime, documentId: documentId)
+                throw error
+            }
+            if case .apiError(_, let statusCode, _) = error, statusCode == 401 {
+                AppLogger.llm.warning("Received 401 during transcript evaluation, refreshing token and retrying")
+                let (newAccessToken, refreshedTokenData) = try await refreshAndGetToken(for: account)
+                response = try await strategy.chat(
+                    messages: messages,
+                    model: model,
+                    accessToken: newAccessToken,
+                    options: options,
+                    tokenData: refreshedTokenData
+                )
+            } else {
+                logEvaluationError(error: error, account: account, model: model, startTime: startTime, documentId: documentId)
+                throw error
+            }
+        }
+
+        try await accountRepository.updateLastUsed(id: account.id)
+
+        // Extract and decode JSON
+        guard let jsonString = extractJSON(from: response.content) else {
+            let error = LLMError.invalidResponse(detail: "No JSON found in judge response")
+            logEvaluationError(error: error, account: account, model: model, startTime: startTime, documentId: documentId)
+            throw error
+        }
+
+        let decoded: JudgeResponse
+        do {
+            let data = Data(jsonString.utf8)
+            decoded = try JSONDecoder().decode(JudgeResponse.self, from: data)
+        } catch {
+            AppLogger.llm.error("Failed to decode judge response: \(error.localizedDescription)\nRaw: \(String(response.content.prefix(500)))")
+            let llmError = LLMError.invalidResponse(detail: "Failed to decode judge response: \(error.localizedDescription)")
+            logEvaluationError(error: llmError, account: account, model: model, startTime: startTime, documentId: documentId)
+            throw llmError
+        }
+
+        // Map prompt indices back to DB IDs
+        guard let bestDbId = indexToTranscriptId[decoded.bestId],
+              let oddDbId = indexToTranscriptId[decoded.oddId] else {
+            let error = LLMError.invalidResponse(detail: "Judge returned IDs not in transcript set: bestId=\(decoded.bestId), oddId=\(decoded.oddId)")
+            logEvaluationError(error: error, account: account, model: model, startTime: startTime, documentId: documentId)
+            throw error
+        }
+
+        let result = JudgeResponse(
+            oddReasoning: decoded.oddReasoning,
+            oddId: oddDbId,
+            bestReasoning: decoded.bestReasoning,
+            bestId: bestDbId
+        )
+
+        // Log reasoning
+        AppLogger.llm.info("Judge evaluation for document \(documentId): bestId=\(result.bestId), oddId=\(result.oddId)")
+        AppLogger.llm.info("Best reasoning: \(result.bestReasoning)")
+        AppLogger.llm.info("Odd reasoning: \(result.oddReasoning)")
+
+        // Log API call
+        logEvaluationRequest(response: response, account: account, startTime: startTime, model: model, documentId: documentId)
+
+        return result
+    }
+
+    /// Extracts the first JSON object from a string, handling markdown code blocks.
+    private func extractJSON(from text: String) -> String? {
+        // Try to extract JSON from ```json ... ``` or ``` ... ``` code blocks using capture group
+        let pattern = "```(?:json)?\\s*\\n?(\\{[\\s\\S]*?\\})\\s*\\n?```"
+        if let regex = try? NSRegularExpression(pattern: pattern),
+           let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+           let range = Range(match.range(at: 1), in: text) {
+            return String(text[range])
+        }
+
+        // Fallback: find the first { ... last } block
+        guard let startIdx = text.firstIndex(of: "{"),
+              let endIdx = text.lastIndex(of: "}") else {
+            return nil
+        }
+        return String(text[startIdx...endIdx])
+    }
+
+    /// Logs a successful evaluation API request.
+    private func logEvaluationRequest(
+        response: LLMResponse,
+        account: LLMAccount,
+        startTime: Date,
+        model: String,
+        documentId: Int64
+    ) {
+        let duration = Int(Date().timeIntervalSince(startTime) * 1000)
+        let logEntry = APILogEntry(
+            id: 0,
+            provider: account.provider,
+            llmAccountId: account.id,
+            model: model,
+            requestPayload: "[transcript evaluation]",
+            responsePayload: truncatePayload(response.content, maxBytes: 10_000),
+            timestamp: Date(),
+            documentId: documentId,
+            sourceId: nil,
+            transcriptId: nil,
+            status: "success",
+            error: nil,
+            inputTokens: response.inputTokens,
+            outputTokens: response.outputTokens,
+            durationMs: duration
+        )
+        Task {
+            do {
+                _ = try await apiLogRepository.insert(logEntry)
+            } catch {
+                AppLogger.llm.warning("Failed to insert API log: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Logs a failed evaluation API request.
+    private func logEvaluationError(
+        error: Error,
+        account: LLMAccount,
+        model: String,
+        startTime: Date,
+        documentId: Int64
+    ) {
+        let duration = Int(Date().timeIntervalSince(startTime) * 1000)
+        let status: String
+        let errorMessage: String
+
+        if let llmError = error as? LLMError {
+            switch llmError {
+            case .rateLimited:
+                status = "rate_limited"
+                errorMessage = llmError.localizedDescription
+            default:
+                status = "error"
+                errorMessage = llmError.localizedDescription
+            }
+        } else {
+            status = "error"
+            errorMessage = error.localizedDescription
+        }
+
+        let logEntry = APILogEntry(
+            id: 0,
+            provider: account.provider,
+            llmAccountId: account.id,
+            model: model,
+            requestPayload: "[transcript evaluation]",
+            responsePayload: nil,
+            timestamp: Date(),
+            documentId: documentId,
+            sourceId: nil,
+            transcriptId: nil,
+            status: status,
+            error: errorMessage,
+            inputTokens: nil,
+            outputTokens: nil,
+            durationMs: duration
+        )
+        Task {
+            do {
+                _ = try await apiLogRepository.insert(logEntry)
+            } catch {
+                AppLogger.llm.warning("Failed to insert API log: \(error.localizedDescription)")
+            }
+        }
+    }
+
     // MARK: - Token Management (Private)
 
     /// Gets a valid access token and token data for an account, refreshing if expired.

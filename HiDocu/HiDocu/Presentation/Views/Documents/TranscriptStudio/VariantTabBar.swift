@@ -14,7 +14,9 @@ struct VariantTabBar: View {
     var onDelete: ((Int64) -> Void)?
     var onPromote: ((Int64) -> Void)?
     var onGenerate: (() -> Void)?
+    var onJudge: (() -> Void)?
     var isGenerating: Bool = false
+    var isJudging: Bool = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -25,6 +27,7 @@ struct VariantTabBar: View {
                     }
 
                     addMenu
+                    judgeButton
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
@@ -108,6 +111,10 @@ struct VariantTabBar: View {
         }
     }
 
+    private var readyCount: Int {
+        transcripts.filter { $0.status == .ready }.count
+    }
+
     // MARK: - Add Menu
 
     private var addMenu: some View {
@@ -145,5 +152,32 @@ struct VariantTabBar: View {
         }
         .menuStyle(.borderlessButton)
         .help(isGenerating ? "Generating transcript..." : "Add Variant")
+    }
+
+    // MARK: - Judge Button
+
+    private var judgeButton: some View {
+        Button {
+            onJudge?()
+        } label: {
+            Group {
+                if isJudging {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Image(systemName: "crown.fill")
+                        .font(.caption)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background {
+                Capsule()
+                    .fill(Color.secondary.opacity(0.1))
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(readyCount < 3 || isJudging || isGenerating)
+        .help(isJudging ? "Evaluating transcripts..." : "AI Judge: pick best transcript")
     }
 }

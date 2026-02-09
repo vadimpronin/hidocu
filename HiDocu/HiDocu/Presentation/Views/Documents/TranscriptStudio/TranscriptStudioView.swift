@@ -211,7 +211,17 @@ struct TranscriptStudioView: View {
                     showPromoteConfirmation = true
                 },
                 onGenerate: { showGenerateSheet = true },
-                isGenerating: viewModel.isGeneratingTranscripts
+                onJudge: {
+                    guard let container else { return }
+                    Task {
+                        await viewModel.judgeTranscripts(
+                            documentId: documentId,
+                            llmService: container.llmService
+                        )
+                    }
+                },
+                isGenerating: viewModel.isGeneratingTranscripts,
+                isJudging: viewModel.isJudging
             )
 
             Divider()
