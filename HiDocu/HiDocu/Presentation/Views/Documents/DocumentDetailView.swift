@@ -192,6 +192,15 @@ struct DocumentDetailView: View {
                             .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity, minHeight: 400)
+                } else if !viewModel.hasSummary && viewModel.bodyGenerationState == .generating {
+                    // Body is still being generated; summary will be auto-enqueued after
+                    VStack(spacing: 8) {
+                        ProgressView()
+                        Text("Waiting for content generation...")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 400)
                 } else {
                     MarkdownEditableView(
                         text: $viewModel.summaryText,
@@ -205,7 +214,7 @@ struct DocumentDetailView: View {
             }
             .toolbar {
                 ToolbarItemGroup(placement: .primaryAction) {
-                    if viewModel.hasLLMService {
+                    if viewModel.hasLLMService && viewModel.bodyGenerationState != .generating {
                         ModelPickerMenu(
                             models: viewModel.availableModels,
                             selectedModelId: $viewModel.selectedModelId,
@@ -225,7 +234,7 @@ struct DocumentDetailView: View {
                         Button(viewModel.isSummaryEditing ? "Done" : "Edit") {
                             viewModel.isSummaryEditing.toggle()
                         }
-                    } else {
+                    } else if viewModel.bodyGenerationState != .generating {
                         Button("Generate Summary", systemImage: "sparkles") {
                             viewModel.generateSummary()
                         }
