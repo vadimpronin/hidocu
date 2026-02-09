@@ -136,6 +136,23 @@ final class DocumentService {
         _ = try await deletionLogRepository.insert(entry)
     }
 
+    /// Delete multiple documents by their IDs.
+    /// Each document is deleted independently; failures are logged but do not prevent other deletions.
+    /// Returns the number of documents that failed to delete.
+    @discardableResult
+    func deleteDocuments(ids: Set<Int64>) async -> Int {
+        var failureCount = 0
+        for id in ids {
+            do {
+                try await deleteDocument(id: id)
+            } catch {
+                AppLogger.general.error("Failed to delete document \(id): \(error.localizedDescription)")
+                failureCount += 1
+            }
+        }
+        return failureCount
+    }
+
     func moveDocument(id: Int64, toFolderId: Int64?) async throws {
         guard var doc = try await documentRepository.fetchById(id) else { return }
         let oldDiskPath = doc.diskPath

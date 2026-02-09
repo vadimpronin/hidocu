@@ -15,7 +15,8 @@ struct ContentViewV2: View {
     @State private var documentDetailVM: DocumentDetailViewModel?
     @State private var deviceDashboardVMs: [UInt64: DeviceDashboardViewModel] = [:]
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
-    @State private var showDeleteConfirmation = false
+    @State private var documentIdsToDelete: Set<Int64> = []
+    @State private var errorMessage: String?
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -44,13 +45,23 @@ struct ContentViewV2: View {
             handleDocumentSelection(newId)
         }
         .background {
-            // Cmd+Backspace: delete selected document
+            // Cmd+Backspace: delete selected documents
             Button("") {
-                if navigationVM.activeDocumentId != nil {
-                    showDeleteConfirmation = true
+                if !navigationVM.selectedDocumentIds.isEmpty {
+                    documentIdsToDelete = navigationVM.selectedDocumentIds
                 }
             }
             .keyboardShortcut(.delete, modifiers: .command)
+            .hidden()
+            .accessibilityHidden(true)
+
+            // Delete key: same action
+            Button("") {
+                if !navigationVM.selectedDocumentIds.isEmpty {
+                    documentIdsToDelete = navigationVM.selectedDocumentIds
+                }
+            }
+            .keyboardShortcut(.delete, modifiers: [])
             .hidden()
             .accessibilityHidden(true)
 
@@ -65,20 +76,51 @@ struct ContentViewV2: View {
             .accessibilityHidden(true)
         }
         .confirmationDialog(
-            "Delete Document",
-            isPresented: $showDeleteConfirmation
+            documentIdsToDelete.count == 1 ? "Delete Document" : "Delete \(documentIdsToDelete.count) Documents",
+            isPresented: Binding(
+                get: { !documentIdsToDelete.isEmpty },
+                set: { if !$0 { documentIdsToDelete = [] } }
+            )
         ) {
-            if let docId = navigationVM.activeDocumentId,
+            let ids = documentIdsToDelete
+            if ids.count == 1,
+               let docId = ids.first,
                let doc = documentListVM?.documents.first(where: { $0.id == docId }) {
                 Button("Delete \"\(doc.title)\"", role: .destructive) {
                     documentDetailVM?.cancelPendingSave()
                     navigationVM.selectedDocumentIds = []
-                    Task { try? await container.documentService.deleteDocument(id: docId) }
+                    documentIdsToDelete = []
+                    Task {
+                        do {
+                            try await container.documentService.deleteDocument(id: docId)
+                        } catch {
+                            errorMessage = error.localizedDescription
+                        }
+                    }
+                }
+            } else {
+                Button("Delete \(ids.count) Documents", role: .destructive) {
+                    documentDetailVM?.cancelPendingSave()
+                    navigationVM.selectedDocumentIds = []
+                    documentIdsToDelete = []
+                    Task {
+                        let failureCount = await container.documentService.deleteDocuments(ids: ids)
+                        if failureCount > 0 {
+                            errorMessage = "Failed to delete \(failureCount) of \(ids.count) documents."
+                        }
+                    }
                 }
             }
         } message: {
-            Text("This will move the document to the Trash.")
+            if documentIdsToDelete.count == 1,
+               let docId = documentIdsToDelete.first,
+               let doc = documentListVM?.documents.first(where: { $0.id == docId }) {
+                Text("This will move \"\(doc.title)\" to the Trash.")
+            } else {
+                Text("This will move \(documentIdsToDelete.count) documents to the Trash.")
+            }
         }
+        .errorBanner($errorMessage)
     }
 
     // MARK: - Sidebar
@@ -115,7 +157,10 @@ struct ContentViewV2: View {
                     folders: folderTreeVM?.allFolders ?? [],
                     folderNodes: folderTreeVM?.roots ?? [],
                     folderName: currentFolderName,
-                    isAllDocumentsView: navigationVM.selectedSidebarItem == .allDocuments
+                    isAllDocumentsView: navigationVM.selectedSidebarItem == .allDocuments,
+                    onBeforeDelete: {
+                        documentDetailVM?.cancelPendingSave()
+                    }
                 )
                 .navigationSplitViewColumnWidth(min: 300, ideal: 400, max: 500)
             } else {

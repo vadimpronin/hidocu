@@ -17,8 +17,9 @@ struct DocumentListView: View {
     var folderNodes: [FolderNode] = []
     var folderName: String?
     var isAllDocumentsView: Bool = false
+    var onBeforeDelete: (() -> Void)?
 
-    @State private var documentToDelete: Document?
+    @State private var documentIdsToDelete: Set<Int64> = []
     @State private var documentToRename: Document?
     @State private var renameText = ""
     @State private var documentToMove: Document?
@@ -45,7 +46,11 @@ struct DocumentListView: View {
                         .keyboardShortcut("r", modifiers: .command)
                         Divider()
                         Button("Delete", role: .destructive) {
-                            documentToDelete = doc
+                            if selectedDocumentIds.contains(doc.id) && selectedDocumentIds.count > 1 {
+                                documentIdsToDelete = selectedDocumentIds
+                            } else {
+                                documentIdsToDelete = [doc.id]
+                            }
                         }
                     }
             }
@@ -54,24 +59,49 @@ struct DocumentListView: View {
             })
         }
         .confirmationDialog(
-            "Delete Document",
+            documentIdsToDelete.count == 1 ? "Delete Document" : "Delete \(documentIdsToDelete.count) Documents",
             isPresented: Binding(
-                get: { documentToDelete != nil },
-                set: { if !$0 { documentToDelete = nil } }
-            ),
-            presenting: documentToDelete
-        ) { doc in
-            Button("Delete \"\(doc.title)\"", role: .destructive) {
-                Task {
-                    do {
-                        try await documentService.deleteDocument(id: doc.id)
-                    } catch {
-                        errorMessage = error.localizedDescription
+                get: { !documentIdsToDelete.isEmpty },
+                set: { if !$0 { documentIdsToDelete = [] } }
+            )
+        ) {
+            let ids = documentIdsToDelete
+            if ids.count == 1,
+               let docId = ids.first,
+               let doc = viewModel.documents.first(where: { $0.id == docId }) {
+                Button("Delete \"\(doc.title)\"", role: .destructive) {
+                    onBeforeDelete?()
+                    selectedDocumentIds = []
+                    documentIdsToDelete = []
+                    Task {
+                        do {
+                            try await documentService.deleteDocument(id: docId)
+                        } catch {
+                            errorMessage = error.localizedDescription
+                        }
+                    }
+                }
+            } else {
+                Button("Delete \(ids.count) Documents", role: .destructive) {
+                    onBeforeDelete?()
+                    selectedDocumentIds = []
+                    documentIdsToDelete = []
+                    Task {
+                        let failureCount = await documentService.deleteDocuments(ids: ids)
+                        if failureCount > 0 {
+                            errorMessage = "Failed to delete \(failureCount) of \(ids.count) documents."
+                        }
                     }
                 }
             }
-        } message: { doc in
-            Text("This will move \"\(doc.title)\" to the Trash.")
+        } message: {
+            if documentIdsToDelete.count == 1,
+               let docId = documentIdsToDelete.first,
+               let doc = viewModel.documents.first(where: { $0.id == docId }) {
+                Text("This will move \"\(doc.title)\" to the Trash.")
+            } else {
+                Text("This will move \(documentIdsToDelete.count) documents to the Trash.")
+            }
         }
         .sheet(item: $documentToRename) { doc in
             RenameDocumentSheet(

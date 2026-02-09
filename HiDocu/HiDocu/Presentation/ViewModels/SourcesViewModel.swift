@@ -114,7 +114,7 @@ final class SourcesViewModel {
                 title: title,
                 fullText: text
             )
-            _ = try await transcriptRepository.insert(transcript)
+            _ = try await transcriptRepository.insert(transcript, skipAutoPrimary: false)
             await loadSources(documentId: documentId)
         } catch {
             AppLogger.general.error("Failed to add transcript: \(error.localizedDescription)")
@@ -194,7 +194,7 @@ final class SourcesViewModel {
                 title: title,
                 fullText: text
             )
-            _ = try await transcriptRepository.insert(transcript)
+            _ = try await transcriptRepository.insert(transcript, skipAutoPrimary: false)
             await loadDocumentTranscripts(documentId: documentId)
         } catch {
             AppLogger.general.error("Failed to add document transcript: \(error.localizedDescription)")
@@ -316,7 +316,7 @@ final class SourcesViewModel {
                     fullText: nil,
                     status: .transcribing
                 )
-                let inserted = try await transcriptRepository.insert(transcript)
+                let inserted = try await transcriptRepository.insert(transcript, skipAutoPrimary: count > 1)
                 transcriptIds.append(inserted.id)
             }
 

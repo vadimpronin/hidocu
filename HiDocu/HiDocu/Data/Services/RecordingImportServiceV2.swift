@@ -509,7 +509,7 @@ final class RecordingImportServiceV2 {
                 status: .transcribing
             )
             do {
-                let inserted = try await transcriptRepository.insert(transcript)
+                let inserted = try await transcriptRepository.insert(transcript, skipAutoPrimary: count > 1)
                 transcriptIds.append(inserted.id)
             } catch {
                 AppLogger.llm.error("Failed to create transcript stub for document \(documentId): \(error.localizedDescription)")

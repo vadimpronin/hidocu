@@ -62,7 +62,7 @@ final class SQLiteTranscriptRepository: TranscriptRepository, Sendable {
         }
     }
 
-    func insert(_ transcript: Transcript) async throws -> Transcript {
+    func insert(_ transcript: Transcript, skipAutoPrimary: Bool = false) async throws -> Transcript {
         try await db.asyncWrite { database in
             var dto = TranscriptDTO(from: transcript)
 
@@ -78,8 +78,8 @@ final class SQLiteTranscriptRepository: TranscriptRepository, Sendable {
                     .fetchCount(database)
             }
 
-            // Auto-set primary if first transcript
-            if count == 0 {
+            // Auto-set primary if first transcript (unless explicitly skipped)
+            if !skipAutoPrimary && count == 0 {
                 dto.isPrimary = true
             } else {
                 dto.isPrimary = false

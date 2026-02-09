@@ -523,6 +523,11 @@ actor LLMQueueService {
             runningProviders.removeValue(forKey: job.provider)
         }
 
+        // After a transcription job finishes, check if all are done and enqueue judge if ready.
+        if job.jobType == .transcription, let documentId = job.documentId {
+            await checkAndEnqueueJudge(documentId: documentId)
+        }
+
         // Signal to pick up more work
         signal()
         await updateState()
@@ -741,12 +746,6 @@ actor LLMQueueService {
         } else {
             AppLogger.llm.warning("Transcript \(payload.transcriptId) not found after generation")
         }
-
-        // Check if all transcription jobs for this document are complete
-        // If so, auto-enqueue judge job
-        if let documentId = job.documentId {
-            await checkAndEnqueueJudge(documentId: documentId)
-        }
     }
 
     /// Executes a summary generation job.
@@ -892,9 +891,9 @@ actor LLMQueueService {
             // Filter transcription jobs
             let transcriptionJobs = allJobs.filter { $0.jobType == .transcription }
 
-            // Check if all transcription jobs are complete (completed or failed)
+            // Check if all transcription jobs have reached a terminal state
             let allComplete = transcriptionJobs.allSatisfy { job in
-                job.status == .completed || job.status == .failed
+                job.status == .completed || job.status == .failed || job.status == .cancelled
             }
 
             guard allComplete else {
