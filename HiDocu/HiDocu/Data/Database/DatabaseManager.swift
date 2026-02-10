@@ -97,118 +97,11 @@ final class DatabaseManager: Sendable {
         #if DEBUG
         migrator.eraseDatabaseOnSchemaChange = true
         #endif
-        
-        // v1: Initial schema
-        migrator.registerMigration("v1_initial") { db in
-            // recordings table
-            try db.execute(sql: """
-                CREATE TABLE recordings (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    filename TEXT UNIQUE NOT NULL,
-                    filepath TEXT NOT NULL,
-                    title TEXT,
-                    duration_seconds INTEGER,
-                    file_size_bytes INTEGER,
-                    created_at DATETIME,
-                    modified_at DATETIME,
-                    device_serial TEXT,
-                    device_model TEXT,
-                    recording_mode TEXT,
-                    status TEXT,
-                    playback_position_seconds INTEGER DEFAULT 0
-                )
-                """)
-            
-            // Indexes for search optimization
-            try db.execute(sql: """
-                CREATE INDEX idx_recordings_filename ON recordings(filename)
-                """)
-            try db.execute(sql: """
-                CREATE INDEX idx_recordings_title ON recordings(title)
-                """)
-            try db.execute(sql: """
-                CREATE INDEX idx_recordings_created_at ON recordings(created_at)
-                """)
-            try db.execute(sql: """
-                CREATE INDEX idx_recordings_status ON recordings(status)
-                """)
-            
-            // transcriptions table (1:N with recordings, up to 5 variants)
-            try db.execute(sql: """
-                CREATE TABLE transcriptions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    recording_id INTEGER NOT NULL REFERENCES recordings(id) ON DELETE CASCADE,
-                    full_text TEXT,
-                    language TEXT,
-                    model_used TEXT,
-                    transcribed_at DATETIME,
-                    confidence_score REAL,
-                    title TEXT,
-                    is_primary INTEGER NOT NULL DEFAULT 0
-                )
-                """)
-            try db.execute(sql: """
-                CREATE INDEX idx_transcriptions_recording_id ON transcriptions(recording_id)
-                """)
-            try db.execute(sql: """
-                CREATE UNIQUE INDEX idx_transcriptions_single_primary
-                    ON transcriptions(recording_id) WHERE is_primary = 1
-                """)
-            
-            // segments table (1:N with transcriptions) - for future use
-            try db.execute(sql: """
-                CREATE TABLE segments (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    transcription_id INTEGER NOT NULL REFERENCES transcriptions(id) ON DELETE CASCADE,
-                    start_time_ms INTEGER NOT NULL,
-                    end_time_ms INTEGER NOT NULL,
-                    text TEXT NOT NULL,
-                    speaker_label TEXT,
-                    confidence REAL
-                )
-                """)
-            try db.execute(sql: """
-                CREATE INDEX idx_segments_transcription ON segments(transcription_id)
-                """)
-            
-            // api_logs table - for tracking AI API usage and costs
-            try db.execute(sql: """
-                CREATE TABLE api_logs (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    recording_id INTEGER REFERENCES recordings(id) ON DELETE SET NULL,
-                    provider TEXT NOT NULL,
-                    model TEXT NOT NULL,
-                    request_type TEXT NOT NULL,
-                    input_tokens INTEGER,
-                    output_tokens INTEGER,
-                    cost_usd REAL,
-                    duration_ms INTEGER,
-                    status TEXT NOT NULL,
-                    error_message TEXT,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-                """)
-            try db.execute(sql: """
-                CREATE INDEX idx_api_logs_recording ON api_logs(recording_id)
-                """)
-            try db.execute(sql: """
-                CREATE INDEX idx_api_logs_created_at ON api_logs(created_at)
-                """)
-            
-            // settings table - key-value store for app configuration
-            try db.execute(sql: """
-                CREATE TABLE settings (
-                    key TEXT PRIMARY KEY NOT NULL,
-                    value TEXT,
-                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-                """)
-            
-            AppLogger.database.info("Migration v1_initial complete")
-        }
 
-        // v2: Context management system tables
-        migrator.registerMigration("v2_context_management") { db in
+        // Single consolidated migration — final schema
+        migrator.registerMigration("v1_initial") { db in
+
+            // -- folders --
             try db.execute(sql: """
                 CREATE TABLE folders (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -219,11 +112,13 @@ final class DatabaseManager: Sendable {
                     prefer_summary INTEGER NOT NULL DEFAULT 1,
                     minimize_before_llm INTEGER NOT NULL DEFAULT 0,
                     sort_order INTEGER NOT NULL DEFAULT 0,
+                    disk_path TEXT,
                     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
                 """)
 
+            // -- documents --
             try db.execute(sql: """
                 CREATE TABLE documents (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -237,15 +132,42 @@ final class DatabaseManager: Sendable {
                     summary_hash TEXT,
                     prefer_summary INTEGER NOT NULL DEFAULT 0,
                     minimize_before_llm INTEGER NOT NULL DEFAULT 0,
+                    sort_order INTEGER NOT NULL DEFAULT 0,
+                    summary_generated_at DATETIME,
+                    summary_model TEXT,
+                    summary_edited INTEGER NOT NULL DEFAULT 0,
                     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
                 """)
+            try db.execute(sql: "CREATE INDEX idx_documents_folder_sort ON documents(folder_id, sort_order)")
 
+            // -- recording_sources --
             try db.execute(sql: """
-                CREATE TABLE recordings_v2 (
+                CREATE TABLE recording_sources (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    filename TEXT UNIQUE NOT NULL,
+                    name TEXT NOT NULL,
+                    type TEXT NOT NULL,
+                    unique_identifier TEXT,
+                    auto_import_enabled INTEGER NOT NULL DEFAULT 0,
+                    is_active INTEGER NOT NULL DEFAULT 1,
+                    directory TEXT NOT NULL,
+                    device_model TEXT,
+                    last_seen_at DATETIME,
+                    last_synced_at DATETIME,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """)
+            try db.execute(sql: """
+                CREATE UNIQUE INDEX idx_recording_sources_unique_id
+                    ON recording_sources(unique_identifier) WHERE unique_identifier IS NOT NULL
+                """)
+
+            // -- recordings --
+            try db.execute(sql: """
+                CREATE TABLE recordings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    filename TEXT NOT NULL,
                     filepath TEXT NOT NULL,
                     title TEXT,
                     file_size_bytes INTEGER,
@@ -254,40 +176,58 @@ final class DatabaseManager: Sendable {
                     modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     device_serial TEXT,
                     device_model TEXT,
-                    recording_mode TEXT
+                    recording_mode TEXT,
+                    recording_source_id INTEGER REFERENCES recording_sources(id) ON DELETE SET NULL,
+                    sync_status TEXT NOT NULL DEFAULT 'local_only'
                 )
                 """)
+            try db.execute(sql: """
+                CREATE UNIQUE INDEX idx_recordings_filename_source
+                    ON recordings(filename, recording_source_id)
+                """)
+            try db.execute(sql: "CREATE INDEX idx_recordings_source ON recordings(recording_source_id)")
+            try db.execute(sql: "CREATE INDEX idx_recordings_source_created ON recordings(recording_source_id, created_at DESC)")
 
+            // -- sources --
             try db.execute(sql: """
                 CREATE TABLE sources (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
                     source_type TEXT NOT NULL DEFAULT 'recording',
-                    recording_id INTEGER REFERENCES recordings_v2(id) ON DELETE SET NULL,
+                    recording_id INTEGER REFERENCES recordings(id) ON DELETE SET NULL,
                     disk_path TEXT NOT NULL,
                     display_name TEXT,
                     sort_order INTEGER NOT NULL DEFAULT 0,
-                    added_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    added_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    audio_path TEXT
                 )
                 """)
 
+            // -- transcripts --
             try db.execute(sql: """
                 CREATE TABLE transcripts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     source_id INTEGER NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+                    document_id INTEGER REFERENCES documents(id) ON DELETE CASCADE,
                     title TEXT,
                     full_text TEXT,
                     md_file_path TEXT,
                     is_primary INTEGER NOT NULL DEFAULT 0,
+                    status TEXT NOT NULL DEFAULT 'ready',
                     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
                 """)
             try db.execute(sql: """
-                CREATE UNIQUE INDEX idx_transcripts_single_primary
-                    ON transcripts(source_id) WHERE is_primary = 1
+                CREATE INDEX idx_transcripts_document_id
+                    ON transcripts(document_id) WHERE document_id IS NOT NULL
+                """)
+            try db.execute(sql: """
+                CREATE UNIQUE INDEX idx_transcripts_document_primary
+                    ON transcripts(document_id) WHERE is_primary = 1 AND document_id IS NOT NULL
                 """)
 
+            // -- deletion_log --
             try db.execute(sql: """
                 CREATE TABLE deletion_log (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -296,10 +236,13 @@ final class DatabaseManager: Sendable {
                     folder_path TEXT,
                     deleted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     trash_path TEXT NOT NULL,
-                    expires_at DATETIME NOT NULL
+                    expires_at DATETIME NOT NULL,
+                    original_created_at DATETIME,
+                    original_modified_at DATETIME
                 )
                 """)
 
+            // -- token caches --
             try db.execute(sql: """
                 CREATE TABLE document_token_cache (
                     document_id INTEGER PRIMARY KEY REFERENCES documents(id) ON DELETE CASCADE,
@@ -308,7 +251,6 @@ final class DatabaseManager: Sendable {
                     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
                 """)
-
             try db.execute(sql: """
                 CREATE TABLE folder_token_cache (
                     folder_id INTEGER PRIMARY KEY REFERENCES folders(id) ON DELETE CASCADE,
@@ -318,98 +260,7 @@ final class DatabaseManager: Sendable {
                 )
                 """)
 
-            AppLogger.database.info("Migration v2_context_management complete")
-        }
-
-        // v3: Drop old tables, rename recordings_v2 → recordings
-        migrator.registerMigration("v3_cleanup") { db in
-            try db.execute(sql: "DROP TABLE IF EXISTS segments")
-            try db.execute(sql: "DROP TABLE IF EXISTS transcriptions")
-            try db.execute(sql: "DROP TABLE IF EXISTS api_logs")
-            try db.execute(sql: "DROP TABLE IF EXISTS settings")
-            try db.execute(sql: "DROP TABLE IF EXISTS recordings")
-            try db.execute(sql: "ALTER TABLE recordings_v2 RENAME TO recordings")
-
-            AppLogger.database.info("Migration v3_cleanup complete")
-        }
-
-        // v4: Recreate sources table with correct FK (recordings_v2 → recordings)
-        migrator.registerMigration("v4_fix_sources_fk") { db in
-            // Disable FK checks during table rebuild
-            try db.execute(sql: "PRAGMA foreign_keys = OFF")
-
-            try db.execute(sql: """
-                CREATE TABLE sources_new (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
-                    source_type TEXT NOT NULL DEFAULT 'recording',
-                    recording_id INTEGER REFERENCES recordings(id) ON DELETE SET NULL,
-                    disk_path TEXT NOT NULL,
-                    display_name TEXT,
-                    sort_order INTEGER NOT NULL DEFAULT 0,
-                    added_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-                )
-                """)
-            try db.execute(sql: """
-                INSERT INTO sources_new (id, document_id, source_type, recording_id, disk_path, display_name, sort_order, added_at)
-                SELECT id, document_id, source_type, recording_id, disk_path, display_name, sort_order, added_at
-                FROM sources
-                """)
-            try db.execute(sql: "DROP TABLE sources")
-            try db.execute(sql: "ALTER TABLE sources_new RENAME TO sources")
-
-            try db.execute(sql: "PRAGMA foreign_keys = ON")
-
-            AppLogger.database.info("Migration v4_fix_sources_fk complete")
-        }
-
-        // v5: Add original timestamps to deletion_log for proper restore
-        migrator.registerMigration("v5_deletion_log_timestamps") { db in
-            try db.execute(sql: "ALTER TABLE deletion_log ADD COLUMN original_created_at DATETIME")
-            try db.execute(sql: "ALTER TABLE deletion_log ADD COLUMN original_modified_at DATETIME")
-            AppLogger.database.info("Migration v5_deletion_log_timestamps complete")
-        }
-
-        // v6: Add disk_path to folders for hierarchical path tracking
-        migrator.registerMigration("v6_hierarchical_paths") { db in
-            try db.execute(sql: "ALTER TABLE folders ADD COLUMN disk_path TEXT")
-            AppLogger.database.info("Migration v6_hierarchical_paths complete")
-        }
-
-        // v7: Add sort_order to documents for manual sorting
-        migrator.registerMigration("v7_document_sort_order") { db in
-            try db.execute(sql: "ALTER TABLE documents ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0")
-
-            // Backfill documents: oldest first within each folder
-            try db.execute(sql: """
-                UPDATE documents SET sort_order = (
-                    SELECT cnt - 1 FROM (
-                        SELECT id, ROW_NUMBER() OVER (
-                            PARTITION BY folder_id ORDER BY created_at ASC
-                        ) AS cnt FROM documents
-                    ) AS ranked WHERE ranked.id = documents.id
-                )
-                """)
-
-            // Backfill folders: oldest first within each parent
-            try db.execute(sql: """
-                UPDATE folders SET sort_order = (
-                    SELECT cnt - 1 FROM (
-                        SELECT id, ROW_NUMBER() OVER (
-                            PARTITION BY parent_id ORDER BY created_at ASC
-                        ) AS cnt FROM folders
-                    ) AS ranked WHERE ranked.id = folders.id
-                )
-                """)
-
-            // Index for efficient sort queries
-            try db.execute(sql: "CREATE INDEX idx_documents_folder_sort ON documents(folder_id, sort_order)")
-
-            AppLogger.database.info("Migration v7_document_sort_order complete")
-        }
-
-        // v8: LLM integration tables
-        migrator.registerMigration("v8_llm_integration") { db in
+            // -- llm_accounts --
             try db.execute(sql: """
                 CREATE TABLE llm_accounts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -418,11 +269,13 @@ final class DatabaseManager: Sendable {
                     display_name TEXT NOT NULL DEFAULT '',
                     is_active INTEGER NOT NULL DEFAULT 1,
                     last_used_at DATETIME,
+                    paused_until DATETIME,
                     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
                 """)
             try db.execute(sql: "CREATE UNIQUE INDEX idx_llm_accounts_provider_email ON llm_accounts(provider, email)")
 
+            // -- api_logs --
             try db.execute(sql: """
                 CREATE TABLE api_logs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -434,6 +287,7 @@ final class DatabaseManager: Sendable {
                     timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     document_id INTEGER REFERENCES documents(id) ON DELETE SET NULL,
                     source_id INTEGER REFERENCES sources(id) ON DELETE SET NULL,
+                    transcript_id INTEGER REFERENCES transcripts(id) ON DELETE SET NULL,
                     status TEXT NOT NULL DEFAULT 'pending',
                     error TEXT,
                     input_tokens INTEGER,
@@ -443,86 +297,44 @@ final class DatabaseManager: Sendable {
                 """)
             try db.execute(sql: "CREATE INDEX idx_api_logs_timestamp ON api_logs(timestamp)")
             try db.execute(sql: "CREATE INDEX idx_api_logs_document ON api_logs(document_id)")
-
-            AppLogger.database.info("Migration v8_llm_integration complete")
-        }
-
-        // v9: Summary metadata fields
-        migrator.registerMigration("v9_summary_metadata") { db in
-            try db.execute(sql: "ALTER TABLE documents ADD COLUMN summary_generated_at DATETIME")
-            try db.execute(sql: "ALTER TABLE documents ADD COLUMN summary_model TEXT")
-            try db.execute(sql: "ALTER TABLE documents ADD COLUMN summary_edited INTEGER NOT NULL DEFAULT 0")
-
-            AppLogger.database.info("Migration v9_summary_metadata complete")
-        }
-
-        // v10: Document-level transcripts
-        migrator.registerMigration("v10_document_transcripts") { db in
-            // Add document_id column to transcripts
-            try db.execute(sql: """
-                ALTER TABLE transcripts ADD COLUMN document_id INTEGER REFERENCES documents(id) ON DELETE CASCADE
-                """)
-
-            // Backfill document_id from the source's document_id
-            try db.execute(sql: """
-                UPDATE transcripts SET document_id = (
-                    SELECT document_id FROM sources WHERE sources.id = transcripts.source_id
-                )
-                """)
-
-            // Drop legacy per-source primary index (replaced by document-level)
-            try db.execute(sql: "DROP INDEX IF EXISTS idx_transcripts_single_primary")
-
-            // Index on document_id for efficient fetchForDocument queries
-            try db.execute(sql: """
-                CREATE INDEX idx_transcripts_document_id
-                    ON transcripts(document_id) WHERE document_id IS NOT NULL
-                """)
-
-            // Unique index: one primary transcript per document
-            try db.execute(sql: """
-                CREATE UNIQUE INDEX idx_transcripts_document_primary
-                    ON transcripts(document_id) WHERE is_primary = 1 AND document_id IS NOT NULL
-                """)
-
-            AppLogger.database.info("Migration v10_document_transcripts complete")
-        }
-
-        // v11: Add audio_path column to sources for direct audio file resolution
-        migrator.registerMigration("v11_source_audio_path") { db in
-            try db.execute(sql: "ALTER TABLE sources ADD COLUMN audio_path TEXT")
-
-            AppLogger.database.info("Migration v11_source_audio_path complete")
-        }
-
-        // v12: Transcript status tracking and API log linking
-        migrator.registerMigration("v12_transcript_status") { db in
-            try db.execute(sql: "ALTER TABLE transcripts ADD COLUMN status TEXT NOT NULL DEFAULT 'ready'")
-            try db.execute(sql: "ALTER TABLE api_logs ADD COLUMN transcript_id INTEGER REFERENCES transcripts(id) ON DELETE SET NULL")
             try db.execute(sql: "CREATE INDEX idx_api_logs_transcript ON api_logs(transcript_id) WHERE transcript_id IS NOT NULL")
 
-            AppLogger.database.info("Migration v12_transcript_status complete")
-        }
-
-        // v13: LLM job queue and quota management
-        migrator.registerMigration("v13_llm_queue_and_quotas") { db in
-            // llm_model_limits: static model capabilities
+            // -- llm_models --
             try db.execute(sql: """
-                CREATE TABLE llm_model_limits (
+                CREATE TABLE llm_models (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     provider TEXT NOT NULL,
                     model_id TEXT NOT NULL,
+                    display_name TEXT NOT NULL,
+                    supports_text INTEGER NOT NULL DEFAULT 1,
+                    supports_audio INTEGER NOT NULL DEFAULT 0,
+                    supports_image INTEGER NOT NULL DEFAULT 0,
                     max_input_tokens INTEGER,
                     max_output_tokens INTEGER,
-                    supports_audio INTEGER NOT NULL DEFAULT 0,
-                    supports_images INTEGER NOT NULL DEFAULT 0,
                     daily_request_limit INTEGER,
                     tokens_per_minute INTEGER,
+                    first_seen_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    last_seen_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE(provider, model_id)
                 )
                 """)
+            try db.execute(sql: "CREATE INDEX idx_llm_models_provider ON llm_models(provider)")
 
-            // llm_usage: per-account/model usage tracking
+            // -- llm_account_models --
+            try db.execute(sql: """
+                CREATE TABLE llm_account_models (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    account_id INTEGER NOT NULL REFERENCES llm_accounts(id) ON DELETE CASCADE,
+                    model_id INTEGER NOT NULL REFERENCES llm_models(id) ON DELETE CASCADE,
+                    is_available INTEGER NOT NULL DEFAULT 1,
+                    last_checked_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(account_id, model_id)
+                )
+                """)
+            try db.execute(sql: "CREATE INDEX idx_llm_account_models_model ON llm_account_models(model_id)")
+            try db.execute(sql: "CREATE INDEX idx_llm_account_models_account ON llm_account_models(account_id)")
+
+            // -- llm_usage --
             try db.execute(sql: """
                 CREATE TABLE llm_usage (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -539,7 +351,7 @@ final class DatabaseManager: Sendable {
                 )
                 """)
 
-            // llm_jobs: persistent job queue
+            // -- llm_jobs --
             try db.execute(sql: """
                 CREATE TABLE llm_jobs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -566,148 +378,7 @@ final class DatabaseManager: Sendable {
             try db.execute(sql: "CREATE INDEX idx_llm_jobs_status ON llm_jobs(status, priority DESC, created_at ASC)")
             try db.execute(sql: "CREATE INDEX idx_llm_jobs_document ON llm_jobs(document_id) WHERE document_id IS NOT NULL")
 
-            // Add paused_until to llm_accounts
-            try db.execute(sql: "ALTER TABLE llm_accounts ADD COLUMN paused_until DATETIME")
-
-            AppLogger.database.info("Migration v13_llm_queue_and_quotas complete")
-        }
-
-        // v14: Persist LLM models with account-model many-to-many relationship
-        migrator.registerMigration("v14_llm_models") { db in
-            // llm_models: every model ever seen from any provider
-            try db.execute(sql: """
-                CREATE TABLE llm_models (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    provider TEXT NOT NULL,
-                    model_id TEXT NOT NULL,
-                    display_name TEXT NOT NULL,
-                    accept_text INTEGER NOT NULL DEFAULT 1,
-                    accept_audio INTEGER NOT NULL DEFAULT 0,
-                    accept_image INTEGER NOT NULL DEFAULT 0,
-                    first_seen_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    last_seen_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(provider, model_id)
-                )
-                """)
-            try db.execute(sql: "CREATE INDEX idx_llm_models_provider ON llm_models(provider)")
-
-            // llm_account_models: junction table tracking which accounts can access which models
-            try db.execute(sql: """
-                CREATE TABLE llm_account_models (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    account_id INTEGER NOT NULL REFERENCES llm_accounts(id) ON DELETE CASCADE,
-                    model_id INTEGER NOT NULL REFERENCES llm_models(id) ON DELETE CASCADE,
-                    is_available INTEGER NOT NULL DEFAULT 1,
-                    last_checked_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(account_id, model_id)
-                )
-                """)
-            try db.execute(sql: "CREATE INDEX idx_llm_account_models_model ON llm_account_models(model_id)")
-            try db.execute(sql: "CREATE INDEX idx_llm_account_models_account ON llm_account_models(account_id)")
-
-            AppLogger.database.info("Migration v14_llm_models complete")
-        }
-
-        migrator.registerMigration("v15_recording_sources") { db in
-            // Clean unused recordings table
-            try db.execute(sql: "DELETE FROM recordings")
-
-            // New table: recording_sources
-            try db.execute(sql: """
-                CREATE TABLE recording_sources (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
-                    type TEXT NOT NULL,
-                    unique_identifier TEXT,
-                    auto_import_enabled INTEGER NOT NULL DEFAULT 0,
-                    is_active INTEGER NOT NULL DEFAULT 1,
-                    directory TEXT NOT NULL,
-                    device_model TEXT,
-                    last_seen_at DATETIME,
-                    last_synced_at DATETIME,
-                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-                )
-                """)
-            try db.execute(sql: """
-                CREATE UNIQUE INDEX idx_recording_sources_unique_id
-                    ON recording_sources(unique_identifier) WHERE unique_identifier IS NOT NULL
-                """)
-
-            // Augment recordings table
-            try db.execute(sql: "ALTER TABLE recordings ADD COLUMN recording_source_id INTEGER REFERENCES recording_sources(id) ON DELETE SET NULL")
-            try db.execute(sql: "ALTER TABLE recordings ADD COLUMN sync_status TEXT NOT NULL DEFAULT 'local_only'")
-            try db.execute(sql: "CREATE INDEX idx_recordings_source ON recordings(recording_source_id)")
-
-            AppLogger.database.info("Migration v15_recording_sources complete")
-        }
-
-        // v16: Change filename uniqueness from global to per-source (compound unique index)
-        migrator.registerMigration("v16_filename_unique_per_source") { db in
-            try db.execute(sql: "PRAGMA foreign_keys = OFF")
-
-            try db.execute(sql: """
-                CREATE TABLE recordings_new (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    filename TEXT NOT NULL,
-                    filepath TEXT NOT NULL,
-                    title TEXT,
-                    file_size_bytes INTEGER,
-                    duration_seconds INTEGER,
-                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    device_serial TEXT,
-                    device_model TEXT,
-                    recording_mode TEXT,
-                    recording_source_id INTEGER REFERENCES recording_sources(id) ON DELETE SET NULL,
-                    sync_status TEXT NOT NULL DEFAULT 'local_only'
-                )
-                """)
-            try db.execute(sql: """
-                INSERT INTO recordings_new
-                SELECT id, filename, filepath, title, file_size_bytes, duration_seconds,
-                       created_at, modified_at, device_serial, device_model, recording_mode,
-                       recording_source_id, sync_status
-                FROM recordings
-                """)
-            try db.execute(sql: "DROP TABLE recordings")
-            try db.execute(sql: "ALTER TABLE recordings_new RENAME TO recordings")
-
-            // Compound unique index: same filename allowed across different sources
-            try db.execute(sql: """
-                CREATE UNIQUE INDEX idx_recordings_filename_source
-                    ON recordings(filename, recording_source_id)
-                """)
-            try db.execute(sql: """
-                CREATE INDEX idx_recordings_source
-                    ON recordings(recording_source_id)
-                """)
-            try db.execute(sql: """
-                CREATE INDEX idx_recordings_source_created
-                    ON recordings(recording_source_id, created_at DESC)
-                """)
-
-            try db.execute(sql: "PRAGMA foreign_keys = ON")
-
-            AppLogger.database.info("Migration v16_filename_unique_per_source complete")
-        }
-
-        // v17: Consolidate llm_model_limits into llm_models
-        migrator.registerMigration("v17_consolidate_model_limits") { db in
-            // Add limit columns from llm_model_limits
-            try db.execute(sql: "ALTER TABLE llm_models ADD COLUMN max_input_tokens INTEGER")
-            try db.execute(sql: "ALTER TABLE llm_models ADD COLUMN max_output_tokens INTEGER")
-            try db.execute(sql: "ALTER TABLE llm_models ADD COLUMN daily_request_limit INTEGER")
-            try db.execute(sql: "ALTER TABLE llm_models ADD COLUMN tokens_per_minute INTEGER")
-
-            // Rename accept_* → supports_*
-            try db.execute(sql: "ALTER TABLE llm_models RENAME COLUMN accept_text TO supports_text")
-            try db.execute(sql: "ALTER TABLE llm_models RENAME COLUMN accept_audio TO supports_audio")
-            try db.execute(sql: "ALTER TABLE llm_models RENAME COLUMN accept_image TO supports_image")
-
-            // Drop the redundant table
-            try db.execute(sql: "DROP TABLE IF EXISTS llm_model_limits")
-
-            AppLogger.database.info("Migration v17_consolidate_model_limits complete")
+            AppLogger.database.info("Migration v1_initial complete")
         }
 
         return migrator

@@ -222,12 +222,6 @@ final class AppDependencyContainer {
             fileSystemService.setDataDirectory(URL(fileURLWithPath: dataDir))
         }
 
-        // Backfill audio_path for existing sources that were created before v11
-        Self.backfillSourceAudioPaths(
-            sourceRepository: sourceRepository,
-            fileSystemService: fileSystemService
-        )
-
         // Start periodic quota refresh
         quotaService.startPeriodicRefresh()
 
@@ -242,31 +236,6 @@ final class AppDependencyContainer {
         AppLogger.general.info("AppDependencyContainer initialized successfully")
     }
 
-    // MARK: - Backfill
-
-    /// One-time backfill: populate `audio_path` on sources that lack it
-    /// by reading each source's `source.yaml` from disk.
-    private static func backfillSourceAudioPaths(
-        sourceRepository: SQLiteSourceRepository,
-        fileSystemService: FileSystemService
-    ) {
-        do {
-            let allSources = try sourceRepository.fetchAllSync()
-            var backfilled = 0
-            for var source in allSources where source.audioPath == nil {
-                if let audioPath = fileSystemService.readSourceAudioPath(sourceDiskPath: source.diskPath) {
-                    source.audioPath = audioPath
-                    try sourceRepository.updateSync(source)
-                    backfilled += 1
-                }
-            }
-            if backfilled > 0 {
-                AppLogger.database.info("Backfilled audio_path for \(backfilled) source(s)")
-            }
-        } catch {
-            AppLogger.database.error("Failed to backfill source audio paths: \(error.localizedDescription)")
-        }
-    }
 }
 
 // MARK: - Environment Key

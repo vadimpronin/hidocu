@@ -22,7 +22,6 @@ struct HiDocuApp: App {
                 .withDependencies(container)
                 .task {
                     await container.trashService.autoCleanup()
-                    await migrateMetadataYAMLIfNeeded()
                     await container.llmService.reloadModelsFromDB()
                     await container.llmService.refreshAvailableModels()
                 }
@@ -104,28 +103,6 @@ struct HiDocuApp: App {
             } catch {
                 AppLogger.ui.error("Failed to create folder: \(error.localizedDescription)")
             }
-        }
-    }
-
-    private func migrateMetadataYAMLIfNeeded() async {
-        let key = "com.hidocu.metadataYAMLMigrated_v1"
-        guard !UserDefaults.standard.bool(forKey: key) else { return }
-
-        do {
-            let folders = try await container.folderRepository.fetchAll()
-            for folder in folders {
-                do { try container.fileSystemService.writeFolderMetadata(folder) }
-                catch { AppLogger.fileSystem.warning("Migration: failed to write folder \(folder.id): \(error.localizedDescription)") }
-            }
-            let documents = try await container.documentRepository.fetchAllDocuments()
-            for doc in documents {
-                do { try container.fileSystemService.writeDocumentMetadata(doc) }
-                catch { AppLogger.fileSystem.warning("Migration: failed to write document \(doc.id): \(error.localizedDescription)") }
-            }
-            UserDefaults.standard.set(true, forKey: key)
-            AppLogger.general.info("Completed metadata YAML migration")
-        } catch {
-            AppLogger.general.error("Migration fetch failed, will retry next launch: \(error.localizedDescription)")
         }
     }
 
