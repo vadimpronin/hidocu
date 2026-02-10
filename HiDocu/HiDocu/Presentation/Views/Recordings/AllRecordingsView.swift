@@ -153,8 +153,12 @@ struct AllRecordingsView: View {
     private func createDocument(for row: AllRecordingsRow) async {
         guard row.syncStatus != .onDeviceOnly, !row.filepath.isEmpty else { return }
         do {
-            _ = try await documentService.createDocumentWithSource(
-                title: row.displayTitle,
+            let title = RecordingImportServiceV2.documentTitle(
+                for: row.createdAt ?? Date(),
+                durationSeconds: row.durationSeconds
+            )
+            let (doc, source) = try await documentService.createDocumentWithSource(
+                title: title,
                 audioRelativePath: row.filepath,
                 originalFilename: row.filename,
                 durationSeconds: row.durationSeconds,
@@ -165,6 +169,7 @@ struct AllRecordingsView: View {
                 recordedAt: row.createdAt,
                 recordingId: row.id
             )
+            importService.autoTranscribe(documentId: doc.id, sourceId: source.id, source: source)
             await viewModel.loadData()
         } catch {
             AppLogger.recordings.error("Failed to create document: \(error.localizedDescription)")

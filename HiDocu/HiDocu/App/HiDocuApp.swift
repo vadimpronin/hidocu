@@ -15,6 +15,9 @@ struct HiDocuApp: App {
     @State private var navigationVM = NavigationViewModelV2()
     @State private var importError: String?
     @State private var showImportError = false
+    #if DEBUG
+    @State private var showClearStorageConfirmation = false
+    #endif
 
     var body: some Scene {
         WindowGroup {
@@ -30,6 +33,18 @@ struct HiDocuApp: App {
                 } message: {
                     Text(importError ?? "An unknown error occurred.")
                 }
+                #if DEBUG
+                .confirmationDialog(
+                    "Clear All Local Storage",
+                    isPresented: $showClearStorageConfirmation
+                ) {
+                    Button("Delete Everything", role: .destructive) {
+                        Task { await clearAllLocalStorage() }
+                    }
+                } message: {
+                    Text("This will delete the database, all recordings, documents, Keychain tokens, and settings. The app will quit.")
+                }
+                #endif
         }
         .windowToolbarStyle(.unified(showsTitle: false))
         .commands {
@@ -60,6 +75,12 @@ struct HiDocuApp: App {
                     }
                 }
                 .keyboardShortcut("c", modifiers: [.command, .shift])
+
+                Divider()
+
+                Button("Clear All Local Storage...") {
+                    showClearStorageConfirmation = true
+                }
             }
             #endif
         }
@@ -105,6 +126,41 @@ struct HiDocuApp: App {
             }
         }
     }
+
+    #if DEBUG
+    private func clearAllLocalStorage() async {
+        // 1. Stop background services
+        await container.llmQueueService.stopProcessing()
+        container.quotaService.stopPeriodicRefresh()
+        try? await Task.sleep(for: .milliseconds(200))
+
+        // 2. Close database
+        try? container.databaseManager.close()
+
+        // 3. Delete Application Support/HiDocu (database + settings)
+        let appSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first!
+        let hidocuAppSupport = appSupport.appendingPathComponent("HiDocu", isDirectory: true)
+        try? FileManager.default.removeItem(at: hidocuAppSupport)
+
+        // 4. Delete data directory (recordings, documents)
+        let dataDir = container.fileSystemService.dataDirectory
+        try? FileManager.default.removeItem(at: dataDir)
+
+        // 5. Clear Keychain tokens
+        container.keychainService.deleteAll()
+
+        // 6. Clear UserDefaults
+        if let bundleId = Bundle.main.bundleIdentifier {
+            UserDefaults.standard.removePersistentDomain(forName: bundleId)
+        }
+
+        // 7. Quit
+        NSApplication.shared.terminate(nil)
+    }
+    #endif
 
     private func importFiles() {
         let panel = NSOpenPanel()

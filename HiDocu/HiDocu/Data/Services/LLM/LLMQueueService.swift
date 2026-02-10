@@ -585,10 +585,22 @@ actor LLMQueueService {
             failedJob.status = .pending  // back to pending for retry
 
             if isRateLimited {
-                let retryAt = await nextAccountAvailableDate(for: job.provider)
-                failedJob.nextRetryAt = retryAt
-                let delay = Int(retryAt.timeIntervalSince(Date()))
-                AppLogger.llm.info("Job \(job.id) rate-limited, retry when account available in \(delay)s (attempt \(failedJob.attemptCount)/\(failedJob.maxAttempts))")
+                // Check if other unpaused accounts are available for immediate failover
+                let activeAccounts = (try? await accountRepository.fetchActive(provider: job.provider)) ?? []
+                failedJob.accountId = nil  // Clear — force pickUpJobs to re-select
+
+                if !activeAccounts.isEmpty {
+                    // Unpaused accounts available — retry immediately with account re-selection
+                    failedJob.nextRetryAt = Date()
+                    failedJob.errorMessage = nil
+                    AppLogger.llm.info("Job \(job.id) rate-limited, retrying immediately with another account (\(activeAccounts.count) available)")
+                } else {
+                    // All accounts paused — wait for earliest unpause
+                    let retryAt = await nextAccountAvailableDate(for: job.provider)
+                    failedJob.nextRetryAt = retryAt
+                    let delay = Int(retryAt.timeIntervalSince(Date()))
+                    AppLogger.llm.info("Job \(job.id) rate-limited, all accounts paused, retry in \(delay)s (attempt \(failedJob.attemptCount)/\(failedJob.maxAttempts))")
+                }
             } else {
                 let backoff = backoffInterval(attempt: failedJob.attemptCount)
                 failedJob.nextRetryAt = Date().addingTimeInterval(backoff)

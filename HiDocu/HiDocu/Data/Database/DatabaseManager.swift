@@ -384,6 +384,11 @@ final class DatabaseManager: Sendable {
         return migrator
     }
     
+    /// Close the database connection pool.
+    func close() throws {
+        try dbPool.close()
+    }
+
     // MARK: - Convenience Methods
     
     /// Execute a read operation

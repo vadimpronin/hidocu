@@ -542,6 +542,12 @@ final class RecordingImportServiceV2 {
 
     // MARK: - Auto-Transcription
 
+    /// Public entry point for triggering auto-transcription from external callers
+    /// (e.g. manual "Create Document" flows). Fire-and-forget via Task.detached internally.
+    func autoTranscribe(documentId: Int64, sourceId: Int64, source: Source) {
+        triggerAutoTranscription(documentId: documentId, sourceId: sourceId, source: source)
+    }
+
     private static let autoTranscriptionModel = "gemini-3-pro-preview"
     private static let autoTranscriptionCount = 3
 

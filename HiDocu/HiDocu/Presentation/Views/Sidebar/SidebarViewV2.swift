@@ -149,7 +149,7 @@ private struct RecordingSourceSidebarRow: View {
             Label {
                 Text(source.name)
             } icon: {
-                Image(systemName: "square.and.arrow.down")
+                Image(systemName: "tray.and.arrow.down")
             }
         } else if isOnline, let controller = controller {
             // Online: show normal state with optional battery indicator

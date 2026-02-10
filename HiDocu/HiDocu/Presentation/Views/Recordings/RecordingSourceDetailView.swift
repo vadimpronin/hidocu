@@ -108,7 +108,8 @@ struct RecordingSourceDetailView: View {
             DeviceHeaderView(
                 title: source.name,
                 model: DeviceModel(rawValue: source.deviceModel ?? "") ?? .unknown,
-                lastSeenAt: source.lastSeenAt
+                lastSeenAt: source.lastSeenAt,
+                isUploadSource: source.type == .upload
             )
             .padding(.horizontal, 20)
             .padding(.top, 16)

@@ -130,6 +130,22 @@ final class KeychainService: @unchecked Sendable {
         try? deleteLegacyToken(identifier: identifier)
     }
 
+    /// Deletes all tokens from Keychain and clears the in-memory cache.
+    func deleteAll() {
+        lock.lock()
+        defer { lock.unlock() }
+        cache.removeAll()
+        hasLoadedAll = false
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.service
+        ]
+        let status = SecItemDelete(query as CFDictionary)
+        if status != errSecSuccess && status != errSecItemNotFound {
+            AppLogger.general.error("Keychain deleteAll failed with status: \(status)")
+        }
+    }
+
     // MARK: - Blob Management
 
     private func loadBlob() throws -> KeychainBlob? {

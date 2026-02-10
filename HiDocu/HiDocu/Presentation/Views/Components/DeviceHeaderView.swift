@@ -20,6 +20,7 @@ struct DeviceHeaderView: View {
     var controller: DeviceController?
     var session: ImportSession?
     var lastSeenAt: Date?
+    var isUploadSource: Bool = false
     var onDisconnect: (() async -> Void)?
 
     private var isOnline: Bool { connectionInfo != nil }
@@ -117,14 +118,16 @@ struct DeviceHeaderView: View {
 
     @ViewBuilder
     private var offlineMetadata: some View {
-        Text("Not connected")
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
+        if !isUploadSource {
+            Text("Not connected")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
 
-        if let lastSeen = lastSeenAt {
-            Text("Last seen: \(lastSeen.formatted(date: .abbreviated, time: .shortened))")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
+            if let lastSeen = lastSeenAt {
+                Text("Last seen: \(lastSeen.formatted(date: .abbreviated, time: .shortened))")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
         }
     }
 }

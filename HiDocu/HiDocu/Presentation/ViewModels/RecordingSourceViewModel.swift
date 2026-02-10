@@ -190,7 +190,7 @@ final class RecordingSourceViewModel {
     func refreshImportStatus(sourceId: Int64) async {
         guard !rows.isEmpty else { return }
 
-        let importedFilenames = (try? await recordingRepository.fetchFilenamesForSource(sourceId)) ?? []
+        let importedFilenames = (try? await recordingRepository.fetchImportedFilenamesForSource(sourceId)) ?? []
 
         // Re-fetch local recordings to get recording IDs for newly imported files
         let localRecordings = (try? await recordingRepository.fetchBySourceId(sourceId)) ?? []
@@ -259,8 +259,12 @@ final class RecordingSourceViewModel {
                   let recordingId = row.recordingId else { continue }
             do {
                 guard let recording = try await recordingRepository.fetchById(recordingId) else { continue }
-                _ = try await documentService.createDocumentWithSource(
-                    title: recording.displayTitle,
+                let title = RecordingImportServiceV2.documentTitle(
+                    for: recording.createdAt,
+                    durationSeconds: recording.durationSeconds
+                )
+                let (doc, source) = try await documentService.createDocumentWithSource(
+                    title: title,
                     audioRelativePath: recording.filepath,
                     originalFilename: recording.filename,
                     durationSeconds: recording.durationSeconds,
@@ -271,11 +275,13 @@ final class RecordingSourceViewModel {
                     recordedAt: recording.createdAt,
                     recordingId: recordingId
                 )
+                importService.autoTranscribe(documentId: doc.id, sourceId: source.id, source: source)
             } catch {
                 AppLogger.recordings.error("Failed to create document for \(filename): \(error.localizedDescription)")
             }
         }
         await populateDocumentInfo()
+        updateProcessingStatus()
     }
 
     // MARK: - Private

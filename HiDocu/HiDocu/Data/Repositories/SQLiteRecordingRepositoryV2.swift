@@ -115,6 +115,16 @@ final class SQLiteRecordingRepositoryV2: RecordingRepositoryV2, Sendable {
         }
     }
 
+    func fetchImportedFilenamesForSource(_ sourceId: Int64) async throws -> Set<String> {
+        try await db.asyncRead { database in
+            let filenames = try String.fetchAll(database,
+                sql: "SELECT filename FROM recordings WHERE recording_source_id = ? AND sync_status != ?",
+                arguments: [sourceId, RecordingSyncStatus.onDeviceOnly.rawValue]
+            )
+            return Set(filenames)
+        }
+    }
+
     func updateSyncStatus(id: Int64, syncStatus: RecordingSyncStatus) async throws {
         _ = try await db.asyncWrite { database in
             try database.execute(
