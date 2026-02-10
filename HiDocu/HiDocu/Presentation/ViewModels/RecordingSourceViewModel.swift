@@ -23,6 +23,11 @@ struct UnifiedRecordingRow: Identifiable {
     // Sortable proxy properties
     var sortableDate: Double { createdAt?.timeIntervalSince1970 ?? 0 }
     var modeDisplayName: String { mode?.displayName ?? "—" }
+
+    /// Returns reduced opacity when the row is device-only and the device is disconnected.
+    func dimmedWhenOffline(_ controller: DeviceController?) -> Double {
+        controller == nil && syncStatus == .onDeviceOnly ? 0.4 : 1.0
+    }
 }
 
 @Observable
@@ -34,6 +39,7 @@ final class RecordingSourceViewModel {
     private(set) var rows: [UnifiedRecordingRow] = []
     private(set) var isLoading: Bool = false
     private(set) var errorMessage: String?
+    private(set) var lastLoadIncludedDevice: Bool = false
 
     var selection: Set<String> = []
     var sortOrder: [KeyPathComparator<UnifiedRecordingRow>] = [
@@ -140,6 +146,8 @@ final class RecordingSourceViewModel {
                     )
                 }
             }
+
+            lastLoadIncludedDevice = deviceController?.isConnected == true
 
             // Populate document IDs from the sources table
             await populateDocumentIds()

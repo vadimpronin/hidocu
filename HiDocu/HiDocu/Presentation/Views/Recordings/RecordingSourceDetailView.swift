@@ -81,7 +81,8 @@ struct RecordingSourceDetailView: View {
             }
         }
         .task(id: source.id) {
-            if viewModel.rows.isEmpty && !viewModel.isLoading && viewModel.errorMessage == nil {
+            let needsLoad = viewModel.rows.isEmpty || !viewModel.lastLoadIncludedDevice
+            if needsLoad && !viewModel.isLoading && viewModel.errorMessage == nil {
                 await viewModel.loadRecordings(sourceId: source.id, deviceController: controller)
             }
         }
@@ -153,21 +154,24 @@ struct RecordingSourceDetailView: View {
             @Bindable var bindableViewModel = viewModel
             Table(viewModel.sortedRows, selection: $bindableViewModel.selection, sortOrder: $bindableViewModel.sortOrder) {
                 TableColumn("Date", value: \.sortableDate) { row in
-                    if let date = row.createdAt {
-                        Text(date.formatted(
-                            .dateTime
-                                .day(.twoDigits)
-                                .month(.abbreviated)
-                                .year()
-                                .hour(.twoDigits(amPM: .omitted))
-                                .minute(.twoDigits)
-                                .second(.twoDigits)
-                        ))
-                        .monospacedDigit()
-                    } else {
-                        Text("--")
-                            .foregroundStyle(.tertiary)
+                    Group {
+                        if let date = row.createdAt {
+                            Text(date.formatted(
+                                .dateTime
+                                    .day(.twoDigits)
+                                    .month(.abbreviated)
+                                    .year()
+                                    .hour(.twoDigits(amPM: .omitted))
+                                    .minute(.twoDigits)
+                                    .second(.twoDigits)
+                            ))
+                            .monospacedDigit()
+                        } else {
+                            Text("--")
+                                .foregroundStyle(.tertiary)
+                        }
                     }
+                    .opacity(row.dimmedWhenOffline(controller))
                 }
                 .width(min: 180, ideal: 190)
 
@@ -176,28 +180,33 @@ struct RecordingSourceDetailView: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                         .monospacedDigit()
+                        .opacity(row.dimmedWhenOffline(controller))
                 }
                 .width(min: 150, ideal: 270)
 
                 TableColumn("Duration", value: \.durationSeconds) { row in
                     Text(row.durationSeconds.formattedDurationFull)
                         .monospacedDigit()
+                        .opacity(row.dimmedWhenOffline(controller))
                 }
                 .width(min: 70, ideal: 80)
 
                 TableColumn("Mode", value: \.modeDisplayName) { row in
                     Text(row.modeDisplayName)
+                        .opacity(row.dimmedWhenOffline(controller))
                 }
                 .width(min: 55, ideal: 70)
 
                 TableColumn("Size", value: \.size) { row in
                     Text(row.size.formattedFileSize)
                         .monospacedDigit()
+                        .opacity(row.dimmedWhenOffline(controller))
                 }
                 .width(min: 60, ideal: 80)
 
                 TableColumn("", sortUsing: KeyPathComparator(\UnifiedRecordingRow.syncStatus)) { row in
                     SyncStatusIcon(status: row.syncStatus)
+                        .opacity(row.dimmedWhenOffline(controller))
                 }
                 .width(28)
 

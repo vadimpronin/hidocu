@@ -19,6 +19,7 @@ struct ContentViewV2: View {
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var recordingSourcesTask: Task<Void, Never>?
     @State private var documentIdsToDelete: Set<Int64> = []
+    @State private var pendingDocumentNavigation: Int64?
     @State private var errorMessage: String?
 
     var body: some View {
@@ -202,8 +203,12 @@ struct ContentViewV2: View {
                     importService: container.importServiceV2,
                     deviceController: controller,
                     onNavigateToDocument: { docId in
-                        navigationVM.selectedSidebarItem = .allDocuments
-                        navigationVM.selectedDocumentIds = [docId]
+                        if navigationVM.selectedSidebarItem == .allDocuments {
+                            navigationVM.selectedDocumentIds = [docId]
+                        } else {
+                            pendingDocumentNavigation = docId
+                            navigationVM.selectedSidebarItem = .allDocuments
+                        }
                     }
                 )
             } else {
@@ -338,6 +343,10 @@ struct ContentViewV2: View {
         case .allDocuments:
             documentListVM?.observeAllDocuments()
             columnVisibility = .all
+            if let docId = pendingDocumentNavigation {
+                pendingDocumentNavigation = nil
+                navigationVM.selectedDocumentIds = [docId]
+            }
         case .allRecordings:
             columnVisibility = .detailOnly
         case .recordingSource(let id):
