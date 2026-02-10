@@ -736,6 +736,7 @@ actor LLMQueueService {
         // Call LLMService to generate transcript
         let transcriptText = try await self.llmService.generateSingleTranscript(
             attachments: attachments,
+            provider: job.provider,
             model: job.model,
             transcriptId: payload.transcriptId,
             documentId: job.documentId,
@@ -832,8 +833,12 @@ actor LLMQueueService {
 
             // Get summary settings
             let settings = await MainActor.run { self.settingsService.settings.llm }
-            let summaryProvider = LLMProvider(rawValue: settings.defaultProvider) ?? .claude
-            let summaryModel = settings.defaultModel.isEmpty ? "claude-3-5-sonnet-20241022" : settings.defaultModel
+            guard let summaryProvider = LLMProvider(rawValue: settings.defaultProvider),
+                  !settings.defaultModel.isEmpty else {
+                AppLogger.llm.warning("Summary auto-enqueue skipped for document \(documentId): default provider or model not configured")
+                return
+            }
+            let summaryModel = settings.defaultModel
 
             _ = try await enqueueSummary(
                 documentId: documentId,
@@ -927,8 +932,12 @@ actor LLMQueueService {
 
             // Enqueue judge job using settings defaults
             let settings = await MainActor.run { self.settingsService.settings.llm }
-            let judgeProvider = LLMProvider(rawValue: settings.defaultJudgeProvider) ?? .gemini
-            let judgeModel = settings.defaultJudgeModel.isEmpty ? "gemini-3-pro-preview" : settings.defaultJudgeModel
+            guard let judgeProvider = LLMProvider(rawValue: settings.defaultJudgeProvider),
+                  !settings.defaultJudgeModel.isEmpty else {
+                AppLogger.llm.warning("Judge auto-enqueue skipped for document \(documentId): judge provider or model not configured")
+                return
+            }
+            let judgeModel = settings.defaultJudgeModel
 
             _ = try await enqueueJudge(
                 documentId: documentId,

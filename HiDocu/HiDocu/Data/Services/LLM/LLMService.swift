@@ -311,29 +311,23 @@ final class LLMService {
         if let override = modelOverride {
             let parts = override.split(separator: ":", maxSplits: 1)
             guard parts.count == 2 else {
-                throw LLMError.authenticationFailed(
-                    provider: .claude,
-                    detail: "Invalid modelOverride format: \(override)"
-                )
+                throw LLMError.invalidResponse(detail: "Invalid modelOverride format: \(override)")
             }
             guard let providerValue = LLMProvider(rawValue: String(parts[0])) else {
-                throw LLMError.authenticationFailed(
-                    provider: .claude,
-                    detail: "Invalid provider in override: \(parts[0])"
-                )
+                throw LLMError.invalidResponse(detail: "Invalid provider in override: \(parts[0])")
             }
             provider = providerValue
             model = String(parts[1])
         } else {
             let settings = settingsService.settings.llm
             guard let providerRawValue = LLMProvider(rawValue: settings.defaultProvider) else {
-                throw LLMError.authenticationFailed(
-                    provider: .claude,
-                    detail: "Invalid default provider: \(settings.defaultProvider)"
-                )
+                throw LLMError.invalidResponse(detail: "Invalid default provider: \(settings.defaultProvider)")
             }
             provider = providerRawValue
-            model = settings.defaultModel.isEmpty ? "claude-3-5-sonnet-20241022" : settings.defaultModel
+            guard !settings.defaultModel.isEmpty else {
+                throw LLMError.invalidResponse(detail: "No default model configured. Please select a model in Settings.")
+            }
+            model = settings.defaultModel
         }
         let promptTemplate = settingsService.settings.llm.summaryPromptTemplate
 
@@ -615,11 +609,12 @@ final class LLMService {
         return try prepareAudioAttachments(sources: wrapped, fileSystemService: fileSystemService)
     }
 
-    /// Generates a single audio transcript using Gemini multimodal API.
+    /// Generates a single audio transcript using a multimodal LLM provider.
     ///
     /// - Parameters:
     ///   - attachments: Pre-loaded audio attachments
-    ///   - model: Gemini model identifier
+    ///   - provider: LLM provider to use for transcription
+    ///   - model: Model identifier
     ///   - transcriptId: Transcript ID for API log linking
     ///   - documentId: Document ID for API log linking
     ///   - sourceId: Source ID for API log linking
@@ -628,6 +623,7 @@ final class LLMService {
     /// - Throws: `LLMError` if generation fails
     func generateSingleTranscript(
         attachments: [LLMAttachment],
+        provider: LLMProvider,
         model: String,
         transcriptId: Int64,
         documentId: Int64?,
@@ -655,11 +651,11 @@ final class LLMService {
             )
         )
 
-        // Select Gemini account and get credentials
-        let account = try await resolveAccount(accountId: accountId, provider: .gemini)
+        // Select account and get credentials for the requested provider
+        let account = try await resolveAccount(accountId: accountId, provider: provider)
 
-        guard let strategy = providers[.gemini] else {
-            throw LLMError.authenticationFailed(provider: .gemini, detail: "Gemini provider not configured")
+        guard let strategy = providers[provider] else {
+            throw LLMError.authenticationFailed(provider: provider, detail: "\(provider.rawValue) provider not configured")
         }
 
         // Helper: single chat call with 401 retry and rate-limit recording
@@ -672,7 +668,7 @@ final class LLMService {
                 )
             } catch let error as LLMError {
                 if case .rateLimited(_, let retryAfter) = error {
-                    await self.quotaService.recordRateLimit(accountId: account.id, provider: .gemini, retryAfter: retryAfter)
+                    await self.quotaService.recordRateLimit(accountId: account.id, provider: provider, retryAfter: retryAfter)
                     throw error
                 }
                 if case .apiError(_, let statusCode, _) = error, statusCode == 401 {
@@ -740,7 +736,7 @@ final class LLMService {
         let duration = Int(Date().timeIntervalSince(startTime) * 1000)
         let logEntry = APILogEntry(
             id: 0,
-            provider: .gemini,
+            provider: account.provider,
             llmAccountId: account.id,
             model: model,
             requestPayload: "[audio transcription]",
@@ -794,7 +790,7 @@ final class LLMService {
 
         let logEntry = APILogEntry(
             id: 0,
-            provider: .gemini,
+            provider: account.provider,
             llmAccountId: account.id,
             model: model,
             requestPayload: "[audio transcription]",
@@ -824,8 +820,8 @@ final class LLMService {
     func evaluateTranscripts(
         transcripts: [Transcript],
         documentId: Int64,
-        provider: LLMProvider = .gemini,
-        model: String = "gemini-3-pro-preview", // TODO: use settings.llm.judgeModel when configurable
+        provider: LLMProvider,
+        model: String,
         accountId: Int64? = nil
     ) async throws -> JudgeResponse {
         let startTime = Date()

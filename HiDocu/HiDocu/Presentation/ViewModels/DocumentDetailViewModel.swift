@@ -277,13 +277,23 @@ final class DocumentDetailViewModel {
                 model = String(parts[1])
             } else {
                 let settings = settingsService.settings.llm
-                provider = LLMProvider(rawValue: settings.defaultProvider) ?? .claude
-                model = settings.defaultModel.isEmpty ? "claude-3-5-sonnet-20241022" : settings.defaultModel
+                guard let providerValue = LLMProvider(rawValue: settings.defaultProvider),
+                      !settings.defaultModel.isEmpty else {
+                    summaryGenerationState = .error("No default provider or model configured. Please configure in Settings.")
+                    return
+                }
+                provider = providerValue
+                model = settings.defaultModel
             }
         } else {
             let settings = settingsService.settings.llm
-            provider = LLMProvider(rawValue: settings.defaultProvider) ?? .claude
-            model = settings.defaultModel.isEmpty ? "claude-3-5-sonnet-20241022" : settings.defaultModel
+            guard let providerValue = LLMProvider(rawValue: settings.defaultProvider),
+                  !settings.defaultModel.isEmpty else {
+                summaryGenerationState = .error("No default provider or model configured. Please configure in Settings.")
+                return
+            }
+            provider = providerValue
+            model = settings.defaultModel
         }
 
         summaryGenerationTask = Task {
