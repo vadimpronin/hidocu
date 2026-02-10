@@ -26,38 +26,65 @@ struct DocumentListView: View {
     @State private var errorMessage: String?
 
     var body: some View {
-        List(selection: $selectedDocumentIds) {
-            ForEach(viewModel.documents) { doc in
-                DocumentRowView(document: doc)
-                    .tag(doc.id)
-                    .contextMenu {
-                        Button("Rename...") {
-                            renameText = doc.title
-                            documentToRename = doc
-                        }
-                        if !folders.isEmpty {
-                            Button("Move to Folder...") {
-                                documentToMove = doc
-                            }
-                        }
-                        Button("Reveal in Finder") {
-                            revealInFinder(diskPath: doc.diskPath)
-                        }
-                        .keyboardShortcut("r", modifiers: .command)
-                        Divider()
-                        Button("Delete", role: .destructive) {
-                            if selectedDocumentIds.contains(doc.id) && selectedDocumentIds.count > 1 {
-                                documentIdsToDelete = selectedDocumentIds
-                            } else {
-                                documentIdsToDelete = [doc.id]
-                            }
-                        }
+        @Bindable var bindableVM = viewModel
+        let docsById = Dictionary(uniqueKeysWithValues: viewModel.sortedDocuments.map { ($0.id, $0) })
+
+        DocumentTableView(
+            rows: viewModel.sortedDocuments,
+            selection: $selectedDocumentIds,
+            sortOrder: Binding(
+                get: { bindableVM.sortOrder },
+                set: { newSortOrder in
+                    bindableVM.sortOrder = newSortOrder
+                    if !isAllDocumentsView {
+                        bindableVM.allowsManualReordering = false
                     }
-            }
-            .onMove(perform: isAllDocumentsView ? nil : { source, destination in
+                }
+            ),
+            config: tableConfig,
+            primaryAction: { row in
+                selectedDocumentIds = [row.id]
+            },
+            onMove: tableConfig.allowsReordering
+            ? { source, destination in
                 viewModel.moveDocuments(from: source, to: destination)
-            })
-        }
+            }
+            : nil,
+            contextMenu: { selectedIds in
+                let selectedDocs = selectedIds.compactMap { docsById[$0] }
+                let primaryDoc = selectedDocs.first
+                let singleSelection = selectedDocs.count == 1
+
+                if singleSelection, let doc = primaryDoc {
+                    Button("Rename...") {
+                        renameText = doc.title
+                        documentToRename = doc
+                    }
+                }
+
+                if !folders.isEmpty, singleSelection, let doc = primaryDoc {
+                    Button("Move to Folder...") {
+                        documentToMove = doc
+                    }
+                }
+
+                if singleSelection, let doc = primaryDoc {
+                    Button("Reveal in Finder") {
+                        revealInFinder(diskPath: doc.diskPath)
+                    }
+                    .keyboardShortcut("r", modifiers: .command)
+                }
+
+                Divider()
+
+                Button(
+                    selectedIds.count == 1 ? "Delete Document" : "Delete \(selectedIds.count) Documents",
+                    role: .destructive
+                ) {
+                    documentIdsToDelete = selectedIds
+                }
+            }
+        )
         .confirmationDialog(
             documentIdsToDelete.count == 1 ? "Delete Document" : "Delete \(documentIdsToDelete.count) Documents",
             isPresented: Binding(
@@ -68,7 +95,7 @@ struct DocumentListView: View {
             let ids = documentIdsToDelete
             if ids.count == 1,
                let docId = ids.first,
-               let doc = viewModel.documents.first(where: { $0.id == docId }) {
+               let doc = docsById[docId] {
                 Button("Delete \"\(doc.title)\"", role: .destructive) {
                     onBeforeDelete?()
                     selectedDocumentIds = []
@@ -97,7 +124,7 @@ struct DocumentListView: View {
         } message: {
             if documentIdsToDelete.count == 1,
                let docId = documentIdsToDelete.first,
-               let doc = viewModel.documents.first(where: { $0.id == docId }) {
+               let doc = docsById[docId] {
                 Text("This will move \"\(doc.title)\" to the Trash.")
             } else {
                 Text("This will move \(documentIdsToDelete.count) documents to the Trash.")
@@ -133,7 +160,7 @@ struct DocumentListView: View {
         }
         .errorBanner($errorMessage)
         .overlay {
-            if viewModel.documents.isEmpty && !viewModel.isLoading {
+            if viewModel.sortedDocuments.isEmpty && !viewModel.isLoading {
                 VStack(spacing: 8) {
                     Image(systemName: "doc.text")
                         .font(.largeTitle)
@@ -162,6 +189,10 @@ struct DocumentListView: View {
             if !isAllDocumentsView {
                 ToolbarItem(placement: .secondaryAction) {
                     Menu {
+                        Button("Manual Order") {
+                            viewModel.useManualOrder()
+                        }
+                        Divider()
                         Button("Name (A-Z)") {
                             viewModel.sortDocuments(folderId: folderId, by: .nameAscending)
                         }
@@ -185,31 +216,11 @@ struct DocumentListView: View {
         let folderURL = fileSystemService.dataDirectory.appendingPathComponent(diskPath, isDirectory: true)
         NSWorkspace.shared.activateFileViewerSelecting([folderURL])
     }
-}
 
-// MARK: - Document Row
-
-struct DocumentRowView: View {
-    let document: Document
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(document.title)
-                .font(.body.weight(.semibold))
-                .lineLimit(1)
-
-            Text(document.createdAt, format: .dateTime.month(.abbreviated).day().year().hour().minute())
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            if let preview = document.bodyPreview, !preview.isEmpty {
-                Text(preview)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-            }
-        }
-        .padding(.vertical, 2)
+    private var tableConfig: DocumentTableConfiguration {
+        var config = DocumentTableConfiguration.documents
+        config.allowsReordering = !isAllDocumentsView && viewModel.allowsManualReordering
+        return config
     }
 }
 

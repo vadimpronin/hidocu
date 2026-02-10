@@ -8,92 +8,98 @@
 import SwiftUI
 
 struct TrashView: View {
-    var trashService: TrashService
+    @State private var viewModel: TrashViewModel
 
-    @State private var entries: [DeletionLogEntry] = []
-    @State private var isLoading = true
     @State private var showEmptyTrashConfirmation = false
-    @State private var entryToDelete: DeletionLogEntry?
-    @State private var errorMessage: String?
+    @State private var idsToDeletePermanently: Set<Int64> = []
+    @State private var idsToRestore: Set<Int64> = []
+
+    init(trashService: TrashService) {
+        _viewModel = State(initialValue: TrashViewModel(trashService: trashService))
+    }
 
     var body: some View {
-        List {
-            ForEach(entries) { entry in
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(entry.documentTitle ?? "Untitled")
-                            .font(.body.weight(.semibold))
-                        HStack(spacing: 8) {
-                            Text("Deleted \(entry.deletedAt, style: .date)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Text("\(entry.daysRemaining) days left")
-                                .font(.caption)
-                                .foregroundStyle(entry.daysRemaining < 7 ? .red : .secondary)
-                        }
-                        if let path = entry.folderPath, !path.isEmpty {
-                            Text("from \(path)")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                    Spacer()
-                    Button("Restore") {
-                        Task {
-                            do {
-                                try await trashService.restoreDocument(
-                                    deletionLogId: entry.id,
-                                    toFolderId: nil
-                                )
-                                await loadEntries()
-                            } catch {
-                                errorMessage = error.localizedDescription
-                            }
-                        }
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                }
-                .contextMenu {
-                    Button("Restore") {
-                        Task {
-                            do {
-                                try await trashService.restoreDocument(
-                                    deletionLogId: entry.id,
-                                    toFolderId: nil
-                                )
-                                await loadEntries()
-                            } catch {
-                                errorMessage = error.localizedDescription
-                            }
-                        }
-                    }
-                    Button("Delete Permanently", role: .destructive) {
-                        entryToDelete = entry
+        @Bindable var bindableVM = viewModel
+        let entriesById = Dictionary(uniqueKeysWithValues: viewModel.entries.map { ($0.id, $0) })
+
+        DocumentTableView(
+            rows: viewModel.sortedEntries,
+            selection: $bindableVM.selection,
+            sortOrder: $bindableVM.sortOrder,
+            config: .trash,
+            primaryAction: { row in
+                idsToRestore = [row.id]
+            },
+            contextMenu: { selectedIds in
+                Button(selectedIds.count == 1 ? "Restore" : "Restore \(selectedIds.count) Items") {
+                    bindableVM.selection = selectedIds
+                    Task {
+                        await bindableVM.restoreSelection()
                     }
                 }
+
+                Divider()
+
+                Button(
+                    selectedIds.count == 1 ? "Delete Permanently" : "Delete \(selectedIds.count) Permanently",
+                    role: .destructive
+                ) {
+                    idsToDeletePermanently = selectedIds
+                }
+            }
+        )
+        .confirmationDialog(
+            idsToRestore.count == 1 ? "Restore Item" : "Restore \(idsToRestore.count) Items",
+            isPresented: Binding(
+                get: { !idsToRestore.isEmpty },
+                set: { if !$0 { idsToRestore = [] } }
+            )
+        ) {
+            Button(idsToRestore.count == 1 ? "Restore" : "Restore All") {
+                let ids = idsToRestore
+                idsToRestore = []
+                bindableVM.selection = ids
+                Task {
+                    await bindableVM.restoreSelection()
+                }
+            }
+        } message: {
+            if idsToRestore.count == 1,
+               let id = idsToRestore.first,
+               let entry = entriesById[id] {
+                Text("Restore \"\(entry.title)\" from Trash?")
+            } else {
+                Text("Restore \(idsToRestore.count) selected items from Trash?")
             }
         }
         .confirmationDialog(
             "Delete Permanently",
             isPresented: Binding(
-                get: { entryToDelete != nil },
-                set: { if !$0 { entryToDelete = nil } }
-            ),
-            presenting: entryToDelete
-        ) { entry in
-            Button("Delete Permanently", role: .destructive) {
+                get: { !idsToDeletePermanently.isEmpty },
+                set: { if !$0 { idsToDeletePermanently = [] } }
+            )
+        ) {
+            Button(
+                idsToDeletePermanently.count == 1
+                ? "Delete Permanently"
+                : "Delete \(idsToDeletePermanently.count) Permanently",
+                role: .destructive
+            ) {
+                let ids = idsToDeletePermanently
+                idsToDeletePermanently = []
+                bindableVM.selection = ids
                 Task {
-                    do {
-                        try await trashService.permanentlyDelete(deletionLogId: entry.id)
-                        await loadEntries()
-                    } catch {
-                        errorMessage = error.localizedDescription
-                    }
+                    await bindableVM.deleteSelectionPermanently()
                 }
             }
-        } message: { entry in
-            Text("Permanently delete \"\(entry.documentTitle ?? "Untitled")\"? This cannot be undone.")
+        } message: {
+            if idsToDeletePermanently.count == 1,
+               let id = idsToDeletePermanently.first,
+               let entry = entriesById[id] {
+                Text("Permanently delete \"\(entry.title)\"? This cannot be undone.")
+            } else {
+                Text("Permanently delete \(idsToDeletePermanently.count) items? This cannot be undone.")
+            }
         }
         .confirmationDialog(
             "Empty Trash",
@@ -101,20 +107,15 @@ struct TrashView: View {
         ) {
             Button("Empty Trash", role: .destructive) {
                 Task {
-                    do {
-                        try await trashService.emptyTrash()
-                        await loadEntries()
-                    } catch {
-                        errorMessage = error.localizedDescription
-                    }
+                    await bindableVM.emptyTrash()
                 }
             }
         } message: {
             Text("Permanently delete all items in the Trash? This cannot be undone.")
         }
-        .errorBanner($errorMessage)
+        .errorBanner($bindableVM.errorMessage)
         .overlay {
-            if entries.isEmpty && !isLoading {
+            if viewModel.entries.isEmpty && !viewModel.isLoading {
                 VStack(spacing: 8) {
                     Image(systemName: "trash")
                         .font(.largeTitle)
@@ -129,16 +130,12 @@ struct TrashView: View {
                 Button("Empty Trash") {
                     showEmptyTrashConfirmation = true
                 }
-                .disabled(entries.isEmpty)
+                .disabled(viewModel.entries.isEmpty)
             }
         }
         .navigationTitle("Trash")
-        .task { await loadEntries() }
-    }
-
-    private func loadEntries() async {
-        isLoading = true
-        entries = (try? await trashService.listTrashedDocuments()) ?? []
-        isLoading = false
+        .task {
+            await bindableVM.loadEntries()
+        }
     }
 }

@@ -16,7 +16,7 @@ struct DeviceFileRow: Identifiable {
     var id: String { fileInfo.filename }
     var filename: String { fileInfo.filename }
     var size: Int { fileInfo.size }
-    var durationSeconds: Int { fileInfo.durationSeconds }
+    var durationSeconds: Int? { fileInfo.durationSeconds }
     var createdAt: Date? { fileInfo.createdAt }
     var mode: RecordingMode? { fileInfo.mode }
 

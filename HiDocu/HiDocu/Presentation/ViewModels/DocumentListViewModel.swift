@@ -13,6 +13,14 @@ final class DocumentListViewModel {
 
     var documents: [Document] = []
     var isLoading = false
+    var sortOrder: [KeyPathComparator<Document>] = [
+        .init(\.sortOrder)
+    ]
+    var allowsManualReordering = true
+
+    var sortedDocuments: [Document] {
+        documents.sorted(using: sortOrder)
+    }
 
     private let documentRepository: any DocumentRepository
     private let documentService: DocumentService
@@ -25,6 +33,8 @@ final class DocumentListViewModel {
 
     func observeDocuments(folderId: Int64?) {
         observationTask?.cancel()
+        allowsManualReordering = true
+        sortOrder = [.init(\.sortOrder)]
         observationTask = Task {
             isLoading = true
             do {
@@ -40,6 +50,8 @@ final class DocumentListViewModel {
 
     func observeAllDocuments() {
         observationTask?.cancel()
+        allowsManualReordering = false
+        sortOrder = [.init(\.createdAt, order: .reverse)]
         observationTask = Task {
             isLoading = true
             do {
@@ -61,7 +73,8 @@ final class DocumentListViewModel {
     // MARK: - Sorting
 
     func moveDocuments(from source: IndexSet, to destination: Int) {
-        var reordered = documents
+        guard allowsManualReordering else { return }
+        var reordered = sortedDocuments
         reordered.move(fromOffsets: source, toOffset: destination)
         documents = reordered  // Optimistic update
         let orderedIds = reordered.map(\.id)
@@ -76,12 +89,22 @@ final class DocumentListViewModel {
     }
 
     func sortDocuments(folderId: Int64?, by criterion: DocumentSortCriterion) {
-        Task {
-            do {
-                try await documentService.sortDocuments(folderId: folderId, by: criterion)
-            } catch {
-                AppLogger.general.error("Failed to sort documents: \(error.localizedDescription)")
-            }
+        _ = folderId
+        switch criterion {
+        case .nameAscending:
+            allowsManualReordering = false
+            sortOrder = [.init(\.title)]
+        case .dateCreatedAscending:
+            allowsManualReordering = false
+            sortOrder = [.init(\.createdAt)]
+        case .dateCreatedDescending:
+            allowsManualReordering = false
+            sortOrder = [.init(\.createdAt, order: .reverse)]
         }
+    }
+
+    func useManualOrder() {
+        allowsManualReordering = true
+        sortOrder = [.init(\.sortOrder)]
     }
 }

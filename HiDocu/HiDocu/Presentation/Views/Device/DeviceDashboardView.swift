@@ -107,50 +107,22 @@ struct DeviceDashboardView: View {
             )
         } else {
             @Bindable var bindableViewModel = viewModel
-            Table(viewModel.sortedFiles, selection: $bindableViewModel.selection, sortOrder: $bindableViewModel.sortOrder) {
-                TableColumn("Date", value: \.sortableDate) { row in
-                    if let date = row.createdAt {
-                        Text(date.formatted(RecordingTableConstants.dateFormat))
-                            .monospacedDigit()
-                    } else {
-                        Text("--")
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-                .width(min: RecordingTableConstants.dateColumnWidth.min, ideal: RecordingTableConstants.dateColumnWidth.ideal)
-
-                TableColumn("Name", value: \.filename) { row in
-                    Text(row.filename)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                        .monospacedDigit()
-                }
-                .width(min: RecordingTableConstants.nameColumnWidth.min, ideal: RecordingTableConstants.nameColumnWidth.ideal)
-
-                TableColumn("Duration", value: \.durationSeconds) { row in
-                    Text(row.durationSeconds.formattedDurationFull)
-                        .monospacedDigit()
-                }
-                .width(min: RecordingTableConstants.durationColumnWidth.min, ideal: RecordingTableConstants.durationColumnWidth.ideal)
-
-                TableColumn("Mode", value: \.modeDisplayName) { row in
-                    Text(row.modeDisplayName)
-                }
-                .width(min: RecordingTableConstants.modeColumnWidth.min, ideal: RecordingTableConstants.modeColumnWidth.ideal)
-
-                TableColumn("Size", value: \.size) { row in
-                    Text(row.size.formattedFileSize)
-                        .monospacedDigit()
-                }
-                .width(min: RecordingTableConstants.sizeColumnWidth.min, ideal: RecordingTableConstants.sizeColumnWidth.ideal)
-
-                TableColumn("", sortUsing: KeyPathComparator(\DeviceFileRow.isImported, comparator: BoolComparator())) { row in
+            RecordingTableView(
+                rows: viewModel.sortedFiles,
+                selection: $bindableViewModel.selection,
+                sortOrder: $bindableViewModel.sortOrder,
+                config: .deviceDashboard,
+                statusSortComparator: KeyPathComparator(\DeviceFileRow.isImported, comparator: BoolComparator()),
+                sourceIcon: { _ in
+                    EmptyView()
+                },
+                statusCell: { row in
                     ImportStatusIcon(isImported: row.isImported)
-                }
-                .width(RecordingTableConstants.statusIconColumnWidth)
-            }
-            .contextMenu(forSelectionType: String.self) { selectedIds in
-                if !selectedIds.isEmpty {
+                },
+                documentCell: { _ in
+                    EmptyView()
+                },
+                contextMenu: { selectedIds in
                     Button("Import Selected") {
                         let files = viewModel.deviceFiles(for: selectedIds)
                         importService.importDeviceFiles(files, from: deviceController)
@@ -163,7 +135,7 @@ struct DeviceDashboardView: View {
                         filesToDelete = selectedIds
                     }
                 }
-            }
+            )
             .confirmationDialog(
                 "Delete from Device",
                 isPresented: Binding(

@@ -13,11 +13,11 @@ struct AllRecordingsRow: Identifiable {
     let filename: String
     let filepath: String
     let title: String?
-    let createdAt: Date
+    let createdAt: Date?
     let durationSeconds: Int?
     let fileSizeBytes: Int?
     let recordingMode: RecordingMode?
-    let syncStatus: RecordingSyncStatus
+    let syncStatus: RecordingSyncStatus?
     let recordingSourceId: Int64?
     // Source info
     var sourceName: String?
@@ -28,6 +28,9 @@ struct AllRecordingsRow: Identifiable {
 
     /// User-friendly title: explicit title if set, otherwise filename.
     var displayTitle: String { title ?? filename }
+
+    /// Sort proxy for optional dates.
+    var sortableDate: Double { createdAt?.timeIntervalSince1970 ?? 0 }
 
     /// Backward-compatible computed property.
     var documentId: Int64? { documentInfo.first?.id }
@@ -45,7 +48,7 @@ final class AllRecordingsViewModel {
 
     var selection: Set<Int64> = []
     var sortOrder: [KeyPathComparator<AllRecordingsRow>] = [
-        .init(\.createdAt, order: .reverse)
+        .init(\.sortableDate, order: .reverse)
     ]
 
     var sortedRows: [AllRecordingsRow] {

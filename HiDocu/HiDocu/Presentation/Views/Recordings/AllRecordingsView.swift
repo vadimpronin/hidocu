@@ -60,68 +60,29 @@ struct AllRecordingsView: View {
 
     private var recordingTable: some View {
         @Bindable var bindableVM = viewModel
-        return Table(viewModel.sortedRows, selection: $bindableVM.selection, sortOrder: $bindableVM.sortOrder) {
-            TableColumn("") { (row: AllRecordingsRow) in
+        return RecordingTableView(
+            rows: viewModel.sortedRows,
+            selection: $bindableVM.selection,
+            sortOrder: $bindableVM.sortOrder,
+            config: .allRecordings,
+            sourceName: { $0.sourceName },
+            primaryAction: { row in
+                guard row.syncStatus != .onDeviceOnly, !row.filepath.isEmpty else { return }
+                let url = fileSystemService.recordingFileURL(relativePath: row.filepath)
+                if FileManager.default.fileExists(atPath: url.path) {
+                    quickLookURL = url
+                }
+            },
+            sourceIcon: { row in
                 sourceIcon(for: row)
-            }
-            .width(RecordingTableConstants.sourceIconColumnWidth)
-
-            TableColumn("Source") { (row: AllRecordingsRow) in
-                Text(row.sourceName ?? "Unknown")
-                    .foregroundStyle(row.sourceName != nil ? .secondary : .tertiary)
-            }
-            .width(min: RecordingTableConstants.sourceColumnWidth.min, ideal: RecordingTableConstants.sourceColumnWidth.ideal)
-
-            TableColumn("Name", value: \.filename) { row in
-                Text(row.filename)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .monospacedDigit()
-            }
-            .width(min: RecordingTableConstants.nameColumnWidth.min, ideal: RecordingTableConstants.nameColumnWidth.ideal)
-
-            TableColumn("Date", value: \.createdAt) { row in
-                Text(row.createdAt.formatted(RecordingTableConstants.dateFormat))
-                    .monospacedDigit()
-            }
-            .width(min: RecordingTableConstants.dateColumnWidth.min, ideal: RecordingTableConstants.dateColumnWidth.ideal)
-
-            TableColumn("Duration") { (row: AllRecordingsRow) in
-                if let duration = row.durationSeconds {
-                    Text(duration.formattedDurationFull)
-                        .monospacedDigit()
-                } else {
-                    Text("--")
-                        .foregroundStyle(.tertiary)
-                }
-            }
-            .width(min: RecordingTableConstants.durationColumnWidth.min, ideal: RecordingTableConstants.durationColumnWidth.ideal)
-
-            TableColumn("Mode") { (row: AllRecordingsRow) in
-                Text(row.recordingMode?.displayName ?? "\u{2014}")
-            }
-            .width(min: RecordingTableConstants.modeColumnWidth.min, ideal: RecordingTableConstants.modeColumnWidth.ideal)
-
-            TableColumn("Size") { (row: AllRecordingsRow) in
-                if let size = row.fileSizeBytes {
-                    Text(size.formattedFileSize)
-                        .monospacedDigit()
-                } else {
-                    Text("--")
-                        .foregroundStyle(.tertiary)
-                }
-            }
-            .width(min: RecordingTableConstants.sizeColumnWidth.min, ideal: RecordingTableConstants.sizeColumnWidth.ideal)
-
-            TableColumn("") { (row: AllRecordingsRow) in
+            },
+            statusCell: { row in
                 AvailabilityStatusIcon(
-                    syncStatus: row.syncStatus,
+                    syncStatus: row.syncStatus ?? .onDeviceOnly,
                     isDeviceOnline: row.recordingSourceId.map { connectedSourceIds.contains($0) } ?? false
                 )
-            }
-            .width(RecordingTableConstants.statusIconColumnWidth)
-
-            TableColumn("") { (row: AllRecordingsRow) in
+            },
+            documentCell: { row in
                 DocumentStatusCell(
                     documentInfo: row.documentInfo,
                     isProcessing: row.isProcessing,
@@ -134,11 +95,8 @@ struct AllRecordingsView: View {
                         }
                     }
                 )
-            }
-            .width(min: RecordingTableConstants.documentColumnWidth.min, ideal: RecordingTableConstants.documentColumnWidth.ideal)
-        }
-        .contextMenu(forSelectionType: Int64.self) { selectedIds in
-            if !selectedIds.isEmpty {
+            },
+            contextMenu: { selectedIds in
                 let selectedRows = viewModel.rows.filter { selectedIds.contains($0.id) }
                 let hasLocal = selectedRows.contains { $0.syncStatus != .onDeviceOnly }
 
@@ -171,19 +129,7 @@ struct AllRecordingsView: View {
                     }
                 )
             }
-        }
-        .onKeyPress(.space) {
-            if let id = viewModel.selection.first,
-               let row = viewModel.rows.first(where: { $0.id == id }),
-               row.syncStatus != .onDeviceOnly,
-               !row.filepath.isEmpty {
-                let url = fileSystemService.recordingFileURL(relativePath: row.filepath)
-                if FileManager.default.fileExists(atPath: url.path) {
-                    quickLookURL = url
-                }
-            }
-            return .handled
-        }
+        )
         .confirmationDialog(
             "Delete Imported",
             isPresented: Binding(

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 struct Document: Identifiable, Sendable, Equatable, Hashable {
     let id: Int64
@@ -63,4 +64,13 @@ struct Document: Identifiable, Sendable, Equatable, Hashable {
         self.summaryModel = summaryModel
         self.summaryEdited = summaryEdited
     }
+}
+
+extension Document: DocumentRowDisplayable {
+    var date: Date { createdAt }
+    var subtext: String? { bodyPreview }
+    var statusIcon: String? { "doc.text" }
+    var statusColor: Color { .accentColor }
+    var isTrashed: Bool { false }
+    var daysRemaining: Int? { nil }
 }

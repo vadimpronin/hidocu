@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 struct DeletionLogEntry: Identifiable, Sendable, Equatable, Hashable {
     let id: Int64
@@ -18,7 +19,7 @@ struct DeletionLogEntry: Identifiable, Sendable, Equatable, Hashable {
     var originalCreatedAt: Date?
     var originalModifiedAt: Date?
 
-    var daysRemaining: Int {
+    var daysRemaining: Int? {
         let calendar = Calendar.current
         let now = Date()
         let components = calendar.dateComponents([.day], from: now, to: expiresAt)
@@ -46,4 +47,20 @@ struct DeletionLogEntry: Identifiable, Sendable, Equatable, Hashable {
         self.originalCreatedAt = originalCreatedAt
         self.originalModifiedAt = originalModifiedAt
     }
+}
+
+extension DeletionLogEntry: DocumentRowDisplayable {
+    var title: String { documentTitle?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? "Untitled" }
+    var date: Date { deletedAt }
+    var subtext: String? { folderPath?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty.map { "Deleted from \($0)" } }
+    var statusIcon: String? { "trash" }
+    var statusColor: Color {
+        guard let daysRemaining else { return .secondary }
+        return daysRemaining < 7 ? .red : .orange
+    }
+    var isTrashed: Bool { true }
+}
+
+private extension String {
+    var nilIfEmpty: String? { isEmpty ? nil : self }
 }

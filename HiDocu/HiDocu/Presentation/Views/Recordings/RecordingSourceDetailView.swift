@@ -166,60 +166,30 @@ struct RecordingSourceDetailView: View {
             )
         } else {
             @Bindable var bindableViewModel = viewModel
-            Table(viewModel.sortedRows, selection: $bindableViewModel.selection, sortOrder: $bindableViewModel.sortOrder) {
-                TableColumn("Date", value: \.sortableDate) { row in
-                    Group {
-                        if let date = row.createdAt {
-                            Text(date.formatted(RecordingTableConstants.dateFormat))
-                                .monospacedDigit()
-                        } else {
-                            Text("--")
-                                .foregroundStyle(.tertiary)
-                        }
+            RecordingTableView(
+                rows: viewModel.sortedRows,
+                selection: $bindableViewModel.selection,
+                sortOrder: $bindableViewModel.sortOrder,
+                config: .recordingSource,
+                statusSortComparator: KeyPathComparator(\UnifiedRecordingRow.syncStatusSortOrder),
+                rowOpacity: { row in row.dimmedWhenOffline(controller) },
+                primaryAction: { row in
+                    guard row.syncStatus != .onDeviceOnly, let filepath = row.filepath else { return }
+                    let url = fileSystemService.recordingFileURL(relativePath: filepath)
+                    if FileManager.default.fileExists(atPath: url.path) {
+                        quickLookURL = url
                     }
-                    .opacity(row.dimmedWhenOffline(controller))
-                }
-                .width(min: RecordingTableConstants.dateColumnWidth.min, ideal: RecordingTableConstants.dateColumnWidth.ideal)
-
-                TableColumn("Name", value: \.filename) { row in
-                    Text(row.filename)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                        .monospacedDigit()
-                        .opacity(row.dimmedWhenOffline(controller))
-                }
-                .width(min: RecordingTableConstants.nameColumnWidth.min, ideal: RecordingTableConstants.nameColumnWidth.ideal)
-
-                TableColumn("Duration", value: \.durationSeconds) { row in
-                    Text(row.durationSeconds.formattedDurationFull)
-                        .monospacedDigit()
-                        .opacity(row.dimmedWhenOffline(controller))
-                }
-                .width(min: RecordingTableConstants.durationColumnWidth.min, ideal: RecordingTableConstants.durationColumnWidth.ideal)
-
-                TableColumn("Mode", value: \.modeDisplayName) { row in
-                    Text(row.modeDisplayName)
-                        .opacity(row.dimmedWhenOffline(controller))
-                }
-                .width(min: RecordingTableConstants.modeColumnWidth.min, ideal: RecordingTableConstants.modeColumnWidth.ideal)
-
-                TableColumn("Size", value: \.size) { row in
-                    Text(row.size.formattedFileSize)
-                        .monospacedDigit()
-                        .opacity(row.dimmedWhenOffline(controller))
-                }
-                .width(min: RecordingTableConstants.sizeColumnWidth.min, ideal: RecordingTableConstants.sizeColumnWidth.ideal)
-
-                TableColumn("", sortUsing: KeyPathComparator(\UnifiedRecordingRow.syncStatus)) { row in
+                },
+                sourceIcon: { _ in
+                    EmptyView()
+                },
+                statusCell: { row in
                     AvailabilityStatusIcon(
-                        syncStatus: row.syncStatus,
+                        syncStatus: row.syncStatus ?? .onDeviceOnly,
                         isDeviceOnline: controller != nil
                     )
-                    .opacity(row.dimmedWhenOffline(controller))
-                }
-                .width(RecordingTableConstants.statusIconColumnWidth)
-
-                TableColumn("") { (row: UnifiedRecordingRow) in
+                },
+                documentCell: { row in
                     DocumentStatusCell(
                         documentInfo: row.documentInfo,
                         isProcessing: row.isProcessing,
@@ -237,11 +207,8 @@ struct RecordingSourceDetailView: View {
                             }
                         }
                     )
-                }
-                .width(min: RecordingTableConstants.documentColumnWidth.min, ideal: RecordingTableConstants.documentColumnWidth.ideal)
-            }
-            .contextMenu(forSelectionType: String.self) { selectedIds in
-                if !selectedIds.isEmpty {
+                },
+                contextMenu: { selectedIds in
                     let selectedRows = viewModel.rows.filter { selectedIds.contains($0.id) }
                     let hasLocal = selectedRows.contains { $0.syncStatus != .onDeviceOnly }
                     let hasUnimported = selectedRows.contains { $0.syncStatus == .onDeviceOnly }
@@ -286,19 +253,7 @@ struct RecordingSourceDetailView: View {
                         }
                     )
                 }
-            }
-            .onKeyPress(.space) {
-                if let filename = viewModel.selection.first,
-                   let row = viewModel.rows.first(where: { $0.filename == filename }),
-                   row.syncStatus != .onDeviceOnly,
-                   let filepath = row.filepath {
-                    let url = fileSystemService.recordingFileURL(relativePath: filepath)
-                    if FileManager.default.fileExists(atPath: url.path) {
-                        quickLookURL = url
-                    }
-                }
-                return .handled
-            }
+            )
             .confirmationDialog(
                 "Delete from Device",
                 isPresented: Binding(

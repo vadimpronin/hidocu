@@ -14,10 +14,10 @@ struct UnifiedRecordingRow: Identifiable {
     let filename: String
     let filepath: String?
     let createdAt: Date?
-    let durationSeconds: Int
+    let durationSeconds: Int?
     let size: Int
     let mode: RecordingMode?
-    var syncStatus: RecordingSyncStatus
+    var syncStatus: RecordingSyncStatus?
     var recordingId: Int64?
     var documentInfo: [DocumentLink] = []
     var isProcessing: Bool = false

@@ -148,6 +148,11 @@
 		AB1234567890ABCD12340012 /* AvailabilityStatusIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340002 /* AvailabilityStatusIcon.swift */; };
 		AB1234567890ABCD12340013 /* DocumentStatusCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340003 /* DocumentStatusCell.swift */; };
 		AB1234567890ABCD12340014 /* RecordingContextMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340004 /* RecordingContextMenu.swift */; };
+		AB1234567890ABCD12340015 /* RecordingTableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340005 /* RecordingTableView.swift */; };
+		AB1234567890ABCD12340016 /* RecordingRowDisplayable.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340006 /* RecordingRowDisplayable.swift */; };
+		AB1234567890ABCD12340021 /* DocumentTableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340008 /* DocumentTableView.swift */; };
+		AB1234567890ABCD12340022 /* DocumentRowDisplayable.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340007 /* DocumentRowDisplayable.swift */; };
+		AB1234567890ABCD12340023 /* TrashViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340009 /* TrashViewModel.swift */; };
 		4621EB24B602474480B72556 /* DeviceIconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6445531941E4C1AAAA93677 /* DeviceIconView.swift */; };
 		844B76E919A0453990DD9A7F /* ImportButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B2CD920910D4121B523536E /* ImportButton.swift */; };
 		BE6826ADC71A49FBBFAF5A6E /* ImportProgressViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 225966B851CE4A9A86ECCBBF /* ImportProgressViews.swift */; };
@@ -308,6 +313,11 @@
 		AB1234567890ABCD12340002 /* AvailabilityStatusIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvailabilityStatusIcon.swift; sourceTree = "<group>"; };
 		AB1234567890ABCD12340003 /* DocumentStatusCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentStatusCell.swift; sourceTree = "<group>"; };
 		AB1234567890ABCD12340004 /* RecordingContextMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingContextMenu.swift; sourceTree = "<group>"; };
+		AB1234567890ABCD12340005 /* RecordingTableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingTableView.swift; sourceTree = "<group>"; };
+		AB1234567890ABCD12340006 /* RecordingRowDisplayable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/RecordingRowDisplayable.swift; sourceTree = "<group>"; };
+		AB1234567890ABCD12340007 /* DocumentRowDisplayable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/DocumentRowDisplayable.swift; sourceTree = "<group>"; };
+		AB1234567890ABCD12340008 /* DocumentTableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentTableView.swift; sourceTree = "<group>"; };
+		AB1234567890ABCD12340009 /* TrashViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Trash/TrashViewModel.swift; sourceTree = "<group>"; };
 		B6445531941E4C1AAAA93677 /* DeviceIconView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceIconView.swift; sourceTree = "<group>"; };
 		2B2CD920910D4121B523536E /* ImportButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportButton.swift; sourceTree = "<group>"; };
 		225966B851CE4A9A86ECCBBF /* ImportProgressViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportProgressViews.swift; sourceTree = "<group>"; };
@@ -410,6 +420,8 @@
 				2B2CD920910D4121B523536E /* ImportButton.swift */,
 				225966B851CE4A9A86ECCBBF /* ImportProgressViews.swift */,
 				FAE7D44C08D44BD683B1959C /* DeviceHeaderView.swift */,
+				AB1234567890ABCD12340008 /* DocumentTableView.swift */,
+				AB1234567890ABCD12340005 /* RecordingTableView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -652,6 +664,9 @@
 				FF00000500000005 /* LLMSettingsViewModel.swift */,
 							A39E440C62C1A3D0620AACD4 /* RecordingSourceViewModel.swift */,
 				AB1234567890ABCD12340001 /* AllRecordingsViewModel.swift */,
+				AB1234567890ABCD12340009 /* TrashViewModel.swift */,
+				AB1234567890ABCD12340007 /* DocumentRowDisplayable.swift */,
+				AB1234567890ABCD12340006 /* RecordingRowDisplayable.swift */,
 );
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -987,6 +1002,11 @@
 				AB1234567890ABCD12340012 /* AvailabilityStatusIcon.swift in Sources */,
 				AB1234567890ABCD12340013 /* DocumentStatusCell.swift in Sources */,
 				AB1234567890ABCD12340014 /* RecordingContextMenu.swift in Sources */,
+				AB1234567890ABCD12340015 /* RecordingTableView.swift in Sources */,
+				AB1234567890ABCD12340016 /* RecordingRowDisplayable.swift in Sources */,
+				AB1234567890ABCD12340021 /* DocumentTableView.swift in Sources */,
+				AB1234567890ABCD12340022 /* DocumentRowDisplayable.swift in Sources */,
+				AB1234567890ABCD12340023 /* TrashViewModel.swift in Sources */,
 				4621EB24B602474480B72556 /* DeviceIconView.swift in Sources */,
 				844B76E919A0453990DD9A7F /* ImportButton.swift in Sources */,
 				BE6826ADC71A49FBBFAF5A6E /* ImportProgressViews.swift in Sources */,
