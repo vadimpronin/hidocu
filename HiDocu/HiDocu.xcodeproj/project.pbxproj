@@ -164,6 +164,7 @@
 		91A4E8F95A3D4E2AB0011003 /* DataStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91A4E8F95A3D4E2AB0012003 /* DataStateView.swift */; };
 		DB10000100000001 /* APIDebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB00000100000001 /* APIDebugLogger.swift */; };
 		DB10000200000002 /* PostmanExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB00000200000002 /* PostmanExporter.swift */; };
+		DB10000400000004 /* HARExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB00000400000004 /* HARExporter.swift */; };
 		DB10000300000003 /* DebugSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB00000300000003 /* DebugSettingsSection.swift */; };
 /* End PBXBuildFile section */
 
@@ -335,6 +336,7 @@
 		91A4E8F95A3D4E2AB0012003 /* DataStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStateView.swift; sourceTree = "<group>"; };
 		DB00000100000001 /* APIDebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIDebugLogger.swift; sourceTree = "<group>"; };
 		DB00000200000002 /* PostmanExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostmanExporter.swift; sourceTree = "<group>"; };
+		DB00000400000004 /* HARExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HARExporter.swift; sourceTree = "<group>"; };
 		DB00000300000003 /* DebugSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugSettingsSection.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -415,6 +417,7 @@
 				LQV0000000000001 /* LLMQueueService.swift */,
 				DB00000100000001 /* APIDebugLogger.swift */,
 				DB00000200000002 /* PostmanExporter.swift */,
+				DB00000400000004 /* HARExporter.swift */,
 				FF20000100000001 /* Providers */,
 			);
 			path = LLM;
@@ -1036,6 +1039,7 @@
 				91A4E8F95A3D4E2AB0011003 /* DataStateView.swift in Sources */,
 				DB10000100000001 /* APIDebugLogger.swift in Sources */,
 				DB10000200000002 /* PostmanExporter.swift in Sources */,
+				DB10000400000004 /* HARExporter.swift in Sources */,
 				DB10000300000003 /* DebugSettingsSection.swift in Sources */,
 );
 			runOnlyForDeploymentPostprocessing = 0;

@@ -11,11 +11,15 @@ import UniformTypeIdentifiers
 @main
 struct HiDocuApp: App {
 
+    private static let appLaunchDate = Date()
+
     @State private var container = AppDependencyContainer()
     @State private var navigationVM = NavigationViewModelV2()
-    @State private var importError: String?
-    @State private var showImportError = false
+    @State private var alertTitle = ""
+    @State private var alertMessage: String?
+    @State private var showAlert = false
     @State private var isAPIDebugEnabled = false
+    @State private var isExportingHAR = false
     #if DEBUG
     @State private var showClearStorageConfirmation = false
     #endif
@@ -36,10 +40,10 @@ struct HiDocuApp: App {
                         await container.apiDebugLogger.setEnabled(newValue)
                     }
                 }
-                .alert("Import Failed", isPresented: $showImportError) {
+                .alert(alertTitle, isPresented: $showAlert) {
                     Button("OK") {}
                 } message: {
-                    Text(importError ?? "An unknown error occurred.")
+                    Text(alertMessage ?? "An unknown error occurred.")
                 }
                 #if DEBUG
                 .confirmationDialog(
@@ -86,6 +90,23 @@ struct HiDocuApp: App {
                         NSWorkspace.shared.activateFileViewerSelecting([url])
                     }
                 }
+
+                Menu("Export as HAR") {
+                    Button("Last 5 Minutes") {
+                        exportHAR(since: Date().addingTimeInterval(-5 * 60))
+                    }
+                    Button("Last 30 Minutes") {
+                        exportHAR(since: Date().addingTimeInterval(-30 * 60))
+                    }
+                    Button("Since App Launch") {
+                        exportHAR(since: Self.appLaunchDate)
+                    }
+                    Divider()
+                    Button("All") {
+                        exportHAR(since: nil)
+                    }
+                }
+                .disabled(isExportingHAR)
 
                 #if DEBUG
                 Divider()
@@ -183,6 +204,40 @@ struct HiDocuApp: App {
     }
     #endif
 
+    private func exportHAR(since: Date?) {
+        isExportingHAR = true
+        Task { @MainActor in
+            var entries = await container.apiDebugLogger.listEntries()
+            if let since {
+                entries = entries.filter { $0.timestamp >= since }
+            }
+
+            guard !entries.isEmpty else {
+                AppLogger.llm.info("HAR export skipped — no entries to export")
+                alertTitle = "No Entries"
+                alertMessage = "No debug log entries found for the selected time range."
+                showAlert = true
+                isExportingHAR = false
+                return
+            }
+
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd_HHmmss"
+            let filename = "HiDocu_Debug_\(dateFormatter.string(from: Date())).har"
+            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+
+            do {
+                let data = try HARExporter.generateHAR(from: entries)
+                try data.write(to: tempURL, options: .atomic)
+                NSWorkspace.shared.activateFileViewerSelecting([tempURL])
+            } catch {
+                AppLogger.llm.error("Failed to export HAR: \(error.localizedDescription)")
+            }
+
+            isExportingHAR = false
+        }
+    }
+
     private func importFiles() {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = false
@@ -210,8 +265,9 @@ struct HiDocuApp: App {
             } catch {
                 AppLogger.ui.error("Import failed: \(error.localizedDescription)")
                 await MainActor.run {
-                    importError = error.localizedDescription
-                    showImportError = true
+                    alertTitle = "Import Failed"
+                    alertMessage = error.localizedDescription
+                    showAlert = true
                 }
             }
         }
