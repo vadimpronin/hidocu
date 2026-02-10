@@ -90,4 +90,26 @@ final class SQLiteSourceRepository: SourceRepository, Sendable {
             return count > 0
         }
     }
+
+    func fetchDocumentIdsByRecordingIds(_ recordingIds: [Int64]) async throws -> [Int64: Int64] {
+        guard !recordingIds.isEmpty else { return [:] }
+        return try await db.asyncRead { database in
+            let placeholders = recordingIds.map { _ in "?" }.joined(separator: ",")
+            let rows = try Row.fetchAll(
+                database,
+                sql: """
+                    SELECT recording_id, document_id FROM sources
+                    WHERE recording_id IN (\(placeholders))
+                    """,
+                arguments: StatementArguments(recordingIds))
+            var result: [Int64: Int64] = [:]
+            for row in rows {
+                if let recId: Int64 = row["recording_id"],
+                   let docId: Int64 = row["document_id"] {
+                    result[recId] = docId
+                }
+            }
+            return result
+        }
+    }
 }

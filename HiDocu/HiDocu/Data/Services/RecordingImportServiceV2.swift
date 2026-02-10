@@ -37,7 +37,6 @@ final class ImportSession: Identifiable {
     }
 
     func reset() {
-        importState = .idle
         currentFile = nil
         errorMessage = nil
         importStats = nil
@@ -241,6 +240,7 @@ final class RecordingImportServiceV2 {
 
         let session = ImportSession(deviceID: deviceID)
         sessions[deviceID] = session
+        session.importState = .preparing
 
         Task {
             await performImport(files: files, from: controller, session: session)
@@ -391,8 +391,9 @@ final class RecordingImportServiceV2 {
         }
 
         // Create Recording entry if recording source is available
+        var recordingV2Id: Int64?
         if let sourceId = deviceController?.recordingSourceId {
-            _ = try await recordingSourceService.createRecording(
+            let recording = try await recordingSourceService.createRecording(
                 filename: filename,
                 filepath: audioRelativePath,
                 sourceId: sourceId,
@@ -403,12 +404,13 @@ final class RecordingImportServiceV2 {
                 recordingMode: fileInfo.mode,
                 syncStatus: .synced
             )
+            recordingV2Id = recording.id
         }
 
         // Generate document title
         let title = Self.documentTitle(for: recordingDate, durationSeconds: fileInfo.durationSeconds)
 
-        // Create Document + Source
+        // Create Document + Source (linked to Recording if available)
         do {
             let (doc, source) = try await documentService.createDocumentWithSource(
                 title: title,
@@ -419,7 +421,8 @@ final class RecordingImportServiceV2 {
                 deviceSerial: controller.connectionInfo?.serialNumber,
                 deviceModel: controller.connectionInfo?.model.rawValue,
                 recordingMode: fileInfo.mode?.rawValue,
-                recordedAt: recordingDate
+                recordedAt: recordingDate,
+                recordingId: recordingV2Id
             )
             triggerAutoTranscription(documentId: doc.id, sourceId: source.id, source: source)
         } catch {
@@ -467,7 +470,7 @@ final class RecordingImportServiceV2 {
                 )
 
                 // Create Recording entry
-                _ = try await recordingSourceService.createRecording(
+                let recording = try await recordingSourceService.createRecording(
                     filename: filename,
                     filepath: audioRelativePath,
                     sourceId: importSource.id,
@@ -487,7 +490,8 @@ final class RecordingImportServiceV2 {
                         deviceSerial: nil,
                         deviceModel: nil,
                         recordingMode: nil,
-                        recordedAt: creationDate
+                        recordedAt: creationDate,
+                        recordingId: recording.id
                     )
                     imported.append(doc)
                     triggerAutoTranscription(documentId: doc.id, sourceId: source.id, source: source)

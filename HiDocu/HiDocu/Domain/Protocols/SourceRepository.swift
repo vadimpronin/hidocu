@@ -15,4 +15,5 @@ protocol SourceRepository: Sendable {
     func delete(id: Int64) async throws
     func updateDiskPathPrefix(oldPrefix: String, newPrefix: String) async throws
     func existsByDisplayName(_ displayName: String) async throws -> Bool
+    func fetchDocumentIdsByRecordingIds(_ recordingIds: [Int64]) async throws -> [Int64: Int64]
 }

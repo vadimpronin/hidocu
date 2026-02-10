@@ -396,7 +396,8 @@ final class DocumentService {
         deviceSerial: String?,
         deviceModel: String?,
         recordingMode: String?,
-        recordedAt: Date?
+        recordedAt: Date?,
+        recordingId: Int64? = nil
     ) async throws -> (Document, Source) {
         try fileSystemService.ensureUncategorizedDirectoryExists()
 
@@ -410,7 +411,7 @@ final class DocumentService {
         do {
             var source = try await addSource(
                 documentId: doc.id,
-                recordingId: nil,
+                recordingId: recordingId,
                 displayName: originalFilename
             )
 

@@ -193,14 +193,18 @@ struct ContentViewV2: View {
                 recordingSourceRepository: container.recordingSourceRepository
             )
         } else if case .recordingSource(let sourceId) = navigationVM.selectedSidebarItem {
-            if let source = recordingSources.first(where: { $0.id == sourceId }) {
-                let viewModel = recordingSourceVM(for: sourceId)
+            if let source = recordingSources.first(where: { $0.id == sourceId }),
+               let viewModel = recordingSourceVMs[sourceId] {
                 let controller = connectedDeviceController(for: source)
                 RecordingSourceDetailView(
                     source: source,
                     viewModel: viewModel,
                     importService: container.importServiceV2,
-                    deviceController: controller
+                    deviceController: controller,
+                    onNavigateToDocument: { docId in
+                        navigationVM.selectedSidebarItem = .allDocuments
+                        navigationVM.selectedDocumentIds = [docId]
+                    }
                 )
             } else {
                 Text("Source not found")
@@ -242,15 +246,12 @@ struct ContentViewV2: View {
         return vm
     }
 
-    private func recordingSourceVM(for sourceId: Int64) -> RecordingSourceViewModel {
-        if let existing = recordingSourceVMs[sourceId] {
-            return existing
-        }
-        let vm = RecordingSourceViewModel(
-            recordingRepository: container.recordingRepositoryV2
+    private func ensureRecordingSourceVM(for sourceId: Int64) {
+        guard recordingSourceVMs[sourceId] == nil else { return }
+        recordingSourceVMs[sourceId] = RecordingSourceViewModel(
+            recordingRepository: container.recordingRepositoryV2,
+            sourceRepository: container.sourceRepository
         )
-        recordingSourceVMs[sourceId] = vm
-        return vm
     }
 
     private var connectedSourceIds: Set<Int64> {
@@ -295,6 +296,11 @@ struct ContentViewV2: View {
         }
 
         navigationVM.restoreSelection()
+
+        // Pre-create VM for restored recording source selection
+        if case .recordingSource(let id) = navigationVM.selectedSidebarItem {
+            ensureRecordingSourceVM(for: id)
+        }
     }
 
     private func observeRecordingSources() async {
@@ -332,8 +338,11 @@ struct ContentViewV2: View {
         case .allDocuments:
             documentListVM?.observeAllDocuments()
             columnVisibility = .all
-        case .allRecordings, .recordingSource:
+        case .allRecordings:
             columnVisibility = .detailOnly
+        case .recordingSource(let id):
+            columnVisibility = .detailOnly
+            ensureRecordingSourceVM(for: id)
         case .trash, .none:
             columnVisibility = .all
         }

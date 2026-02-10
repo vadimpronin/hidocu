@@ -13,6 +13,7 @@ struct RecordingSourceDetailView: View {
     var viewModel: RecordingSourceViewModel
     var importService: RecordingImportServiceV2
     var deviceController: DeviceController?
+    var onNavigateToDocument: ((Int64) -> Void)?
 
     @State private var filesToDelete: Set<String> = []
 
@@ -79,8 +80,7 @@ struct RecordingSourceDetailView: View {
                     .padding(.vertical, 12)
             }
         }
-        .task {
-            // Only load on first appearance; cached files skip this
+        .task(id: source.id) {
             if viewModel.rows.isEmpty && !viewModel.isLoading && viewModel.errorMessage == nil {
                 await viewModel.loadRecordings(sourceId: source.id, deviceController: controller)
             }
@@ -121,7 +121,7 @@ struct RecordingSourceDetailView: View {
             recordingBrowser(controller: nil)
                 .frame(maxHeight: .infinity)
         }
-        .task {
+        .task(id: source.id) {
             if viewModel.rows.isEmpty && !viewModel.isLoading && viewModel.errorMessage == nil {
                 await viewModel.loadRecordings(sourceId: source.id, deviceController: nil)
             }
@@ -198,6 +198,20 @@ struct RecordingSourceDetailView: View {
 
                 TableColumn("", sortUsing: KeyPathComparator(\UnifiedRecordingRow.syncStatus)) { row in
                     SyncStatusIcon(status: row.syncStatus)
+                }
+                .width(28)
+
+                TableColumn("") { (row: UnifiedRecordingRow) in
+                    if let docId = row.documentId {
+                        Button {
+                            onNavigateToDocument?(docId)
+                        } label: {
+                            Image(systemName: "doc.text.fill")
+                                .foregroundStyle(Color.accentColor)
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Go to document")
+                    }
                 }
                 .width(28)
             }

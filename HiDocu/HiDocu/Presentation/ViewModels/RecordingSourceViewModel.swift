@@ -17,8 +17,8 @@ struct UnifiedRecordingRow: Identifiable {
     let size: Int
     let mode: RecordingMode?
     var syncStatus: RecordingSyncStatus
-    let recordingId: Int64?
-    let documentId: Int64?
+    var recordingId: Int64?
+    var documentId: Int64?
 
     // Sortable proxy properties
     var sortableDate: Double { createdAt?.timeIntervalSince1970 ?? 0 }
@@ -47,14 +47,16 @@ final class RecordingSourceViewModel {
     // MARK: - Dependencies
 
     private let recordingRepository: any RecordingRepositoryV2
+    private let sourceRepository: any SourceRepository
 
     // Store device files for later access (needed for import operations)
     private var deviceFilesByFilename: [String: DeviceFileInfo] = [:]
 
     // MARK: - Initialization
 
-    init(recordingRepository: any RecordingRepositoryV2) {
+    init(recordingRepository: any RecordingRepositoryV2, sourceRepository: any SourceRepository) {
         self.recordingRepository = recordingRepository
+        self.sourceRepository = sourceRepository
     }
 
     // MARK: - Actions
@@ -101,7 +103,7 @@ final class RecordingSourceViewModel {
                         mode: file.mode,
                         syncStatus: status,
                         recordingId: localRec?.id,
-                        documentId: nil  // Future use
+                        documentId: nil
                     ))
                 }
 
@@ -116,7 +118,7 @@ final class RecordingSourceViewModel {
                         mode: rec.recordingMode,
                         syncStatus: .localOnly,
                         recordingId: rec.id,
-                        documentId: nil  // Future use
+                        documentId: nil
                     ))
                 }
 
@@ -134,10 +136,13 @@ final class RecordingSourceViewModel {
                         mode: rec.recordingMode,
                         syncStatus: .localOnly,
                         recordingId: rec.id,
-                        documentId: nil  // Future use
+                        documentId: nil
                     )
                 }
             }
+
+            // Populate document IDs from the sources table
+            await populateDocumentIds()
         } catch {
             errorMessage = error.localizedDescription
             AppLogger.recordings.error("Failed to load recordings: \(error.localizedDescription)")
@@ -146,12 +151,19 @@ final class RecordingSourceViewModel {
         isLoading = false
     }
 
-    /// Re-check import status without re-fetching device file list.
-    /// Called after import finishes to update checkmarks.
+    /// Re-check import status and document links without re-fetching device file list.
+    /// Called after import finishes to update checkmarks and document links.
     func refreshImportStatus(sourceId: Int64) async {
         guard !rows.isEmpty else { return }
 
         let importedFilenames = (try? await recordingRepository.fetchFilenamesForSource(sourceId)) ?? []
+
+        // Re-fetch local recordings to get recording IDs for newly imported files
+        let localRecordings = (try? await recordingRepository.fetchBySourceId(sourceId)) ?? []
+        let localByFilename = Dictionary(
+            localRecordings.map { ($0.filename, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
 
         for i in rows.indices {
             let onDevice = deviceFilesByFilename[rows[i].filename] != nil
@@ -164,11 +176,36 @@ final class RecordingSourceViewModel {
             } else {
                 rows[i].syncStatus = .localOnly
             }
+
+            // Update recording ID if it was nil (newly imported)
+            if rows[i].recordingId == nil, let localRec = localByFilename[rows[i].filename] {
+                rows[i].recordingId = localRec.id
+            }
         }
+
+        // Refresh document IDs (import creates new documents)
+        await populateDocumentIds()
     }
 
     /// Return DeviceFileInfo objects for selected filenames (for import).
     func deviceFiles(for filenames: Set<String>) -> [DeviceFileInfo] {
         filenames.compactMap { deviceFilesByFilename[$0] }
+    }
+
+    // MARK: - Private
+
+    /// Batch-fetch document IDs for all rows that have recording IDs.
+    private func populateDocumentIds() async {
+        let recordingIds = rows.compactMap(\.recordingId)
+        guard !recordingIds.isEmpty else { return }
+
+        let docIdMap = (try? await sourceRepository.fetchDocumentIdsByRecordingIds(recordingIds)) ?? [:]
+        guard !docIdMap.isEmpty else { return }
+
+        for i in rows.indices {
+            if let recId = rows[i].recordingId, let docId = docIdMap[recId] {
+                rows[i].documentId = docId
+            }
+        }
     }
 }
