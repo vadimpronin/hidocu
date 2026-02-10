@@ -20,6 +20,8 @@ struct RecordingV2: Identifiable, Sendable, Equatable, Hashable {
     var deviceSerial: String?
     var deviceModel: String?
     var recordingMode: RecordingMode?
+    var recordingSourceId: Int64?
+    var syncStatus: RecordingSyncStatus
 
     var displayTitle: String {
         title ?? filename
@@ -41,7 +43,9 @@ struct RecordingV2: Identifiable, Sendable, Equatable, Hashable {
         modifiedAt: Date = Date(),
         deviceSerial: String? = nil,
         deviceModel: String? = nil,
-        recordingMode: RecordingMode? = nil
+        recordingMode: RecordingMode? = nil,
+        recordingSourceId: Int64? = nil,
+        syncStatus: RecordingSyncStatus = .localOnly
     ) {
         self.id = id
         self.filename = filename
@@ -54,5 +58,7 @@ struct RecordingV2: Identifiable, Sendable, Equatable, Hashable {
         self.deviceSerial = deviceSerial
         self.deviceModel = deviceModel
         self.recordingMode = recordingMode
+        self.recordingSourceId = recordingSourceId
+        self.syncStatus = syncStatus
     }
 }

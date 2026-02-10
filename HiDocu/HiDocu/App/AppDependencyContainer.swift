@@ -43,6 +43,7 @@ final class AppDependencyContainer {
     let llmJobRepository: SQLiteLLMJobRepository
     let llmModelLimitRepository: SQLiteLLMModelLimitRepository
     let llmModelRepository: SQLiteLLMModelRepository
+    let recordingSourceRepository: SQLiteRecordingSourceRepository
 
     // MARK: - Services
 
@@ -58,6 +59,7 @@ final class AppDependencyContainer {
     let quotaService: QuotaService
     let llmQueueState: LLMQueueState
     let llmQueueService: LLMQueueService
+    let recordingSourceService: RecordingSourceService
 
     // MARK: - Initialization
 
@@ -91,6 +93,7 @@ final class AppDependencyContainer {
         self.llmJobRepository = SQLiteLLMJobRepository(databaseManager: databaseManager)
         self.llmModelLimitRepository = SQLiteLLMModelLimitRepository(databaseManager: databaseManager)
         self.llmModelRepository = SQLiteLLMModelRepository(databaseManager: databaseManager)
+        self.recordingSourceRepository = SQLiteRecordingSourceRepository(databaseManager: databaseManager)
 
         // Initialize services
         self.settingsService = SettingsService()
@@ -185,6 +188,13 @@ final class AppDependencyContainer {
         // Wire LLMQueueService into DocumentService (post-init to break circular dependency)
         documentService.setLLMQueueService(llmQueueService)
 
+        // Initialize RecordingSourceService (must be before importServiceV2)
+        self.recordingSourceService = RecordingSourceService(
+            recordingSourceRepository: recordingSourceRepository,
+            recordingRepository: recordingRepositoryV2,
+            fileSystemService: fileSystemService
+        )
+
         self.importServiceV2 = RecordingImportServiceV2(
             fileSystemService: fileSystemService,
             documentService: documentService,
@@ -192,8 +202,13 @@ final class AppDependencyContainer {
             transcriptRepository: transcriptRepository,
             llmService: llmService,
             llmQueueService: llmQueueService,
-            settingsService: settingsService
+            settingsService: settingsService,
+            recordingSourceService: recordingSourceService,
+            recordingRepository: recordingRepositoryV2
         )
+
+        // Wire RecordingSourceService into DeviceManager (post-init)
+        deviceManager.setRecordingSourceService(recordingSourceService)
 
         // Apply settings to file system service
         if let dataDir = settingsService.settings.general.dataDirectory {
@@ -208,6 +223,9 @@ final class AppDependencyContainer {
 
         // Start periodic quota refresh
         quotaService.startPeriodicRefresh()
+
+        // Start USB monitoring AFTER all services are wired
+        deviceManager.startMonitoring()
 
         // Start LLM queue processor
         Task {

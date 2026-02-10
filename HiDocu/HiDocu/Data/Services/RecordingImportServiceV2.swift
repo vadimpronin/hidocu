@@ -175,6 +175,8 @@ final class RecordingImportServiceV2 {
     private let llmService: LLMService
     private let llmQueueService: LLMQueueService
     private let settingsService: SettingsService
+    private let recordingSourceService: RecordingSourceService
+    private let recordingRepository: any RecordingRepositoryV2
 
     init(
         fileSystemService: FileSystemService,
@@ -183,7 +185,9 @@ final class RecordingImportServiceV2 {
         transcriptRepository: any TranscriptRepository,
         llmService: LLMService,
         llmQueueService: LLMQueueService,
-        settingsService: SettingsService
+        settingsService: SettingsService,
+        recordingSourceService: RecordingSourceService,
+        recordingRepository: any RecordingRepositoryV2
     ) {
         self.fileSystemService = fileSystemService
         self.documentService = documentService
@@ -192,6 +196,8 @@ final class RecordingImportServiceV2 {
         self.llmService = llmService
         self.llmQueueService = llmQueueService
         self.settingsService = settingsService
+        self.recordingSourceService = recordingSourceService
+        self.recordingRepository = recordingRepository
         AppLogger.fileSystem.info("RecordingImportServiceV2 initialized")
     }
 
@@ -324,9 +330,18 @@ final class RecordingImportServiceV2 {
     private func processFile(_ fileInfo: DeviceFileInfo, from controller: any DeviceFileProvider, session: ImportSession) async throws -> ProcessResult {
         let filename = fileInfo.filename
 
-        // Dedup: check if a Source with this displayName already exists
-        if try await sourceRepository.existsByDisplayName(filename) {
-            return .skipped
+        // Get the recording source ID from the controller
+        let sourceId = (controller as? DeviceController)?.recordingSourceId
+
+        // Dedup: check scoped to recording source if available, otherwise fall back to display name
+        if let sourceId {
+            if try await recordingSourceService.recordingExists(filename: filename, sourceId: sourceId) {
+                return .skipped
+            }
+        } else {
+            if try await sourceRepository.existsByDisplayName(filename) {
+                return .skipped
+            }
         }
 
         try await downloadAndStore(fileInfo, from: controller, session: session)
@@ -356,13 +371,39 @@ final class RecordingImportServiceV2 {
             throw ImportError.downloadIncomplete(filename: filename, expectedBytes: fileInfo.size, actualBytes: downloadedSize)
         }
 
-        // Move audio to date-organized directory
         let recordingDate = fileInfo.createdAt ?? Date()
-        let audioRelativePath = try fileSystemService.moveAudioToRecordings(
-            from: tempURL,
-            filename: filename,
-            date: recordingDate
-        )
+        let deviceController = controller as? DeviceController
+
+        // Move audio to source-organized directory if available
+        let audioRelativePath: String
+        if let sourceDir = deviceController?.recordingSourceDirectory {
+            audioRelativePath = try fileSystemService.moveAudioToSourceDirectory(
+                from: tempURL,
+                filename: filename,
+                sourceDirectory: sourceDir
+            )
+        } else {
+            audioRelativePath = try fileSystemService.moveAudioToRecordings(
+                from: tempURL,
+                filename: filename,
+                date: recordingDate
+            )
+        }
+
+        // Create Recording entry if recording source is available
+        if let sourceId = deviceController?.recordingSourceId {
+            _ = try await recordingSourceService.createRecording(
+                filename: filename,
+                filepath: audioRelativePath,
+                sourceId: sourceId,
+                fileSizeBytes: fileInfo.size,
+                durationSeconds: fileInfo.durationSeconds,
+                deviceSerial: controller.connectionInfo?.serialNumber,
+                deviceModel: controller.connectionInfo?.model.rawValue,
+                recordingMode: fileInfo.mode,
+                syncStatus: .synced
+            )
+        }
 
         // Generate document title
         let title = Self.documentTitle(for: recordingDate, durationSeconds: fileInfo.durationSeconds)
@@ -382,10 +423,14 @@ final class RecordingImportServiceV2 {
             )
             triggerAutoTranscription(documentId: doc.id, sourceId: source.id, source: source)
         } catch {
-            // Cleanup orphaned audio file
             let audioURL = fileSystemService.dataDirectory.appendingPathComponent(audioRelativePath)
             try? FileManager.default.removeItem(at: audioURL)
             throw error
+        }
+
+        // Mark source as synced after successful import
+        if let sourceId = deviceController?.recordingSourceId {
+            try? await recordingSourceService.markSynced(sourceId: sourceId)
         }
     }
 
@@ -394,11 +439,14 @@ final class RecordingImportServiceV2 {
     func importFiles(_ urls: [URL]) async throws -> [Document] {
         var imported: [Document] = []
 
+        // Ensure "Imported" recording source exists
+        let importSource = try await recordingSourceService.ensureImportSource()
+
         for url in urls {
             let filename = url.lastPathComponent
 
-            // Skip if already exists
-            if (try? await sourceRepository.existsByDisplayName(filename)) == true {
+            // Skip if already exists for this source
+            if try await recordingSourceService.recordingExists(filename: filename, sourceId: importSource.id) {
                 continue
             }
 
@@ -412,10 +460,19 @@ final class RecordingImportServiceV2 {
                 let fileSize = attrs[.size] as? Int ?? 0
                 let creationDate = attrs[.creationDate] as? Date ?? Date()
 
-                let audioRelativePath = try fileSystemService.copyAudioToRecordings(
+                let audioRelativePath = try fileSystemService.copyAudioToSourceDirectory(
                     from: url,
                     filename: filename,
-                    date: creationDate
+                    sourceDirectory: importSource.directory
+                )
+
+                // Create Recording entry
+                _ = try await recordingSourceService.createRecording(
+                    filename: filename,
+                    filepath: audioRelativePath,
+                    sourceId: importSource.id,
+                    fileSizeBytes: fileSize,
+                    syncStatus: .localOnly
                 )
 
                 let title = Self.documentTitle(for: creationDate, durationSeconds: nil)
@@ -435,7 +492,6 @@ final class RecordingImportServiceV2 {
                     imported.append(doc)
                     triggerAutoTranscription(documentId: doc.id, sourceId: source.id, source: source)
                 } catch {
-                    // Cleanup orphaned audio
                     let audioURL = fileSystemService.dataDirectory.appendingPathComponent(audioRelativePath)
                     try? FileManager.default.removeItem(at: audioURL)
                     AppLogger.fileSystem.error("Failed to create document for \(filename): \(error.localizedDescription)")

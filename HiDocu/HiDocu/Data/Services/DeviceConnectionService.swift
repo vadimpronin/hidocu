@@ -16,14 +16,24 @@ final class DeviceManager {
     
     /// List of connected device controllers
     var connectedDevices: [DeviceController] = []
-    
+
     /// USB Monitor for hot-plug detection
     private var usbMonitor: USBMonitor?
+
+    /// Recording source service for device-to-source mapping
+    private var recordingSourceService: RecordingSourceService?
     
     // MARK: - Initialization
     
     init() {
         AppLogger.usb.info("DeviceManager initialized")
+    }
+
+    func setRecordingSourceService(_ service: RecordingSourceService) {
+        self.recordingSourceService = service
+    }
+
+    func startMonitoring() {
         setupUSBMonitor()
     }
     
@@ -67,15 +77,31 @@ final class DeviceManager {
             AppLogger.usb.info("Device \(entryID) already managed, ignoring re-connection event")
             return
         }
-        
+
         AppLogger.usb.info("New device detected (ID: \(entryID))")
-        
+
         let newController = DeviceController(entryID: entryID)
         connectedDevices.append(newController)
-        
-        // Initiate connection
-        Task {
+
+        // Initiate connection, then upsert recording source
+        Task { [weak self] in
             await newController.connect()
+
+            // After successful connection, upsert the recording source
+            if newController.isConnected, let info = newController.connectionInfo {
+                do {
+                    let source = try await self?.recordingSourceService?.ensureSourceForDevice(
+                        serialNumber: info.serialNumber,
+                        model: info.model.rawValue,
+                        displayName: info.model.displayName
+                    )
+                    newController.recordingSourceId = source?.id
+                    newController.recordingSourceDirectory = source?.directory
+                    AppLogger.usb.info("Linked device \(entryID) to recording source \(source?.id ?? 0)")
+                } catch {
+                    AppLogger.usb.error("Failed to upsert recording source for device \(entryID): \(error.localizedDescription)")
+                }
+            }
         }
     }
     
@@ -127,6 +153,8 @@ final class DeviceController: Identifiable, DeviceFileProvider, Equatable {
     var batteryInfo: DeviceBatteryInfo?
     var storageInfo: DeviceStorageInfo?
     var lastError: String?
+    var recordingSourceId: Int64?
+    var recordingSourceDirectory: String?
 
 
     

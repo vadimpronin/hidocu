@@ -14,7 +14,10 @@ struct ContentViewV2: View {
     @State private var documentListVM: DocumentListViewModel?
     @State private var documentDetailVM: DocumentDetailViewModel?
     @State private var deviceDashboardVMs: [UInt64: DeviceDashboardViewModel] = [:]
+    @State private var recordingSourceVMs: [Int64: RecordingSourceViewModel] = [:]
+    @State private var recordingSources: [RecordingSource] = []
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @State private var recordingSourcesTask: Task<Void, Never>?
     @State private var documentIdsToDelete: Set<Int64> = []
     @State private var errorMessage: String?
 
@@ -132,6 +135,8 @@ struct ContentViewV2: View {
                 navigationVM: navigationVM,
                 folderTreeVM: folderTreeVM,
                 deviceManager: container.deviceManager,
+                recordingSources: recordingSources,
+                connectedSourceIds: connectedSourceIds,
                 contextService: container.contextService,
                 folderService: container.folderService,
                 fileSystemService: container.fileSystemService
@@ -171,7 +176,8 @@ struct ContentViewV2: View {
             TrashView(trashService: container.trashService)
                 .navigationSplitViewColumnWidth(min: 220, ideal: 280, max: 400)
 
-        case .device:
+        case .allRecordings, .recordingSource:
+            // Recordings: hide content column, show directly in detail
             Color.clear
                 .navigationSplitViewColumnWidth(0)
         }
@@ -181,15 +187,23 @@ struct ContentViewV2: View {
 
     @ViewBuilder
     private var detailColumn: some View {
-        if case .device(let id) = navigationVM.selectedSidebarItem {
-            if let controller = container.deviceManager.connectedDevices.first(where: { $0.id == id }) {
-                DeviceDashboardView(
-                    deviceController: controller,
+        if case .allRecordings = navigationVM.selectedSidebarItem {
+            AllRecordingsView(
+                recordingRepository: container.recordingRepositoryV2,
+                recordingSourceRepository: container.recordingSourceRepository
+            )
+        } else if case .recordingSource(let sourceId) = navigationVM.selectedSidebarItem {
+            if let source = recordingSources.first(where: { $0.id == sourceId }) {
+                let viewModel = recordingSourceVM(for: sourceId)
+                let controller = connectedDeviceController(for: source)
+                RecordingSourceDetailView(
+                    source: source,
+                    viewModel: viewModel,
                     importService: container.importServiceV2,
-                    viewModel: deviceDashboardVMs[id] ?? makeDashboardVM(for: controller)
+                    deviceController: controller
                 )
             } else {
-                Text("Device disconnected")
+                Text("Source not found")
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -228,6 +242,29 @@ struct ContentViewV2: View {
         return vm
     }
 
+    private func recordingSourceVM(for sourceId: Int64) -> RecordingSourceViewModel {
+        if let existing = recordingSourceVMs[sourceId] {
+            return existing
+        }
+        let vm = RecordingSourceViewModel(
+            recordingRepository: container.recordingRepositoryV2
+        )
+        recordingSourceVMs[sourceId] = vm
+        return vm
+    }
+
+    private var connectedSourceIds: Set<Int64> {
+        Set(container.deviceManager.connectedDevices.compactMap { controller in
+            controller.recordingSourceId
+        })
+    }
+
+    private func connectedDeviceController(for source: RecordingSource) -> DeviceController? {
+        container.deviceManager.connectedDevices.first { controller in
+            controller.recordingSourceId == source.id
+        }
+    }
+
     private var currentFolderName: String? {
         if case .uncategorized = navigationVM.selectedSidebarItem {
             return "Uncategorized"
@@ -252,12 +289,33 @@ struct ContentViewV2: View {
         let ddvm = DocumentDetailViewModel(documentService: container.documentService, llmService: container.llmService, llmQueueService: container.llmQueueService, settingsService: container.settingsService)
         documentDetailVM = ddvm
 
+        // Observe recording sources
+        recordingSourcesTask = Task {
+            await observeRecordingSources()
+        }
+
         navigationVM.restoreSelection()
+    }
+
+    private func observeRecordingSources() async {
+        do {
+            for try await sources in container.recordingSourceRepository.observeAll() {
+                recordingSources = sources
+                let validIds = Set(sources.map(\.id))
+                recordingSourceVMs = recordingSourceVMs.filter { validIds.contains($0.key) }
+            }
+        } catch is CancellationError {
+            // Normal cleanup on view disappear
+        } catch {
+            AppLogger.recordings.error("Failed to observe recording sources: \(error.localizedDescription)")
+        }
     }
 
     private func handleDisappear() {
         folderTreeVM?.stopObserving()
         documentListVM?.stopObserving()
+        recordingSourcesTask?.cancel()
+        recordingSourcesTask = nil
         navigationVM.saveSelection()
     }
 
@@ -274,8 +332,8 @@ struct ContentViewV2: View {
         case .allDocuments:
             documentListVM?.observeAllDocuments()
             columnVisibility = .all
-        case .device:
-            columnVisibility = .all
+        case .allRecordings, .recordingSource:
+            columnVisibility = .detailOnly
         case .trash, .none:
             columnVisibility = .all
         }
@@ -308,12 +366,6 @@ struct ContentViewV2: View {
                 if controller.isConnected {
                     Task { await vm.loadFiles() }
                 }
-            }
-        }
-
-        if case .device(let id) = navigationVM.selectedSidebarItem {
-            if !connectedIDs.contains(id) {
-                navigationVM.selectedSidebarItem = .allDocuments
             }
         }
     }

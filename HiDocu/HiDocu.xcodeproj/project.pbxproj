@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		071CE0515FFA41CAAACBB874 /* RecordingSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A077FC9AD84D72A3E071BC /* RecordingSource.swift */; };
+		8AB8E6490C1A4367B6DA9453 /* RecordingSourceDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = D99C1960DB53454796885B23 /* RecordingSourceDTO.swift */; };
+		8AA672C1610D4B0CAF91D672 /* RecordingSourceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 485F8C4FF11D4F0F8983C76E /* RecordingSourceRepository.swift */; };
+		9DBFF30D1F374ABFB1C319F5 /* SQLiteRecordingSourceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAB94EA38DBD470B850CBA1F /* SQLiteRecordingSourceRepository.swift */; };
 		0119A84E4F2840779DA2E2B3 /* TimeInterval+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86F8B131B8884602A9CF022F /* TimeInterval+Extensions.swift */; };
 		022D1B3252A0A87CE530C60B /* RecordingV2DTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9D040E8C768C4EB7680B474 /* RecordingV2DTO.swift */; };
 		04DE6A3CDE2453D7D214B2CF /* SQLiteRecordingRepositoryV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = A29A4A2521C6F0977A6C729F /* SQLiteRecordingRepositoryV2.swift */; };
@@ -74,6 +78,7 @@
 		BB0000A00000000A /* AvailableModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000A00000000A /* AvailableModel.swift */; };
 		BB0000B00000000B /* JudgeResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000B00000000B /* JudgeResponse.swift */; };
 		BE6ECC1B25F71F50417558E0 /* RecordingImportServiceV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368BA73F8C08D273FE2B21C8 /* RecordingImportServiceV2.swift */; };
+		RSSE00001A5B6C7D /* RecordingSourceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = RSSF00001A5B6C7D /* RecordingSourceService.swift */; };
 		BFC601E7D452D90CD990621E /* DocumentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6226CD68D273A20A4EBB9B65 /* DocumentService.swift */; };
 		BM00000000000001 /* LLMJob.swift in Sources */ = {isa = PBXBuildFile; fileRef = DM00000000000001 /* LLMJob.swift */; };
 		BM00000000000002 /* LLMJobPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = DM00000000000002 /* LLMJobPayload.swift */; };
@@ -140,6 +145,9 @@
 		LQV1000000000001 /* LLMQueueService.swift in Sources */ = {isa = PBXBuildFile; fileRef = LQV0000000000001 /* LLMQueueService.swift */; };
 		QB00000000000001 /* QuotaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = QS00000000000001 /* QuotaService.swift */; };
 		TM10000000000001 /* TokenManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = TM00000000000001 /* TokenManager.swift */; };
+		8D6F1D4C8176BC1DE48C7C59 /* RecordingSourceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A39E440C62C1A3D0620AACD4 /* RecordingSourceViewModel.swift */; };
+		F0F2FF9D8D0B1BF5A52461FD /* RecordingSourceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2E77ED394B3F03BE48200F2 /* RecordingSourceDetailView.swift */; };
+		D7FFE2A012B3C7DDB6FE64A9 /* AllRecordingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9157D5BF5831DA5A2CBCF95D /* AllRecordingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -153,6 +161,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		F5A077FC9AD84D72A3E071BC /* RecordingSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSource.swift; sourceTree = "<group>"; };
+		D99C1960DB53454796885B23 /* RecordingSourceDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSourceDTO.swift; sourceTree = "<group>"; };
+		485F8C4FF11D4F0F8983C76E /* RecordingSourceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSourceRepository.swift; sourceTree = "<group>"; };
+		DAB94EA38DBD470B850CBA1F /* SQLiteRecordingSourceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteRecordingSourceRepository.swift; sourceTree = "<group>"; };
 		02EA9E22A4AFD964CEEF863C /* JobMonitorPopoverView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = JobMonitorPopoverView.swift; path = JobMonitorPopoverView.swift; sourceTree = "<group>"; };
 		07496990C2830BD1439D5351 /* BatteryIndicatorView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BatteryIndicatorView.swift; sourceTree = "<group>"; };
 		09134FD2A3C89DFB7EA7BB0F /* DeviceDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DeviceDashboardView.swift; path = HiDocu/Presentation/Views/Device/DeviceDashboardView.swift; sourceTree = SOURCE_ROOT; };
@@ -171,6 +183,7 @@
 		364A63BCA40C34F1107B6A60 /* SidebarViewV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SidebarViewV2.swift; sourceTree = "<group>"; };
 		366665D1CFE1F75AFAAD9DF4 /* SQLiteFolderRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SQLiteFolderRepository.swift; sourceTree = "<group>"; };
 		368BA73F8C08D273FE2B21C8 /* RecordingImportServiceV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingImportServiceV2.swift; sourceTree = "<group>"; };
+		RSSF00001A5B6C7D /* RecordingSourceService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingSourceService.swift; sourceTree = "<group>"; };
 		371F17CB8D6ADADD5D3AD590 /* Source.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Source.swift; sourceTree = "<group>"; };
 		37A04E6ED12F76D8DF4867E7 /* SQLiteTranscriptRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SQLiteTranscriptRepository.swift; sourceTree = "<group>"; };
 		37BFD95EBB1B504ED68E3980 /* DeletionLogDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeletionLogDTO.swift; sourceTree = "<group>"; };
@@ -286,6 +299,9 @@
 		M3N4O5P6Q7R8S9T0U1V2W3X4 /* GenerateTranscriptSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateTranscriptSheet.swift; sourceTree = "<group>"; };
 		QS00000000000001 /* QuotaService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaService.swift; sourceTree = "<group>"; };
 		TM00000000000001 /* TokenManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenManager.swift; sourceTree = "<group>"; };
+		A39E440C62C1A3D0620AACD4 /* RecordingSourceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSourceViewModel.swift; sourceTree = "<group>"; };
+		C2E77ED394B3F03BE48200F2 /* RecordingSourceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSourceDetailView.swift; sourceTree = "<group>"; };
+		9157D5BF5831DA5A2CBCF95D /* AllRecordingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllRecordingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -472,6 +488,7 @@
 				120ABFADCBA34F60024F6346 /* Transcript.swift */,
 				1358CE1110F0A9D6089071F3 /* DeletionLogEntry.swift */,
 				9CB033465FB3E12E0BB749B1 /* RecordingV2.swift */,
+				F5A077FC9AD84D72A3E071BC /* RecordingSource.swift */,
 				AA00000100000001 /* LLMProvider.swift */,
 				AA00000200000002 /* LLMAccount.swift */,
 				DM00000000000004 /* LLMModelLimit.swift */,
@@ -497,6 +514,7 @@
 				A98CB705C2B0017E531544B6 /* SourceRepository.swift */,
 				2B0D1580CF48C34D6AA476C3 /* TranscriptRepository.swift */,
 				93F40903E763C5CAAA849A16 /* RecordingRepositoryV2.swift */,
+				485F8C4FF11D4F0F8983C76E /* RecordingSourceRepository.swift */,
 				47BF7D3168C144CED0C36ED9 /* DeletionLogRepository.swift */,
 				AA00000600000006 /* LLMProviderStrategy.swift */,
 				AA00000700000007 /* LLMAccountRepository.swift */,
@@ -512,7 +530,7 @@
 		F200000AF200000A /* UseCases */ = {
 			isa = PBXGroup;
 			children = (
-			);
+);
 			path = UseCases;
 			sourceTree = "<group>";
 		};
@@ -538,6 +556,7 @@
 				D69953C06FF92116AE18C2DE /* TrashService.swift */,
 				1982272C3186149C008392DB /* SettingsService.swift */,
 				368BA73F8C08D273FE2B21C8 /* RecordingImportServiceV2.swift */,
+				RSSF00001A5B6C7D /* RecordingSourceService.swift */,
 				DF266F9B0F879544CB1FB848 /* PathSanitizer.swift */,
 				CC00000100000001 /* LLM */,
 			);
@@ -552,6 +571,7 @@
 				438E368ED96312AD4F772D25 /* SQLiteSourceRepository.swift */,
 				37A04E6ED12F76D8DF4867E7 /* SQLiteTranscriptRepository.swift */,
 				A29A4A2521C6F0977A6C729F /* SQLiteRecordingRepositoryV2.swift */,
+				DAB94EA38DBD470B850CBA1F /* SQLiteRecordingSourceRepository.swift */,
 				AAA3834F987CA973FCD8506B /* SQLiteDeletionLogRepository.swift */,
 				DD00000300000003 /* SQLiteLLMAccountRepository.swift */,
 				DD00000300000006 /* SQLiteLLMModelLimitRepository.swift */,
@@ -572,6 +592,7 @@
 				B930F1D2F342C5D58BD7B889 /* TranscriptDTO.swift */,
 				37BFD95EBB1B504ED68E3980 /* DeletionLogDTO.swift */,
 				A9D040E8C768C4EB7680B474 /* RecordingV2DTO.swift */,
+				D99C1960DB53454796885B23 /* RecordingSourceDTO.swift */,
 				DD00000100000001 /* LLMAccountDTO.swift */,
 				DTO0000000000003 /* LLMModelLimitDTO.swift */,
 				DTO0000000000004 /* LLMModelDTO.swift */,
@@ -586,7 +607,7 @@
 		F200000FF200000F /* Migrations */ = {
 			isa = PBXGroup;
 			children = (
-			);
+);
 			path = Migrations;
 			sourceTree = "<group>";
 		};
@@ -601,7 +622,8 @@
 				D0A200194A4444435072733F /* ContentViewV2.swift */,
 				FB454B08628CE5A75BC6ED32 /* Folders */,
 				6631DDC458171CC9C7062A5D /* Trash */,
-			);
+							FB2DDE62926C7C5A52D00344 /* Recordings */,
+);
 			path = Views;
 			sourceTree = "<group>";
 		};
@@ -615,7 +637,8 @@
 				AAADD95ECAC7FF3C0B18B887 /* DocumentDetailViewModel.swift */,
 				DBA3562E4C531972E9D61F66 /* SourcesViewModel.swift */,
 				FF00000500000005 /* LLMSettingsViewModel.swift */,
-			);
+							A39E440C62C1A3D0620AACD4 /* RecordingSourceViewModel.swift */,
+);
 			path = ViewModels;
 			sourceTree = "<group>";
 		};
@@ -673,6 +696,15 @@
 				FF00000300000003 /* GeminiProvider.swift */,
 			);
 			path = Providers;
+			sourceTree = "<group>";
+		};
+		FB2DDE62926C7C5A52D00344 /* Recordings */ = {
+			isa = PBXGroup;
+			children = (
+							C2E77ED394B3F03BE48200F2 /* RecordingSourceDetailView.swift */,
+				9157D5BF5831DA5A2CBCF95D /* AllRecordingsView.swift */,
+);
+			path = Recordings;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -830,23 +862,27 @@
 				A1B2C3D4E5F6G7H8I9J0K1L2 /* GenerateTranscriptSheet.swift in Sources */,
 				DF3313BAB7828D8D8AB8304A /* DeletionLogEntry.swift in Sources */,
 				DE3B51E4417F4918F5022E40 /* RecordingV2.swift in Sources */,
+				071CE0515FFA41CAAACBB874 /* RecordingSource.swift in Sources */,
 				3D6B099B9A5D77F71AADE23C /* FolderDTO.swift in Sources */,
 				20B7797FB09248004C7B5DF8 /* DocumentDTO.swift in Sources */,
 				7C544CC177A527E1114D7392 /* SourceDTO.swift in Sources */,
 				CE4EB2D09509DEC4A3A562E1 /* TranscriptDTO.swift in Sources */,
 				5454FE8644F05C68769CE2B3 /* DeletionLogDTO.swift in Sources */,
 				022D1B3252A0A87CE530C60B /* RecordingV2DTO.swift in Sources */,
+				8AB8E6490C1A4367B6DA9453 /* RecordingSourceDTO.swift in Sources */,
 				A6B8973348B1B36D7C152E9F /* FolderRepository.swift in Sources */,
 				826884BB9C56944CC45A4128 /* DocumentRepository.swift in Sources */,
 				57CCCAE7FE29385655121C19 /* SourceRepository.swift in Sources */,
 				6ED29A3CA24533D402F918DD /* TranscriptRepository.swift in Sources */,
 				8C1F7AFE2BA73F51196C0CE6 /* RecordingRepositoryV2.swift in Sources */,
+				8AA672C1610D4B0CAF91D672 /* RecordingSourceRepository.swift in Sources */,
 				D29B81C7FF9C622845D2E888 /* DeletionLogRepository.swift in Sources */,
 				F21116180C58EFA51A7A7459 /* SQLiteFolderRepository.swift in Sources */,
 				A7E80828A8F4FECF9047CDEE /* SQLiteDocumentRepository.swift in Sources */,
 				A5B176A9AEBF7C402C7342DA /* SQLiteSourceRepository.swift in Sources */,
 				32C7299902FF667CC690A02A /* SQLiteTranscriptRepository.swift in Sources */,
 				04DE6A3CDE2453D7D214B2CF /* SQLiteRecordingRepositoryV2.swift in Sources */,
+				9DBFF30D1F374ABFB1C319F5 /* SQLiteRecordingSourceRepository.swift in Sources */,
 				2D4B4E272B97C1411E75FA0C /* SQLiteDeletionLogRepository.swift in Sources */,
 				BFC601E7D452D90CD990621E /* DocumentService.swift in Sources */,
 				6653E1E533CD3337CF17CEB4 /* FolderService.swift in Sources */,
@@ -854,6 +890,7 @@
 				0EC792C8A6BE261D6C07D17F /* TrashService.swift in Sources */,
 				9DDDA0CC7D5FA306672B6EE7 /* SettingsService.swift in Sources */,
 				BE6ECC1B25F71F50417558E0 /* RecordingImportServiceV2.swift in Sources */,
+				RSSE00001A5B6C7D /* RecordingSourceService.swift in Sources */,
 				AFA436901852E6303785837D /* NavigationViewModelV2.swift in Sources */,
 				53438D90B497848BD250352E /* FolderTreeViewModel.swift in Sources */,
 				A2626B02BDE9315C6B921544 /* DocumentListViewModel.swift in Sources */,
@@ -920,7 +957,10 @@
 				FF10000600000006 /* LLMSettingsTab.swift in Sources */,				3DE8D43D5E41E48342A9B174 /* JobMonitorPopoverView.swift in Sources */,
 				E9628EC90C9811DAA5FDE221 /* ToolbarQuotaIndicatorView.swift in Sources */,
 				0ED011EB7EC2F9A051A66982 /* QuotaPopoverView.swift in Sources */,
-				92AEDC85782DB00613E2A128 /* ToolbarJobMonitorView.swift in Sources */,			);
+				92AEDC85782DB00613E2A128 /* ToolbarJobMonitorView.swift in Sources */,							8D6F1D4C8176BC1DE48C7C59 /* RecordingSourceViewModel.swift in Sources */,
+				F0F2FF9D8D0B1BF5A52461FD /* RecordingSourceDetailView.swift in Sources */,
+				D7FFE2A012B3C7DDB6FE64A9 /* AllRecordingsView.swift in Sources */,
+);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F1A00000F1A00000 /* Sources */ = {

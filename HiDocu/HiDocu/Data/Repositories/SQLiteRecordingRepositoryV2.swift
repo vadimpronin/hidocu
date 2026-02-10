@@ -84,4 +84,55 @@ final class SQLiteRecordingRepositoryV2: RecordingRepositoryV2, Sendable {
             }
         }
     }
+
+    func fetchBySourceId(_ sourceId: Int64) async throws -> [RecordingV2] {
+        try await db.asyncRead { database in
+            let dtos = try RecordingV2DTO
+                .filter(RecordingV2DTO.Columns.recordingSourceId == sourceId)
+                .order(RecordingV2DTO.Columns.createdAt.desc)
+                .fetchAll(database)
+            return dtos.map { $0.toDomain() }
+        }
+    }
+
+    func existsByFilenameAndSourceId(_ filename: String, sourceId: Int64) async throws -> Bool {
+        try await db.asyncRead { database in
+            let count = try RecordingV2DTO
+                .filter(RecordingV2DTO.Columns.filename == filename)
+                .filter(RecordingV2DTO.Columns.recordingSourceId == sourceId)
+                .fetchCount(database)
+            return count > 0
+        }
+    }
+
+    func fetchFilenamesForSource(_ sourceId: Int64) async throws -> Set<String> {
+        try await db.asyncRead { database in
+            let filenames = try String.fetchAll(database,
+                sql: "SELECT filename FROM recordings WHERE recording_source_id = ?",
+                arguments: [sourceId]
+            )
+            return Set(filenames)
+        }
+    }
+
+    func observeBySourceId(_ sourceId: Int64) -> AsyncThrowingStream<[RecordingV2], Error> {
+        AsyncThrowingStream { continuation in
+            let observation = ValueObservation.tracking { database -> [RecordingV2DTO] in
+                try RecordingV2DTO
+                    .filter(RecordingV2DTO.Columns.recordingSourceId == sourceId)
+                    .order(RecordingV2DTO.Columns.createdAt.desc)
+                    .fetchAll(database)
+            }
+
+            let cancellable = observation.start(in: self.db.dbPool, scheduling: .async(onQueue: .main)) { error in
+                continuation.finish(throwing: error)
+            } onChange: { dtos in
+                continuation.yield(dtos.map { $0.toDomain() })
+            }
+
+            continuation.onTermination = { _ in
+                cancellable.cancel()
+            }
+        }
+    }
 }

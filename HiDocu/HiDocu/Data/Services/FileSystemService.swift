@@ -348,7 +348,7 @@ final class FileSystemService {
     /// - Throws: FileSystemError if copy fails
     func copyToStorage(from sourceURL: URL, filename: String) throws -> URL {
         let destinationURL = try recordingPath(for: filename)
-        
+
         let operation = {
             // Remove existing file if present
             if FileManager.default.fileExists(atPath: destinationURL.path) {
@@ -356,17 +356,80 @@ final class FileSystemService {
             }
             try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
         }
-        
+
         if requiresSecurityScope, let dir = storageDirectory {
             try withSecurityScopedAccess(to: dir, operation)
         } else {
             try operation()
         }
-        
+
         AppLogger.fileSystem.info("Copied \(sourceURL.lastPathComponent) to storage as \(filename)")
         return destinationURL
     }
-    
+
+    // MARK: - Source-Organized Audio Storage
+
+    /// Move audio file to a source-specific directory: Recordings/<sourceDirectory>/filename.
+    /// Returns relative path from data directory.
+    func moveAudioToSourceDirectory(from sourceURL: URL, filename: String, sourceDirectory: String) throws -> String {
+        return try performSourceAudioOperation(
+            from: sourceURL,
+            filename: filename,
+            sourceDirectory: sourceDirectory,
+            isMove: true
+        )
+    }
+
+    /// Copy audio file to a source-specific directory: Recordings/<sourceDirectory>/filename.
+    /// Returns relative path from data directory.
+    func copyAudioToSourceDirectory(from sourceURL: URL, filename: String, sourceDirectory: String) throws -> String {
+        return try performSourceAudioOperation(
+            from: sourceURL,
+            filename: filename,
+            sourceDirectory: sourceDirectory,
+            isMove: false
+        )
+    }
+
+    /// Ensure the Recordings/<sourceDirectory>/ directory exists.
+    func ensureRecordingsSourceDirectoryExists(sourceDirectory: String) throws {
+        let dirURL = dataDirectory
+            .appendingPathComponent("Recordings", isDirectory: true)
+            .appendingPathComponent(sourceDirectory, isDirectory: true)
+        try FileManager.default.createDirectory(at: dirURL, withIntermediateDirectories: true)
+    }
+
+    /// Private helper for source-directory audio move/copy operations.
+    private func performSourceAudioOperation(
+        from sourceURL: URL,
+        filename: String,
+        sourceDirectory: String,
+        isMove: Bool
+    ) throws -> String {
+        let relativePath = "Recordings/\(sourceDirectory)/\(filename)"
+        let destinationURL = dataDirectory.appendingPathComponent(relativePath)
+
+        // Create intermediate directories
+        let parentURL = destinationURL.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: parentURL, withIntermediateDirectories: true)
+
+        // Remove existing file if present
+        if FileManager.default.fileExists(atPath: destinationURL.path) {
+            try FileManager.default.removeItem(at: destinationURL)
+            AppLogger.fileSystem.info("Removed existing file at destination: \(relativePath)")
+        }
+
+        if isMove {
+            try FileManager.default.moveItem(at: sourceURL, to: destinationURL)
+            AppLogger.fileSystem.info("Moved audio to: \(relativePath)")
+        } else {
+            try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
+            AppLogger.fileSystem.info("Copied audio to: \(relativePath)")
+        }
+
+        return relativePath
+    }
+
     // MARK: - Async Wrappers
     
     /// Execute an async operation with proper storage directory access.

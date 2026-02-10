@@ -50,4 +50,7 @@ enum AppLogger {
 
     /// LLM operations (OAuth, API calls, token management)
     static let llm = Logger(subsystem: subsystem, category: "llm")
+
+    /// Recording source and recording operations
+    static let recordings = Logger(subsystem: subsystem, category: "recordings")
 }

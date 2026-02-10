@@ -11,6 +11,8 @@ struct SidebarViewV2: View {
     @Bindable var navigationVM: NavigationViewModelV2
     var folderTreeVM: FolderTreeViewModel
     var deviceManager: DeviceManager
+    var recordingSources: [RecordingSource]
+    var connectedSourceIds: Set<Int64>
     var contextService: ContextService
     var folderService: FolderService
     var fileSystemService: FileSystemService
@@ -23,7 +25,7 @@ struct SidebarViewV2: View {
     var body: some View {
         List(selection: $navigationVM.selectedSidebarItem) {
 
-            Section("System") {
+            Section("Library") {
                 Label("All Documents", systemImage: "doc.on.doc")
                     .tag(SidebarItemV2.allDocuments)
 
@@ -73,12 +75,17 @@ struct SidebarViewV2: View {
                 }
             }
 
-            if !deviceManager.connectedDevices.isEmpty {
-                Section("Devices") {
-                    ForEach(deviceManager.connectedDevices) { controller in
-                        DeviceSidebarRowV2(controller: controller)
-                            .tag(SidebarItemV2.device(id: controller.id))
-                    }
+            Section("Recordings") {
+                Label("All Recordings", systemImage: "waveform")
+                    .tag(SidebarItemV2.allRecordings)
+
+                ForEach(recordingSources) { source in
+                    RecordingSourceSidebarRow(
+                        source: source,
+                        isOnline: connectedSourceIds.contains(source.id),
+                        controller: findController(for: source)
+                    )
+                    .tag(SidebarItemV2.recordingSource(id: source.id))
                 }
             }
         }
@@ -96,49 +103,67 @@ struct SidebarViewV2: View {
         }
         .errorBanner($errorMessage)
     }
+
+    private func findController(for source: RecordingSource) -> DeviceController? {
+        deviceManager.connectedDevices.first { controller in
+            controller.recordingSourceId == source.id
+        }
+    }
 }
 
-// MARK: - Device Sidebar Row (V2 - simplified)
+// MARK: - Recording Source Sidebar Row
 
-private struct DeviceSidebarRowV2: View {
-    let controller: DeviceController
+private struct RecordingSourceSidebarRow: View {
+    let source: RecordingSource
+    let isOnline: Bool
+    let controller: DeviceController?
 
     private var model: DeviceModel {
-        controller.connectionInfo?.model ?? .unknown
+        DeviceModel(rawValue: source.deviceModel ?? "") ?? .unknown
     }
 
     var body: some View {
-        let modelName = controller.displayName
-
-        switch controller.connectionState {
-        case .connecting:
-            Label {
-                Text(modelName)
-            } icon: {
-                ProgressView()
-                    .controlSize(.small)
-            }
-
-        case .connected:
-            Label {
-                HStack {
-                    Text(modelName)
-                    Spacer()
-                    if let battery = controller.batteryInfo {
-                        BatteryIndicatorView(battery: battery)
-                    }
+        if isOnline, let controller = controller {
+            // Online: show normal state with optional battery indicator
+            switch controller.connectionState {
+            case .connecting:
+                Label {
+                    Text(source.name)
+                } icon: {
+                    ProgressView()
+                        .controlSize(.small)
                 }
-            } icon: {
-                deviceIcon
-            }
 
-        case .connectionFailed, .disconnected:
+            case .connected:
+                Label {
+                    HStack {
+                        Text(source.name)
+                        Spacer()
+                        if let battery = controller.batteryInfo {
+                            BatteryIndicatorView(battery: battery)
+                        }
+                    }
+                } icon: {
+                    deviceIcon
+                }
+
+            case .connectionFailed, .disconnected:
+                Label {
+                    Text(source.name)
+                        .foregroundStyle(.secondary)
+                } icon: {
+                    deviceIcon
+                        .foregroundStyle(.red)
+                }
+            }
+        } else {
+            // Offline: show muted state
             Label {
-                Text(modelName)
+                Text(source.name)
                     .foregroundStyle(.secondary)
             } icon: {
                 deviceIcon
-                    .foregroundStyle(.red)
+                    .foregroundStyle(.tertiary)
             }
         }
     }

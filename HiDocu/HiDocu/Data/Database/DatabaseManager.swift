@@ -608,6 +608,39 @@ final class DatabaseManager: Sendable {
             AppLogger.database.info("Migration v14_llm_models complete")
         }
 
+        migrator.registerMigration("v15_recording_sources") { db in
+            // Clean unused recordings table
+            try db.execute(sql: "DELETE FROM recordings")
+
+            // New table: recording_sources
+            try db.execute(sql: """
+                CREATE TABLE recording_sources (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    type TEXT NOT NULL,
+                    unique_identifier TEXT,
+                    auto_import_enabled INTEGER NOT NULL DEFAULT 0,
+                    is_active INTEGER NOT NULL DEFAULT 1,
+                    directory TEXT NOT NULL,
+                    device_model TEXT,
+                    last_seen_at DATETIME,
+                    last_synced_at DATETIME,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """)
+            try db.execute(sql: """
+                CREATE UNIQUE INDEX idx_recording_sources_unique_id
+                    ON recording_sources(unique_identifier) WHERE unique_identifier IS NOT NULL
+                """)
+
+            // Augment recordings table
+            try db.execute(sql: "ALTER TABLE recordings ADD COLUMN recording_source_id INTEGER REFERENCES recording_sources(id) ON DELETE SET NULL")
+            try db.execute(sql: "ALTER TABLE recordings ADD COLUMN sync_status TEXT NOT NULL DEFAULT 'local_only'")
+            try db.execute(sql: "CREATE INDEX idx_recordings_source ON recordings(recording_source_id)")
+
+            AppLogger.database.info("Migration v15_recording_sources complete")
+        }
+
         return migrator
     }
     

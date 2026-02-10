@@ -23,6 +23,8 @@ struct RecordingV2DTO: Codable, FetchableRecord, PersistableRecord, Sendable {
     var deviceSerial: String?
     var deviceModel: String?
     var recordingMode: String?
+    var recordingSourceId: Int64?
+    var syncStatus: String
 
     enum Columns {
         static let id = Column(CodingKeys.id)
@@ -36,6 +38,8 @@ struct RecordingV2DTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         static let deviceSerial = Column(CodingKeys.deviceSerial)
         static let deviceModel = Column(CodingKeys.deviceModel)
         static let recordingMode = Column(CodingKeys.recordingMode)
+        static let recordingSourceId = Column(CodingKeys.recordingSourceId)
+        static let syncStatus = Column(CodingKeys.syncStatus)
     }
 
     enum CodingKeys: String, CodingKey {
@@ -50,6 +54,8 @@ struct RecordingV2DTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         case deviceSerial = "device_serial"
         case deviceModel = "device_model"
         case recordingMode = "recording_mode"
+        case recordingSourceId = "recording_source_id"
+        case syncStatus = "sync_status"
     }
 
     init(from domain: RecordingV2) {
@@ -64,6 +70,8 @@ struct RecordingV2DTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         self.deviceSerial = domain.deviceSerial
         self.deviceModel = domain.deviceModel
         self.recordingMode = domain.recordingMode?.rawValue
+        self.recordingSourceId = domain.recordingSourceId
+        self.syncStatus = domain.syncStatus.rawValue
     }
 
     func toDomain() -> RecordingV2 {
@@ -78,7 +86,9 @@ struct RecordingV2DTO: Codable, FetchableRecord, PersistableRecord, Sendable {
             modifiedAt: modifiedAt,
             deviceSerial: deviceSerial,
             deviceModel: deviceModel,
-            recordingMode: recordingMode.flatMap { RecordingMode(rawValue: $0) }
+            recordingMode: recordingMode.flatMap { RecordingMode(rawValue: $0) },
+            recordingSourceId: recordingSourceId,
+            syncStatus: RecordingSyncStatus(rawValue: syncStatus) ?? .localOnly
         )
     }
 }
