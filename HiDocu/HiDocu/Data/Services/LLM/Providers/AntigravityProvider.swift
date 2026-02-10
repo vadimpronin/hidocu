@@ -47,10 +47,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
     private static let apiUserAgent = "antigravity/1.104.0 darwin/arm64"
 
     // System prompt injected into every Antigravity chat request (matches Go executor)
-    private static let antigravitySystemPrompt = """
-        You are Antigravity, a powerful agentic AI coding assistant. \
-        Help the user with their coding tasks. Be concise and accurate.
-        """
+    private static let antigravitySystemPrompt = "You are Antigravity, a powerful agentic AI coding assistant designed by the Google Deepmind team working on Advanced Agentic Coding.You are pair programming with a USER to solve their coding task. The task may require creating a new codebase, modifying or debugging an existing codebase, or simply answering a question.**Absolute paths only****Proactiveness**"
 
     // MARK: - Properties
 
