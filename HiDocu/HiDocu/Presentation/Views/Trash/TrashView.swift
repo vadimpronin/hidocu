@@ -116,13 +116,10 @@ struct TrashView: View {
         .errorBanner($bindableVM.errorMessage)
         .overlay {
             if viewModel.entries.isEmpty && !viewModel.isLoading {
-                VStack(spacing: 8) {
-                    Image(systemName: "trash")
-                        .font(.largeTitle)
-                        .foregroundStyle(.quaternary)
-                    Text("Trash is Empty")
-                        .foregroundStyle(.secondary)
-                }
+                StandardEmptyStateView(
+                    symbolName: "trash",
+                    title: "Trash is Empty"
+                )
             }
         }
         .toolbar {

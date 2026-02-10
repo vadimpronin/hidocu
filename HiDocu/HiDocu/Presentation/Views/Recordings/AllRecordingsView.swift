@@ -21,50 +21,18 @@ struct AllRecordingsView: View {
     @State private var quickLookURL: URL?
 
     var body: some View {
-        Group {
-            if viewModel.isLoading && viewModel.rows.isEmpty {
-                ProgressView("Loading recordings...")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if viewModel.rows.isEmpty {
-                RecordingEmptyStateView(
-                    title: "No Recordings",
-                    subtitle: "Import recordings from a connected device to get started.",
-                    errorMessage: viewModel.errorMessage,
-                    isLoading: viewModel.isLoading,
-                    onRefresh: { Task { await viewModel.loadData() } }
-                )
-            } else {
-                recordingTable
-            }
-        }
-        .navigationTitle("All Recordings")
-        .quickLookPreview($quickLookURL)
-        .task {
-            await viewModel.loadData()
-        }
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    Task { await viewModel.loadData() }
-                } label: {
-                    Label("Refresh", systemImage: "arrow.clockwise")
-                }
-                .keyboardShortcut("r", modifiers: .command)
-                .help("Refresh recordings")
-                .disabled(viewModel.isLoading)
-            }
-        }
-    }
-
-    // MARK: - Recording Table
-
-    private var recordingTable: some View {
         @Bindable var bindableVM = viewModel
-        return RecordingTableView(
+
+        UnifiedRecordingListView(
             rows: viewModel.sortedRows,
             selection: $bindableVM.selection,
             sortOrder: $bindableVM.sortOrder,
+            isLoading: viewModel.isLoading,
+            errorMessage: viewModel.errorMessage,
             config: .allRecordings,
+            emptyStateTitle: "No Recordings",
+            emptyStateSubtitle: "Import recordings from a connected device to get started.",
+            onRefresh: { await viewModel.loadData() },
             sourceName: { $0.sourceName },
             primaryAction: { row in
                 guard row.syncStatus != .onDeviceOnly, !row.filepath.isEmpty else { return }
@@ -146,6 +114,11 @@ struct AllRecordingsView: View {
             }
         } message: {
             Text("This will remove the local copy. The file will remain on the device if still connected.")
+        }
+        .navigationTitle("All Recordings")
+        .quickLookPreview($quickLookURL)
+        .task {
+            await viewModel.loadData()
         }
     }
 

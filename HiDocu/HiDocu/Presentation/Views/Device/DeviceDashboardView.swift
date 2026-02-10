@@ -72,18 +72,6 @@ struct DeviceDashboardView: View {
                 await viewModel.loadFiles()
             }
         }
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    Task { await viewModel.loadFiles() }
-                } label: {
-                    Label("Refresh", systemImage: "arrow.clockwise")
-                }
-                .keyboardShortcut("r", modifiers: .command)
-                .help("Refresh file list")
-                .disabled(viewModel.isLoading)
-            }
-        }
         .onChange(of: session?.isImporting) { oldValue, newValue in
             if (oldValue == true) && (newValue == false || newValue == nil) {
                 Task { await viewModel.refreshImportStatus() }
@@ -93,64 +81,57 @@ struct DeviceDashboardView: View {
 
     // MARK: - File Browser
 
-    @ViewBuilder
     private var fileBrowser: some View {
-        if viewModel.isLoading && viewModel.files.isEmpty {
-            ProgressView("Loading files...")
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if viewModel.files.isEmpty {
-            RecordingEmptyStateView(
-                title: "No Recordings on Device",
-                errorMessage: viewModel.errorMessage,
-                isLoading: viewModel.isLoading,
-                onRefresh: { Task { await viewModel.loadFiles() } }
-            )
-        } else {
-            @Bindable var bindableViewModel = viewModel
-            RecordingTableView(
-                rows: viewModel.sortedFiles,
-                selection: $bindableViewModel.selection,
-                sortOrder: $bindableViewModel.sortOrder,
-                config: .deviceDashboard,
-                statusSortComparator: KeyPathComparator(\DeviceFileRow.isImported, comparator: BoolComparator()),
-                sourceIcon: { _ in
-                    EmptyView()
-                },
-                statusCell: { row in
-                    ImportStatusIcon(isImported: row.isImported)
-                },
-                documentCell: { _ in
-                    EmptyView()
-                },
-                contextMenu: { selectedIds in
-                    Button("Import Selected") {
-                        let files = viewModel.deviceFiles(for: selectedIds)
-                        importService.importDeviceFiles(files, from: deviceController)
-                    }
-                    .disabled(importService.session(for: deviceController.id)?.isImporting ?? false)
+        @Bindable var bindableViewModel = viewModel
 
-                    Divider()
+        return UnifiedRecordingListView(
+            rows: viewModel.sortedFiles,
+            selection: $bindableViewModel.selection,
+            sortOrder: $bindableViewModel.sortOrder,
+            isLoading: viewModel.isLoading,
+            errorMessage: viewModel.errorMessage,
+            config: .deviceDashboard,
+            emptyStateTitle: "No Recordings on Device",
+            emptyStateSubtitle: "Record something on your HiDock and refresh the list.",
+            onRefresh: { await viewModel.loadFiles() },
+            statusSortComparator: KeyPathComparator(\DeviceFileRow.isImported, comparator: BoolComparator()),
+            sourceIcon: { _ in
+                EmptyView()
+            },
+            statusCell: { row in
+                ImportStatusIcon(isImported: row.isImported)
+            },
+            documentCell: { _ in
+                EmptyView()
+            },
+            contextMenu: { selectedIds in
+                Button("Import Selected") {
+                    let files = viewModel.deviceFiles(for: selectedIds)
+                    importService.importDeviceFiles(files, from: deviceController)
+                }
+                .disabled(importService.session(for: deviceController.id)?.isImporting ?? false)
 
-                    Button("Delete from Device", role: .destructive) {
-                        filesToDelete = selectedIds
-                    }
+                Divider()
+
+                Button("Delete from Device", role: .destructive) {
+                    filesToDelete = selectedIds
                 }
-            )
-            .confirmationDialog(
-                "Delete from Device",
-                isPresented: Binding(
-                    get: { !filesToDelete.isEmpty },
-                    set: { if !$0 { filesToDelete = [] } }
-                )
-            ) {
-                Button("Delete \(filesToDelete.count) file\(filesToDelete.count == 1 ? "" : "s")", role: .destructive) {
-                    let ids = filesToDelete
-                    filesToDelete = []
-                    Task { await viewModel.deleteFiles(ids) }
-                }
-            } message: {
-                Text("This will permanently delete \(filesToDelete.count) file\(filesToDelete.count == 1 ? "" : "s") from the device. This cannot be undone.")
             }
+        )
+        .confirmationDialog(
+            "Delete from Device",
+            isPresented: Binding(
+                get: { !filesToDelete.isEmpty },
+                set: { if !$0 { filesToDelete = [] } }
+            )
+        ) {
+            Button("Delete \(filesToDelete.count) file\(filesToDelete.count == 1 ? "" : "s")", role: .destructive) {
+                let ids = filesToDelete
+                filesToDelete = []
+                Task { await viewModel.deleteFiles(ids) }
+            }
+        } message: {
+            Text("This will permanently delete \(filesToDelete.count) file\(filesToDelete.count == 1 ? "" : "s") from the device. This cannot be undone.")
         }
     }
 

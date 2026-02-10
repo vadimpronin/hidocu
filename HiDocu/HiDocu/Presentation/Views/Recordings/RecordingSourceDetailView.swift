@@ -94,18 +94,6 @@ struct RecordingSourceDetailView: View {
                 await viewModel.loadRecordings(sourceId: source.id, deviceController: controller)
             }
         }
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    Task { await viewModel.loadRecordings(sourceId: source.id, deviceController: controller) }
-                } label: {
-                    Label("Refresh", systemImage: "arrow.clockwise")
-                }
-                .keyboardShortcut("r", modifiers: .command)
-                .help("Refresh file list")
-                .disabled(viewModel.isLoading)
-            }
-        }
         .onChange(of: session?.isImporting) { oldValue, newValue in
             if (oldValue == true) && (newValue == false || newValue == nil) {
                 Task { await viewModel.refreshImportStatus(sourceId: source.id) }
@@ -136,160 +124,141 @@ struct RecordingSourceDetailView: View {
                 await viewModel.loadRecordings(sourceId: source.id, deviceController: nil)
             }
         }
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    Task { await viewModel.loadRecordings(sourceId: source.id, deviceController: nil) }
-                } label: {
-                    Label("Refresh", systemImage: "arrow.clockwise")
-                }
-                .keyboardShortcut("r", modifiers: .command)
-                .help("Refresh list")
-                .disabled(viewModel.isLoading)
-            }
-        }
     }
 
     // MARK: - Recording Browser
 
-    @ViewBuilder
     private func recordingBrowser(controller: DeviceController?) -> some View {
-        if viewModel.isLoading && viewModel.rows.isEmpty {
-            ProgressView("Loading recordings...")
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if viewModel.rows.isEmpty {
-            RecordingEmptyStateView(
-                title: deviceController != nil ? "No Recordings on Device" : "No Recordings",
-                errorMessage: viewModel.errorMessage,
-                isLoading: viewModel.isLoading,
-                onRefresh: { Task { await viewModel.loadRecordings(sourceId: source.id, deviceController: deviceController) } }
-            )
-        } else {
-            @Bindable var bindableViewModel = viewModel
-            RecordingTableView(
-                rows: viewModel.sortedRows,
-                selection: $bindableViewModel.selection,
-                sortOrder: $bindableViewModel.sortOrder,
-                config: .recordingSource,
-                statusSortComparator: KeyPathComparator(\UnifiedRecordingRow.syncStatusSortOrder),
-                rowOpacity: { row in row.dimmedWhenOffline(controller) },
-                primaryAction: { row in
-                    guard row.syncStatus != .onDeviceOnly, let filepath = row.filepath else { return }
-                    let url = fileSystemService.recordingFileURL(relativePath: filepath)
-                    if FileManager.default.fileExists(atPath: url.path) {
-                        quickLookURL = url
-                    }
-                },
-                sourceIcon: { _ in
-                    EmptyView()
-                },
-                statusCell: { row in
-                    AvailabilityStatusIcon(
-                        syncStatus: row.syncStatus ?? .onDeviceOnly,
-                        isDeviceOnline: controller != nil
-                    )
-                },
-                documentCell: { row in
-                    DocumentStatusCell(
-                        documentInfo: row.documentInfo,
-                        isProcessing: row.isProcessing,
-                        onNavigateToDocument: { docId in
-                            onNavigateToDocument?(docId)
-                        },
-                        onCreateDocument: {
-                            Task {
-                                await viewModel.createDocuments(
-                                    filenames: [row.filename],
-                                    sourceId: source.id,
-                                    documentService: documentService,
-                                    importService: importService
-                                )
-                            }
-                        }
-                    )
-                },
-                contextMenu: { selectedIds in
-                    let selectedRows = viewModel.rows.filter { selectedIds.contains($0.id) }
-                    let hasLocal = selectedRows.contains { $0.syncStatus != .onDeviceOnly }
-                    let hasUnimported = selectedRows.contains { $0.syncStatus == .onDeviceOnly }
-                    let isDeviceOnline = controller != nil
-                    let isImporting = controller.flatMap { importService.session(for: $0.id)?.isImporting } ?? false
+        @Bindable var bindableViewModel = viewModel
 
-                    RecordingContextMenu(
-                        hasLocalFile: hasLocal,
-                        isDeviceOnly: hasUnimported,
-                        isDeviceOnline: isDeviceOnline,
-                        isImporting: isImporting,
-                        onOpen: {
-                            if let row = selectedRows.first, row.syncStatus != .onDeviceOnly {
-                                openRecording(row)
-                            }
-                        },
-                        onShowInFinder: {
-                            if let row = selectedRows.first, row.syncStatus != .onDeviceOnly {
-                                showInFinder(row)
-                            }
-                        },
-                        onImport: {
-                            if let ctrl = controller {
-                                let files = viewModel.deviceFiles(for: selectedIds)
-                                importService.importDeviceFiles(files, from: ctrl)
-                            }
-                        },
-                        onCreateDocument: {
-                            Task {
-                                await viewModel.createDocuments(
-                                    filenames: selectedIds,
-                                    sourceId: source.id,
-                                    documentService: documentService,
-                                    importService: importService
-                                )
-                            }
-                        },
-                        onDeleteImported: {
-                            filesToDeleteImported = selectedIds.filter { id in
-                                selectedRows.first(where: { $0.id == id })?.syncStatus != .onDeviceOnly
-                            }
-                        }
-                    )
+        return UnifiedRecordingListView(
+            rows: viewModel.sortedRows,
+            selection: $bindableViewModel.selection,
+            sortOrder: $bindableViewModel.sortOrder,
+            isLoading: viewModel.isLoading,
+            errorMessage: viewModel.errorMessage,
+            config: .recordingSource,
+            emptyStateTitle: controller != nil ? "No Recordings on Device" : "No Recordings",
+            emptyStateSubtitle: "Import recordings from your device to get started.",
+            onRefresh: { await viewModel.loadRecordings(sourceId: source.id, deviceController: controller) },
+            statusSortComparator: KeyPathComparator(\UnifiedRecordingRow.syncStatusSortOrder),
+            rowOpacity: { row in row.dimmedWhenOffline(controller) },
+            primaryAction: { row in
+                guard row.syncStatus != .onDeviceOnly, let filepath = row.filepath else { return }
+                let url = fileSystemService.recordingFileURL(relativePath: filepath)
+                if FileManager.default.fileExists(atPath: url.path) {
+                    quickLookURL = url
                 }
-            )
-            .confirmationDialog(
-                "Delete from Device",
-                isPresented: Binding(
-                    get: { !filesToDelete.isEmpty },
-                    set: { if !$0 { filesToDelete = [] } }
+            },
+            sourceIcon: { _ in
+                EmptyView()
+            },
+            statusCell: { row in
+                AvailabilityStatusIcon(
+                    syncStatus: row.syncStatus ?? .onDeviceOnly,
+                    isDeviceOnline: controller != nil
                 )
-            ) {
-                Button("Delete \(filesToDelete.count) file\(filesToDelete.count == 1 ? "" : "s")", role: .destructive) {
-                    let ids = filesToDelete
-                    filesToDelete = []
-                    Task {
+            },
+            documentCell: { row in
+                DocumentStatusCell(
+                    documentInfo: row.documentInfo,
+                    isProcessing: row.isProcessing,
+                    onNavigateToDocument: { docId in
+                        onNavigateToDocument?(docId)
+                    },
+                    onCreateDocument: {
+                        Task {
+                            await viewModel.createDocuments(
+                                filenames: [row.filename],
+                                sourceId: source.id,
+                                documentService: documentService,
+                                importService: importService
+                            )
+                        }
+                    }
+                )
+            },
+            contextMenu: { selectedIds in
+                let selectedRows = viewModel.rows.filter { selectedIds.contains($0.id) }
+                let hasLocal = selectedRows.contains { $0.syncStatus != .onDeviceOnly }
+                let hasUnimported = selectedRows.contains { $0.syncStatus == .onDeviceOnly }
+                let isDeviceOnline = controller != nil
+                let isImporting = controller.flatMap { importService.session(for: $0.id)?.isImporting } ?? false
+
+                RecordingContextMenu(
+                    hasLocalFile: hasLocal,
+                    isDeviceOnly: hasUnimported,
+                    isDeviceOnline: isDeviceOnline,
+                    isImporting: isImporting,
+                    onOpen: {
+                        if let row = selectedRows.first, row.syncStatus != .onDeviceOnly {
+                            openRecording(row)
+                        }
+                    },
+                    onShowInFinder: {
+                        if let row = selectedRows.first, row.syncStatus != .onDeviceOnly {
+                            showInFinder(row)
+                        }
+                    },
+                    onImport: {
                         if let ctrl = controller {
-                            await deleteFiles(ids, controller: ctrl)
+                            let files = viewModel.deviceFiles(for: selectedIds)
+                            importService.importDeviceFiles(files, from: ctrl)
+                        }
+                    },
+                    onCreateDocument: {
+                        Task {
+                            await viewModel.createDocuments(
+                                filenames: selectedIds,
+                                sourceId: source.id,
+                                documentService: documentService,
+                                importService: importService
+                            )
+                        }
+                    },
+                    onDeleteImported: {
+                        filesToDeleteImported = selectedIds.filter { id in
+                            selectedRows.first(where: { $0.id == id })?.syncStatus != .onDeviceOnly
                         }
                     }
-                }
-            } message: {
-                Text("This will permanently delete \(filesToDelete.count) file\(filesToDelete.count == 1 ? "" : "s") from the device. This cannot be undone.")
-            }
-            .confirmationDialog(
-                "Delete Imported",
-                isPresented: Binding(
-                    get: { !filesToDeleteImported.isEmpty },
-                    set: { if !$0 { filesToDeleteImported = [] } }
                 )
-            ) {
-                Button("Delete \(filesToDeleteImported.count) local cop\(filesToDeleteImported.count == 1 ? "y" : "ies")", role: .destructive) {
-                    let ids = filesToDeleteImported
-                    filesToDeleteImported = []
-                    Task {
-                        await viewModel.deleteLocalCopies(filenames: ids, sourceId: source.id)
+            }
+        )
+        .confirmationDialog(
+            "Delete from Device",
+            isPresented: Binding(
+                get: { !filesToDelete.isEmpty },
+                set: { if !$0 { filesToDelete = [] } }
+            )
+        ) {
+            Button("Delete \(filesToDelete.count) file\(filesToDelete.count == 1 ? "" : "s")", role: .destructive) {
+                let ids = filesToDelete
+                filesToDelete = []
+                Task {
+                    if let ctrl = controller {
+                        await deleteFiles(ids, controller: ctrl)
                     }
                 }
-            } message: {
-                Text("This will remove the local copy. The file will remain on the device if still connected.")
             }
+        } message: {
+            Text("This will permanently delete \(filesToDelete.count) file\(filesToDelete.count == 1 ? "" : "s") from the device. This cannot be undone.")
+        }
+        .confirmationDialog(
+            "Delete Imported",
+            isPresented: Binding(
+                get: { !filesToDeleteImported.isEmpty },
+                set: { if !$0 { filesToDeleteImported = [] } }
+            )
+        ) {
+            Button("Delete \(filesToDeleteImported.count) local cop\(filesToDeleteImported.count == 1 ? "y" : "ies")", role: .destructive) {
+                let ids = filesToDeleteImported
+                filesToDeleteImported = []
+                Task {
+                    await viewModel.deleteLocalCopies(filenames: ids, sourceId: source.id)
+                }
+            }
+        } message: {
+            Text("This will remove the local copy. The file will remain on the device if still connected.")
         }
     }
 

@@ -161,13 +161,10 @@ struct DocumentListView: View {
         .errorBanner($errorMessage)
         .overlay {
             if viewModel.sortedDocuments.isEmpty && !viewModel.isLoading {
-                VStack(spacing: 8) {
-                    Image(systemName: "doc.text")
-                        .font(.largeTitle)
-                        .foregroundStyle(.quaternary)
-                    Text("No Documents")
-                        .foregroundStyle(.secondary)
-                }
+                StandardEmptyStateView(
+                    symbolName: "doc.text",
+                    title: "No Documents"
+                )
             }
         }
         .toolbar {
