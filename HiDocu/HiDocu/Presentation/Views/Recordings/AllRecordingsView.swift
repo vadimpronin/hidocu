@@ -85,7 +85,7 @@ struct AllRecordingsView: View {
                     },
                     onCreateDocument: {
                         Task {
-                            for row in selectedRows where row.documentInfo.isEmpty {
+                            for row in selectedRows where row.documentInfo.isEmpty && row.syncStatus != .onDeviceOnly {
                                 await createDocument(for: row)
                             }
                         }

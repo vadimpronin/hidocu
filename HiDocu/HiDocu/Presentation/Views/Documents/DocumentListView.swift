@@ -29,60 +29,72 @@ struct DocumentListView: View {
         @Bindable var bindableVM = viewModel
         let docsById = Dictionary(uniqueKeysWithValues: viewModel.sortedDocuments.map { ($0.id, $0) })
 
-        DocumentTableView(
-            rows: viewModel.sortedDocuments,
-            selection: $selectedDocumentIds,
-            sortOrder: Binding(
-                get: { bindableVM.sortOrder },
-                set: { newSortOrder in
-                    bindableVM.sortOrder = newSortOrder
-                    if !isAllDocumentsView {
-                        bindableVM.allowsManualReordering = false
+        DataStateView(
+            isLoading: viewModel.isLoading,
+            isEmpty: viewModel.sortedDocuments.isEmpty,
+            content: {
+                DocumentTableView(
+                    rows: viewModel.sortedDocuments,
+                    selection: $selectedDocumentIds,
+                    sortOrder: Binding(
+                        get: { bindableVM.sortOrder },
+                        set: { newSortOrder in
+                            bindableVM.sortOrder = newSortOrder
+                            if !isAllDocumentsView {
+                                bindableVM.allowsManualReordering = false
+                            }
+                        }
+                    ),
+                    config: tableConfig,
+                    primaryAction: { row in
+                        selectedDocumentIds = [row.id]
+                    },
+                    onMove: tableConfig.allowsReordering
+                    ? { source, destination in
+                        viewModel.moveDocuments(from: source, to: destination)
                     }
-                }
-            ),
-            config: tableConfig,
-            primaryAction: { row in
-                selectedDocumentIds = [row.id]
+                    : nil,
+                    contextMenu: { selectedIds in
+                        let selectedDocs = selectedIds.compactMap { docsById[$0] }
+                        let primaryDoc = selectedDocs.first
+                        let singleSelection = selectedDocs.count == 1
+
+                        if singleSelection, let doc = primaryDoc {
+                            Button("Rename...") {
+                                renameText = doc.title
+                                documentToRename = doc
+                            }
+                        }
+
+                        if !folders.isEmpty, singleSelection, let doc = primaryDoc {
+                            Button("Move to Folder...") {
+                                documentToMove = doc
+                            }
+                        }
+
+                        if singleSelection, let doc = primaryDoc {
+                            Button("Reveal in Finder") {
+                                revealInFinder(diskPath: doc.diskPath)
+                            }
+                            .keyboardShortcut("r", modifiers: .command)
+                        }
+
+                        Divider()
+
+                        Button(
+                            selectedIds.count == 1 ? "Delete Document" : "Delete \(selectedIds.count) Documents",
+                            role: .destructive
+                        ) {
+                            documentIdsToDelete = selectedIds
+                        }
+                    }
+                )
             },
-            onMove: tableConfig.allowsReordering
-            ? { source, destination in
-                viewModel.moveDocuments(from: source, to: destination)
-            }
-            : nil,
-            contextMenu: { selectedIds in
-                let selectedDocs = selectedIds.compactMap { docsById[$0] }
-                let primaryDoc = selectedDocs.first
-                let singleSelection = selectedDocs.count == 1
-
-                if singleSelection, let doc = primaryDoc {
-                    Button("Rename...") {
-                        renameText = doc.title
-                        documentToRename = doc
-                    }
-                }
-
-                if !folders.isEmpty, singleSelection, let doc = primaryDoc {
-                    Button("Move to Folder...") {
-                        documentToMove = doc
-                    }
-                }
-
-                if singleSelection, let doc = primaryDoc {
-                    Button("Reveal in Finder") {
-                        revealInFinder(diskPath: doc.diskPath)
-                    }
-                    .keyboardShortcut("r", modifiers: .command)
-                }
-
-                Divider()
-
-                Button(
-                    selectedIds.count == 1 ? "Delete Document" : "Delete \(selectedIds.count) Documents",
-                    role: .destructive
-                ) {
-                    documentIdsToDelete = selectedIds
-                }
+            emptyContent: {
+                StandardEmptyStateView(
+                    symbolName: "doc.text",
+                    title: "No Documents"
+                )
             }
         )
         .confirmationDialog(
@@ -159,14 +171,6 @@ struct DocumentListView: View {
             )
         }
         .errorBanner($errorMessage)
-        .overlay {
-            if viewModel.sortedDocuments.isEmpty && !viewModel.isLoading {
-                StandardEmptyStateView(
-                    symbolName: "doc.text",
-                    title: "No Documents"
-                )
-            }
-        }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {

@@ -22,30 +22,42 @@ struct TrashView: View {
         @Bindable var bindableVM = viewModel
         let entriesById = Dictionary(uniqueKeysWithValues: viewModel.entries.map { ($0.id, $0) })
 
-        DocumentTableView(
-            rows: viewModel.sortedEntries,
-            selection: $bindableVM.selection,
-            sortOrder: $bindableVM.sortOrder,
-            config: .trash,
-            primaryAction: { row in
-                idsToRestore = [row.id]
-            },
-            contextMenu: { selectedIds in
-                Button(selectedIds.count == 1 ? "Restore" : "Restore \(selectedIds.count) Items") {
-                    bindableVM.selection = selectedIds
-                    Task {
-                        await bindableVM.restoreSelection()
+        DataStateView(
+            isLoading: viewModel.isLoading,
+            isEmpty: viewModel.entries.isEmpty,
+            content: {
+                DocumentTableView(
+                    rows: viewModel.sortedEntries,
+                    selection: $bindableVM.selection,
+                    sortOrder: $bindableVM.sortOrder,
+                    config: .trash,
+                    primaryAction: { row in
+                        idsToRestore = [row.id]
+                    },
+                    contextMenu: { selectedIds in
+                        Button(selectedIds.count == 1 ? "Restore" : "Restore \(selectedIds.count) Items") {
+                            bindableVM.selection = selectedIds
+                            Task {
+                                await bindableVM.restoreSelection()
+                            }
+                        }
+
+                        Divider()
+
+                        Button(
+                            selectedIds.count == 1 ? "Delete Permanently" : "Delete \(selectedIds.count) Permanently",
+                            role: .destructive
+                        ) {
+                            idsToDeletePermanently = selectedIds
+                        }
                     }
-                }
-
-                Divider()
-
-                Button(
-                    selectedIds.count == 1 ? "Delete Permanently" : "Delete \(selectedIds.count) Permanently",
-                    role: .destructive
-                ) {
-                    idsToDeletePermanently = selectedIds
-                }
+                )
+            },
+            emptyContent: {
+                StandardEmptyStateView(
+                    symbolName: "trash",
+                    title: "Trash is Empty"
+                )
             }
         )
         .confirmationDialog(
@@ -114,14 +126,6 @@ struct TrashView: View {
             Text("Permanently delete all items in the Trash? This cannot be undone.")
         }
         .errorBanner($bindableVM.errorMessage)
-        .overlay {
-            if viewModel.entries.isEmpty && !viewModel.isLoading {
-                StandardEmptyStateView(
-                    symbolName: "trash",
-                    title: "Trash is Empty"
-                )
-            }
-        }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button("Empty Trash") {

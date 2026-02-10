@@ -116,17 +116,15 @@ actor OAuthCallbackServer {
     }
 
     private func processRequest(data: Data?, connection: NWConnection, isComplete: Bool, error: NWError?) {
-        defer {
-            connection.cancel()
-        }
-
         guard let data = data, let request = String(data: data, encoding: .utf8) else {
+            connection.cancel()
             return
         }
 
         // Parse HTTP request line
         guard let firstLine = request.components(separatedBy: .newlines).first,
               let urlString = firstLine.components(separatedBy: " ").dropFirst().first else {
+            connection.cancel()
             return
         }
 
@@ -139,6 +137,7 @@ actor OAuthCallbackServer {
         // Parse query parameters
         guard let url = URL(string: "http://localhost" + urlString),
               let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            connection.cancel()
             return
         }
 
@@ -206,7 +205,11 @@ actor OAuthCallbackServer {
         """
 
         if let data = response.data(using: .utf8) {
-            connection.send(content: data, completion: .contentProcessed { _ in })
+            connection.send(content: data, completion: .contentProcessed { _ in
+                connection.cancel()
+            })
+        } else {
+            connection.cancel()
         }
     }
 

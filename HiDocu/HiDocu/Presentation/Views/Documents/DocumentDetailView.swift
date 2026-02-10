@@ -95,7 +95,8 @@ struct DocumentDetailView: View {
                     sourceRepository: container.sourceRepository,
                     transcriptRepository: container.transcriptRepository,
                     apiLogRepository: container.apiLogRepository,
-                    recordingRepositoryV2: container.recordingRepositoryV2
+                    recordingRepositoryV2: container.recordingRepositoryV2,
+                    eventService: container.eventService
                 )
             } else {
                 sourcesViewModel = nil

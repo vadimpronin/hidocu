@@ -231,7 +231,7 @@ final class RecordingImportServiceV2 {
         }
     }
 
-    func importDeviceFiles(_ files: [DeviceFileInfo], from controller: any DeviceFileProvider) {
+    func importDeviceFiles(_ files: [DeviceFileInfo], from controller: any DeviceFileProvider, createDocument: Bool = true) {
         let deviceID = (controller as? DeviceController)?.id ?? 0
 
         if let existing = sessions[deviceID], existing.isImporting {
@@ -243,7 +243,7 @@ final class RecordingImportServiceV2 {
         session.importState = .preparing
 
         Task {
-            await performImport(files: files, from: controller, session: session)
+            await performImport(files: files, from: controller, session: session, createDocument: createDocument)
             sessions.removeValue(forKey: deviceID)
         }
     }
@@ -253,7 +253,7 @@ final class RecordingImportServiceV2 {
         session.importState = .stopping
     }
 
-    private func performImport(files deviceFiles: [DeviceFileInfo], from controller: any DeviceFileProvider, session: ImportSession) async {
+    private func performImport(files deviceFiles: [DeviceFileInfo], from controller: any DeviceFileProvider, session: ImportSession, createDocument: Bool = true) async {
         session.reset()
 
         await MainActor.run {
@@ -286,7 +286,7 @@ final class RecordingImportServiceV2 {
                 }
 
                 do {
-                    let result = try await processFile(fileInfo, from: controller, session: session)
+                    let result = try await processFile(fileInfo, from: controller, session: session, createDocument: createDocument)
                     switch result {
                     case .downloaded: downloaded += 1
                     case .skipped: skipped += 1
@@ -327,7 +327,7 @@ final class RecordingImportServiceV2 {
         case skipped
     }
 
-    private func processFile(_ fileInfo: DeviceFileInfo, from controller: any DeviceFileProvider, session: ImportSession) async throws -> ProcessResult {
+    private func processFile(_ fileInfo: DeviceFileInfo, from controller: any DeviceFileProvider, session: ImportSession, createDocument: Bool = true) async throws -> ProcessResult {
         let filename = fileInfo.filename
 
         // Get the recording source ID from the controller
@@ -340,7 +340,7 @@ final class RecordingImportServiceV2 {
                     return .skipped  // already imported (.synced or .localOnly)
                 }
                 // Device-only record exists — download and update it in place
-                try await downloadAndStore(fileInfo, from: controller, session: session, existingRecordingId: existing.id)
+                try await downloadAndStore(fileInfo, from: controller, session: session, existingRecordingId: existing.id, createDocument: createDocument)
                 return .downloaded
             }
         } else {
@@ -349,11 +349,11 @@ final class RecordingImportServiceV2 {
             }
         }
 
-        try await downloadAndStore(fileInfo, from: controller, session: session)
+        try await downloadAndStore(fileInfo, from: controller, session: session, createDocument: createDocument)
         return .downloaded
     }
 
-    private func downloadAndStore(_ fileInfo: DeviceFileInfo, from controller: any DeviceFileProvider, session: ImportSession, existingRecordingId: Int64? = nil) async throws {
+    private func downloadAndStore(_ fileInfo: DeviceFileInfo, from controller: any DeviceFileProvider, session: ImportSession, existingRecordingId: Int64? = nil, createDocument: Bool = true) async throws {
         let filename = fileInfo.filename
         let tempDir = FileManager.default.temporaryDirectory
         let tempURL = tempDir.appendingPathComponent("download_v2_\(UUID().uuidString)_\(filename)")
@@ -420,34 +420,35 @@ final class RecordingImportServiceV2 {
             }
         }
 
-        // Generate document title
-        let title = Self.documentTitle(for: recordingDate, durationSeconds: fileInfo.durationSeconds)
-
         // Create Document + Source (linked to Recording if available)
-        do {
-            let (doc, source) = try await documentService.createDocumentWithSource(
-                title: title,
-                audioRelativePath: audioRelativePath,
-                originalFilename: filename,
-                durationSeconds: fileInfo.durationSeconds,
-                fileSizeBytes: fileInfo.size,
-                deviceSerial: controller.connectionInfo?.serialNumber,
-                deviceModel: controller.connectionInfo?.model.rawValue,
-                recordingMode: fileInfo.mode?.rawValue,
-                recordedAt: recordingDate,
-                recordingId: recordingV2Id
-            )
-            triggerAutoTranscription(documentId: doc.id, sourceId: source.id, source: source)
-        } catch {
-            let audioURL = fileSystemService.dataDirectory.appendingPathComponent(audioRelativePath)
-            try? FileManager.default.removeItem(at: audioURL)
-            // Revert recording row if we were updating a device-only record
-            if let existingId = existingRecordingId {
-                try? await recordingRepository.updateAfterImport(
-                    id: existingId, filepath: "", syncStatus: .onDeviceOnly
+        if createDocument {
+            let title = Self.documentTitle(for: recordingDate, durationSeconds: fileInfo.durationSeconds)
+
+            do {
+                let (doc, source) = try await documentService.createDocumentWithSource(
+                    title: title,
+                    audioRelativePath: audioRelativePath,
+                    originalFilename: filename,
+                    durationSeconds: fileInfo.durationSeconds,
+                    fileSizeBytes: fileInfo.size,
+                    deviceSerial: controller.connectionInfo?.serialNumber,
+                    deviceModel: controller.connectionInfo?.model.rawValue,
+                    recordingMode: fileInfo.mode?.rawValue,
+                    recordedAt: recordingDate,
+                    recordingId: recordingV2Id
                 )
+                triggerAutoTranscription(documentId: doc.id, sourceId: source.id, source: source)
+            } catch {
+                let audioURL = fileSystemService.dataDirectory.appendingPathComponent(audioRelativePath)
+                try? FileManager.default.removeItem(at: audioURL)
+                // Revert recording row if we were updating a device-only record
+                if let existingId = existingRecordingId {
+                    try? await recordingRepository.updateAfterImport(
+                        id: existingId, filepath: "", syncStatus: .onDeviceOnly
+                    )
+                }
+                throw error
             }
-            throw error
         }
 
         // Mark source as synced after successful import

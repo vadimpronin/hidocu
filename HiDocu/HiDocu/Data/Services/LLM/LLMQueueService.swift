@@ -27,6 +27,7 @@ actor LLMQueueService {
     private let documentService: DocumentService  // @MainActor
     private let fileSystemService: FileSystemService
     private let settingsService: SettingsService
+    private let eventService: AppEventService
 
     // MARK: - State
 
@@ -59,7 +60,8 @@ actor LLMQueueService {
         documentService: DocumentService,
         fileSystemService: FileSystemService,
         settingsService: SettingsService,
-        state: LLMQueueState
+        state: LLMQueueState,
+        eventService: AppEventService
     ) {
         self.jobRepository = jobRepository
         self.accountRepository = accountRepository
@@ -70,6 +72,7 @@ actor LLMQueueService {
         self.fileSystemService = fileSystemService
         self.settingsService = settingsService
         self.state = state
+        self.eventService = eventService
     }
 
     // MARK: - Enqueue Methods
@@ -488,6 +491,20 @@ actor LLMQueueService {
                 try await jobRepository.update(completed)
             } catch {
                 AppLogger.llm.error("Failed to mark job \(job.id) as completed: \(error.localizedDescription)")
+            }
+
+            // Notify UI of completed work
+            if let documentId = job.documentId {
+                switch job.jobType {
+                case .transcription:
+                    eventService.send(.transcriptsUpdated(documentId: documentId))
+                case .summary:
+                    eventService.send(.documentUpdated(id: documentId))
+                case .judge:
+                    eventService.send(.documentUpdated(id: documentId))
+                    eventService.send(.transcriptsUpdated(documentId: documentId))
+                }
+                eventService.send(.jobCompleted(jobId: job.id, documentId: documentId))
             }
 
         } catch let error as LLMError {

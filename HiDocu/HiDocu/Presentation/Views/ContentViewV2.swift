@@ -21,6 +21,7 @@ struct ContentViewV2: View {
     @State private var recordingSourcesTask: Task<Void, Never>?
     @State private var documentIdsToDelete: Set<Int64> = []
     @State private var pendingDocumentNavigation: Int64?
+    @State private var documentSelectionTask: Task<Void, Never>?
     @State private var errorMessage: String?
 
     var body: some View {
@@ -353,6 +354,8 @@ struct ContentViewV2: View {
         documentListVM?.stopObserving()
         recordingSourcesTask?.cancel()
         recordingSourcesTask = nil
+        documentSelectionTask?.cancel()
+        documentSelectionTask = nil
         navigationVM.saveSelection()
     }
 
@@ -385,10 +388,19 @@ struct ContentViewV2: View {
 
     private func handleDocumentSelection(_ newId: Int64?) {
         guard let ddvm = documentDetailVM else { return }
-        Task {
+        // Capture the document synchronously before any async gap
+        let doc: Document? = if let id = newId {
+            documentListVM?.documents.first(where: { $0.id == id })
+        } else {
+            nil
+        }
+        // Cancel any in-flight selection task to prevent a race where
+        // the previous task's `ddvm.document = nil` overwrites a newly loaded document
+        documentSelectionTask?.cancel()
+        documentSelectionTask = Task {
             await ddvm.saveIfNeeded()
-            if let id = newId,
-               let doc = documentListVM?.documents.first(where: { $0.id == id }) {
+            guard !Task.isCancelled else { return }
+            if let doc {
                 ddvm.loadDocument(doc)
             } else {
                 ddvm.document = nil

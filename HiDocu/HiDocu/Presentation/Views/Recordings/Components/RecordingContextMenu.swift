@@ -14,7 +14,8 @@ struct RecordingContextMenu: View {
     let isImporting: Bool
     var onOpen: (() -> Void)?
     var onShowInFinder: (() -> Void)?
-    var onImport: (() -> Void)?
+    var onImportAndCreateDocument: (() -> Void)?
+    var onImportOnly: (() -> Void)?
     var onCreateDocument: (() -> Void)?
     var onDeleteImported: (() -> Void)?
 
@@ -29,14 +30,21 @@ struct RecordingContextMenu: View {
         }
 
         if isDeviceOnly && isDeviceOnline {
-            Button("Import") {
-                onImport?()
+            Button("Import and Create Document") {
+                onImportAndCreateDocument?()
+            }
+            .disabled(isImporting)
+
+            Button("Import Only") {
+                onImportOnly?()
             }
             .disabled(isImporting)
         }
 
-        Button("Create Document") {
-            onCreateDocument?()
+        if hasLocalFile {
+            Button("Create Document") {
+                onCreateDocument?()
+            }
         }
 
         Divider()

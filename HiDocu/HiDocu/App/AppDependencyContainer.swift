@@ -59,6 +59,7 @@ final class AppDependencyContainer {
     let llmQueueState: LLMQueueState
     let llmQueueService: LLMQueueService
     let recordingSourceService: RecordingSourceService
+    let eventService: AppEventService
 
     // MARK: - Initialization
 
@@ -169,6 +170,9 @@ final class AppDependencyContainer {
             antigravityProvider: antigravityProvider
         )
 
+        // Initialize event bus (must be before LLMQueueService)
+        self.eventService = AppEventService()
+
         // Initialize LLM queue state and service (must be before importServiceV2)
         self.llmQueueState = LLMQueueState()
         self.llmQueueService = LLMQueueService(
@@ -180,7 +184,8 @@ final class AppDependencyContainer {
             documentService: documentService,
             fileSystemService: fileSystemService,
             settingsService: settingsService,
-            state: llmQueueState
+            state: llmQueueState,
+            eventService: eventService
         )
 
         // Wire LLMQueueService into DocumentService (post-init to break circular dependency)

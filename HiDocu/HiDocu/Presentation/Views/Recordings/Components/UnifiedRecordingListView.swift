@@ -74,24 +74,10 @@ struct UnifiedRecordingListView<
     }
 
     var body: some View {
-        Group {
-            if isLoading && rows.isEmpty {
-                ProgressView("Loading...")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if rows.isEmpty {
-                StandardEmptyStateView(
-                    symbolName: "waveform.slash",
-                    title: emptyStateTitle,
-                    subtitle: emptyStateSubtitle,
-                    errorMessage: errorMessage,
-                    isLoading: isLoading,
-                    onRefresh: {
-                        Task {
-                            await onRefresh()
-                        }
-                    }
-                )
-            } else {
+        DataStateView(
+            isLoading: isLoading,
+            isEmpty: rows.isEmpty,
+            content: {
                 RecordingTableView(
                     rows: rows,
                     selection: $selection,
@@ -106,8 +92,22 @@ struct UnifiedRecordingListView<
                     documentCell: documentCell,
                     contextMenu: contextMenu
                 )
+            },
+            emptyContent: {
+                StandardEmptyStateView(
+                    symbolName: "waveform.slash",
+                    title: emptyStateTitle,
+                    subtitle: emptyStateSubtitle,
+                    errorMessage: errorMessage,
+                    isLoading: isLoading,
+                    onRefresh: {
+                        Task {
+                            await onRefresh()
+                        }
+                    }
+                )
             }
-        }
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

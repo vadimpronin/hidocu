@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Combine
 
 struct SourceWithDetails: Identifiable {
     let source: Source
@@ -40,22 +41,51 @@ final class SourcesViewModel {
     private let transcriptRepository: any TranscriptRepository
     private let apiLogRepository: any APILogRepository
     let recordingRepository: any RecordingRepositoryV2
+    private let eventService: AppEventService
+    private var cancellables = Set<AnyCancellable>()
+    private var currentDocumentId: Int64?
 
     init(
         documentService: DocumentService,
         sourceRepository: any SourceRepository,
         transcriptRepository: any TranscriptRepository,
         apiLogRepository: any APILogRepository,
-        recordingRepositoryV2: any RecordingRepositoryV2
+        recordingRepositoryV2: any RecordingRepositoryV2,
+        eventService: AppEventService
     ) {
         self.documentService = documentService
         self.sourceRepository = sourceRepository
         self.transcriptRepository = transcriptRepository
         self.apiLogRepository = apiLogRepository
         self.recordingRepository = recordingRepositoryV2
+        self.eventService = eventService
+        subscribeToEvents()
+    }
+
+    // MARK: - Event Subscription
+
+    private func subscribeToEvents() {
+        eventService.publisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] event in
+                guard let self, let documentId = self.currentDocumentId else { return }
+                switch event {
+                case .transcriptsUpdated(let eventDocId) where eventDocId == documentId:
+                    Task {
+                        await self.loadDocumentTranscripts(documentId: documentId)
+                        await self.loadSources(documentId: documentId)
+                    }
+                case .documentUpdated(let eventDocId) where eventDocId == documentId:
+                    Task { await self.loadSources(documentId: documentId) }
+                default:
+                    break
+                }
+            }
+            .store(in: &cancellables)
     }
 
     func loadSources(documentId: Int64) async {
+        currentDocumentId = documentId
         isLoading = true
         sources.removeAll()
         defer { isLoading = false }

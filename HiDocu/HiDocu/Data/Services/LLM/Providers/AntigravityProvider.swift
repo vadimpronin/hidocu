@@ -46,6 +46,12 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
     // User-Agent for API calls (chat, models) — match executor defaultAntigravityAgent
     private static let apiUserAgent = "antigravity/1.104.0 darwin/arm64"
 
+    // System prompt injected into every Antigravity chat request (matches Go executor)
+    private static let antigravitySystemPrompt = """
+        You are Antigravity, a powerful agentic AI coding assistant. \
+        Help the user with their coding tasks. Be concise and accurate.
+        """
+
     // MARK: - Properties
 
     let provider: LLMProvider = .antigravity
@@ -326,9 +332,18 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
             case .system:
                 systemInstructions.append(message.content)
             case .user:
+                var parts: [[String: Any]] = [["text": message.content]]
+                for attachment in message.attachments {
+                    parts.append([
+                        "inlineData": [
+                            "mimeType": attachment.mimeType,
+                            "data": attachment.data.base64EncodedString()
+                        ]
+                    ])
+                }
                 contents.append([
                     "role": "user",
-                    "parts": [["text": message.content]]
+                    "parts": parts
                 ])
             case .assistant:
                 contents.append([
@@ -339,15 +354,21 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         }
 
         var geminiRequest: [String: Any] = [
-            "contents": contents
+            "contents": contents,
+            "generationConfig": [
+                "maxOutputTokens": options.maxTokens ?? 65536
+            ]
         ]
 
-        let finalSystemPrompt = options.systemPrompt ?? systemInstructions.joined(separator: "\n\n")
-        if !finalSystemPrompt.isEmpty {
-            geminiRequest["systemInstruction"] = [
-                "parts": [["text": finalSystemPrompt]]
-            ]
+        // Build system prompt: Antigravity base prompt + user-provided system prompt
+        var systemParts: [String] = [Self.antigravitySystemPrompt]
+        let userSystemPrompt = options.systemPrompt ?? systemInstructions.joined(separator: "\n\n")
+        if !userSystemPrompt.isEmpty {
+            systemParts.append(userSystemPrompt)
         }
+        geminiRequest["systemInstruction"] = [
+            "parts": [["text": systemParts.joined(separator: "\n\n")]]
+        ]
 
         // Add sessionId matching generateStableSessionID in executor
         geminiRequest["sessionId"] = generateStableSessionID(contents: contents)
@@ -373,7 +394,8 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         // Headers match executor buildRequest — only Authorization, Content-Type, User-Agent, Accept
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.timeoutInterval = 300
+        let hasAttachments = messages.contains { !$0.attachments.isEmpty }
+        request.timeoutInterval = hasAttachments ? 600 : 300
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
@@ -382,12 +404,15 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
 
         let (data, response): (Data, URLResponse)
 
+        let requestStart = Date()
         do {
             (data, response) = try await urlSession.data(for: request)
         } catch {
             AppLogger.llm.error("Chat request network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
         }
+        let elapsed = Date().timeIntervalSince(requestStart)
+        AppLogger.llm.info("Antigravity response received in \(String(format: "%.1f", elapsed))s (\(data.count) bytes)")
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw LLMError.invalidResponse(detail: "Not an HTTP response")

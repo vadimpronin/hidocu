@@ -201,10 +201,16 @@ struct RecordingSourceDetailView: View {
                             showInFinder(row)
                         }
                     },
-                    onImport: {
+                    onImportAndCreateDocument: {
                         if let ctrl = controller {
                             let files = viewModel.deviceFiles(for: selectedIds)
-                            importService.importDeviceFiles(files, from: ctrl)
+                            importService.importDeviceFiles(files, from: ctrl, createDocument: true)
+                        }
+                    },
+                    onImportOnly: {
+                        if let ctrl = controller {
+                            let files = viewModel.deviceFiles(for: selectedIds)
+                            importService.importDeviceFiles(files, from: ctrl, createDocument: false)
                         }
                     },
                     onCreateDocument: {
