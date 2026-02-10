@@ -32,8 +32,6 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
 
     let provider: LLMProvider = .codex
     private let urlSession: URLSession
-    // Note: Debug logging not yet implemented for SSE-based streaming chat.
-    // The debugLogger dependency is accepted for forward compatibility.
     private let debugLogger: APIDebugLogger?
 
     // MARK: - Initialization
@@ -110,11 +108,7 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.httpBody = bodyData
 
-        let (data, response) = try await urlSession.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMError.invalidResponse(detail: "Response is not HTTP")
-        }
+        let (data, httpResponse) = try await performRequest(request, model: "token-refresh", debugContext: nil, account: account)
 
         guard httpResponse.statusCode == 200 else {
             let message = String(data: data, encoding: .utf8) ?? "Unknown error"
@@ -144,11 +138,7 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
             request.setValue(accountId, forHTTPHeaderField: "Chatgpt-Account-Id")
         }
 
-        let (data, response) = try await urlSession.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMError.invalidResponse(detail: "Response is not HTTP")
-        }
+        let (data, httpResponse) = try await performRequest(request, model: "fetch-models", debugContext: nil, account: account)
 
         guard httpResponse.statusCode == 200 else {
             let message = String(data: data, encoding: .utf8) ?? "Unknown error"
@@ -296,6 +286,25 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
         )
     }
 
+    // MARK: - Debug-Instrumented Request
+
+    private func performRequest(
+        _ request: URLRequest,
+        model: String,
+        debugContext: APIDebugContext?,
+        account: String? = nil
+    ) async throws -> (Data, HTTPURLResponse) {
+        try await performDebugLoggingRequest(
+            request,
+            urlSession: urlSession,
+            provider: provider,
+            model: model,
+            debugContext: debugContext,
+            debugLogger: debugLogger,
+            account: account
+        )
+    }
+
     // MARK: - Private Helpers
 
     /// Generates a fake user ID for request metadata.
@@ -336,11 +345,7 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.httpBody = bodyData
 
-        let (data, response) = try await urlSession.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMError.invalidResponse(detail: "Response is not HTTP")
-        }
+        let (data, httpResponse) = try await performRequest(request, model: "token-exchange", debugContext: nil)
 
         guard httpResponse.statusCode == 200 else {
             let message = String(data: data, encoding: .utf8) ?? "Unknown error"

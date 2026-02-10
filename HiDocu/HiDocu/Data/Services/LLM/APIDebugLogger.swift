@@ -253,7 +253,7 @@ actor APIDebugLogger {
         if let colonIdx = component.lastIndex(of: ":") {
             component = String(component[component.index(after: colonIdx)...])
         }
-        return component.isEmpty ? "unknown" : component
+        return component.isEmpty || component == "/" ? "unknown" : component
     }
 
     /// Returns a filename-safe slug from an account email (local part only).
