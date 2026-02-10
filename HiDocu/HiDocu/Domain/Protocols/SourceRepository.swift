@@ -16,4 +16,5 @@ protocol SourceRepository: Sendable {
     func updateDiskPathPrefix(oldPrefix: String, newPrefix: String) async throws
     func existsByDisplayName(_ displayName: String) async throws -> Bool
     func fetchDocumentIdsByRecordingIds(_ recordingIds: [Int64]) async throws -> [Int64: Int64]
+    func fetchDocumentInfoByRecordingIds(_ recordingIds: [Int64]) async throws -> [Int64: [DocumentLink]]
 }

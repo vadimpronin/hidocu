@@ -7,15 +7,22 @@
 //
 
 import SwiftUI
+import QuickLook
 
 struct RecordingSourceDetailView: View {
     var source: RecordingSource
     var viewModel: RecordingSourceViewModel
     var importService: RecordingImportServiceV2
     var deviceController: DeviceController?
+    var recordingSourceService: RecordingSourceService
+    var documentService: DocumentService
+    var fileSystemService: FileSystemService
+    var llmQueueState: LLMQueueState
     var onNavigateToDocument: ((Int64) -> Void)?
 
     @State private var filesToDelete: Set<String> = []
+    @State private var filesToDeleteImported: Set<String> = []
+    @State private var quickLookURL: URL?
 
     var body: some View {
         Group {
@@ -28,6 +35,7 @@ struct RecordingSourceDetailView: View {
             }
         }
         .navigationTitle(source.name)
+        .quickLookPreview($quickLookURL)
     }
 
     // MARK: - Device-Backed Content
@@ -205,54 +213,95 @@ struct RecordingSourceDetailView: View {
                 .width(min: 60, ideal: 80)
 
                 TableColumn("", sortUsing: KeyPathComparator(\UnifiedRecordingRow.syncStatus)) { row in
-                    SyncStatusIcon(status: row.syncStatus)
-                        .opacity(row.dimmedWhenOffline(controller))
+                    AvailabilityStatusIcon(
+                        syncStatus: row.syncStatus,
+                        isDeviceOnline: controller != nil
+                    )
+                    .opacity(row.dimmedWhenOffline(controller))
                 }
                 .width(28)
 
                 TableColumn("") { (row: UnifiedRecordingRow) in
-                    if let docId = row.documentId {
-                        Button {
+                    DocumentStatusCell(
+                        documentInfo: row.documentInfo,
+                        isProcessing: row.isProcessing,
+                        onNavigateToDocument: { docId in
                             onNavigateToDocument?(docId)
-                        } label: {
-                            Image(systemName: "doc.text.fill")
-                                .foregroundStyle(Color.accentColor)
+                        },
+                        onCreateDocument: {
+                            Task {
+                                await viewModel.createDocuments(
+                                    filenames: [row.filename],
+                                    sourceId: source.id,
+                                    documentService: documentService,
+                                    importService: importService
+                                )
+                            }
                         }
-                        .buttonStyle(.borderless)
-                        .help("Go to document")
-                    }
+                    )
                 }
-                .width(28)
+                .width(min: 80, ideal: 120)
             }
             .contextMenu(forSelectionType: String.self) { selectedIds in
                 if !selectedIds.isEmpty {
-                    if let ctrl = controller {
-                        // Only show import for device-backed sources
-                        let selectedRows = viewModel.rows.filter { selectedIds.contains($0.id) }
-                        let hasUnimported = selectedRows.contains { $0.syncStatus == .onDeviceOnly }
+                    let selectedRows = viewModel.rows.filter { selectedIds.contains($0.id) }
+                    let hasLocal = selectedRows.contains { $0.syncStatus != .onDeviceOnly }
+                    let hasUnimported = selectedRows.contains { $0.syncStatus == .onDeviceOnly }
+                    let isDeviceOnline = controller != nil
+                    let isImporting = controller.flatMap { importService.session(for: $0.id)?.isImporting } ?? false
 
-                        if hasUnimported {
-                            Button("Import Selected") {
+                    RecordingContextMenu(
+                        hasLocalFile: hasLocal,
+                        isDeviceOnly: hasUnimported,
+                        isDeviceOnline: isDeviceOnline,
+                        isImporting: isImporting,
+                        onOpen: {
+                            if let row = selectedRows.first, row.syncStatus != .onDeviceOnly {
+                                openRecording(row)
+                            }
+                        },
+                        onShowInFinder: {
+                            if let row = selectedRows.first, row.syncStatus != .onDeviceOnly {
+                                showInFinder(row)
+                            }
+                        },
+                        onImport: {
+                            if let ctrl = controller {
                                 let files = viewModel.deviceFiles(for: selectedIds)
                                 importService.importDeviceFiles(files, from: ctrl)
                             }
-                            .disabled(importService.session(for: ctrl.id)?.isImporting ?? false)
-
-                            Divider()
+                        },
+                        onCreateDocument: {
+                            Task {
+                                await viewModel.createDocuments(
+                                    filenames: selectedIds,
+                                    sourceId: source.id,
+                                    documentService: documentService,
+                                    importService: importService
+                                )
+                            }
+                        },
+                        onDeleteImported: {
+                            filesToDeleteImported = selectedIds.filter { id in
+                                selectedRows.first(where: { $0.id == id })?.syncStatus != .onDeviceOnly
+                            }
                         }
-
-                        Button("Delete from Device", role: .destructive) {
-                            filesToDelete = selectedIds
-                        }
-                    } else {
-                        // Offline: show local operations (future)
-                        Button("Delete from Library", role: .destructive) {
-                            // Future implementation
-                        }
-                        .disabled(true)
-                    }
+                    )
                 }
             }
+            .onKeyPress(.space) {
+                if let filename = viewModel.selection.first,
+                   let row = viewModel.rows.first(where: { $0.filename == filename }),
+                   row.syncStatus != .onDeviceOnly,
+                   let filepath = row.filepath {
+                    let url = fileSystemService.recordingFileURL(relativePath: filepath)
+                    if FileManager.default.fileExists(atPath: url.path) {
+                        quickLookURL = url
+                    }
+                }
+                return .handled
+            }
+            // Delete from device confirmation
             .confirmationDialog(
                 "Delete from Device",
                 isPresented: Binding(
@@ -271,6 +320,24 @@ struct RecordingSourceDetailView: View {
                 }
             } message: {
                 Text("This will permanently delete \(filesToDelete.count) file\(filesToDelete.count == 1 ? "" : "s") from the device. This cannot be undone.")
+            }
+            // Delete imported confirmation
+            .confirmationDialog(
+                "Delete Imported",
+                isPresented: Binding(
+                    get: { !filesToDeleteImported.isEmpty },
+                    set: { if !$0 { filesToDeleteImported = [] } }
+                )
+            ) {
+                Button("Delete \(filesToDeleteImported.count) local cop\(filesToDeleteImported.count == 1 ? "y" : "ies")", role: .destructive) {
+                    let ids = filesToDeleteImported
+                    filesToDeleteImported = []
+                    Task {
+                        await viewModel.deleteLocalCopies(filenames: ids, sourceId: source.id)
+                    }
+                }
+            } message: {
+                Text("This will remove the local copy. The file will remain on the device if still connected.")
             }
         }
     }
@@ -318,6 +385,22 @@ struct RecordingSourceDetailView: View {
         viewModel.selection.removeAll()
         await viewModel.loadRecordings(sourceId: source.id, deviceController: controller)
         await controller.refreshStorageInfo()
+    }
+
+    private func openRecording(_ row: UnifiedRecordingRow) {
+        guard let filepath = row.filepath else { return }
+        let url = fileSystemService.recordingFileURL(relativePath: filepath)
+        if FileManager.default.fileExists(atPath: url.path) {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    private func showInFinder(_ row: UnifiedRecordingRow) {
+        guard let filepath = row.filepath else { return }
+        let url = fileSystemService.recordingFileURL(relativePath: filepath)
+        if FileManager.default.fileExists(atPath: url.path) {
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+        }
     }
 
     // MARK: - Computed
@@ -475,41 +558,6 @@ private struct DeviceIcon: View {
     }
 }
 
-// MARK: - Sync Status Icon
-
-private struct SyncStatusIcon: View {
-    let status: RecordingSyncStatus
-
-    var body: some View {
-        Group {
-            switch status {
-            case .onDeviceOnly:
-                Image(systemName: "arrow.down.circle")
-                    .foregroundStyle(.secondary)
-            case .synced:
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-            case .localOnly:
-                Image(systemName: "internaldrive")
-                    .foregroundStyle(.blue)
-            }
-        }
-        .font(.system(size: 13))
-        .help(helpText)
-    }
-
-    private var helpText: String {
-        switch status {
-        case .onDeviceOnly:
-            return "On device — not yet downloaded"
-        case .synced:
-            return "Downloaded to library"
-        case .localOnly:
-            return "In library — not on device"
-        }
-    }
-}
-
 // MARK: - Import Button
 
 private struct ImportButton: View {
@@ -528,9 +576,9 @@ private struct ImportButton: View {
     private var label: String {
         switch state {
         case .idle: "Import"
-        case .preparing: "Preparing…"
+        case .preparing: "Preparing..."
         case .importing: "Stop"
-        case .stopping: "Stopping…"
+        case .stopping: "Stopping..."
         }
     }
 

@@ -19,4 +19,5 @@ protocol RecordingRepositoryV2: Sendable {
     func existsByFilenameAndSourceId(_ filename: String, sourceId: Int64) async throws -> Bool
     func fetchFilenamesForSource(_ sourceId: Int64) async throws -> Set<String>
     func observeBySourceId(_ sourceId: Int64) -> AsyncThrowingStream<[RecordingV2], Error>
+    func updateSyncStatus(id: Int64, syncStatus: RecordingSyncStatus) async throws
 }

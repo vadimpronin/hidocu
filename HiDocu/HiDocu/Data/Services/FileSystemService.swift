@@ -495,6 +495,13 @@ final class FileSystemService {
             .appendingPathComponent("HiDocu", isDirectory: true)
     }
 
+    /// Resolve a recording file URL from its relative path.
+    func recordingFileURL(relativePath: String) -> URL {
+        dataDirectory
+            .appendingPathComponent("Recordings", isDirectory: true)
+            .appendingPathComponent(relativePath)
+    }
+
     /// Custom data directory override (set via settings)
     private(set) var customDataDirectory: URL?
 

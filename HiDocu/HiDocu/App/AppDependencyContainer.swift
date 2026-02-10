@@ -207,6 +207,15 @@ final class AppDependencyContainer {
             recordingRepository: recordingRepositoryV2
         )
 
+        // Bootstrap "Imported" source so it always appears in the sidebar
+        Task {
+            do {
+                _ = try await recordingSourceService.ensureImportSource()
+            } catch {
+                AppLogger.database.error("Failed to bootstrap Imported source: \(error.localizedDescription)")
+            }
+        }
+
         // Wire RecordingSourceService into DeviceManager (post-init)
         deviceManager.setRecordingSourceService(recordingSourceService)
 

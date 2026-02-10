@@ -12,6 +12,12 @@ enum SourceType: String, Sendable, CaseIterable, Hashable {
     case recording
 }
 
+/// Lightweight reference to a document linked to a recording.
+struct DocumentLink: Identifiable, Sendable, Equatable, Hashable {
+    let id: Int64
+    let title: String
+}
+
 struct Source: Identifiable, Sendable, Equatable, Hashable {
     let id: Int64
     let documentId: Int64

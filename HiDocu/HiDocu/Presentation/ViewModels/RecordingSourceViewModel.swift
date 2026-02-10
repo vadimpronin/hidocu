@@ -12,13 +12,18 @@ import Foundation
 struct UnifiedRecordingRow: Identifiable {
     let id: String  // filename serves as ID
     let filename: String
+    let filepath: String?
     let createdAt: Date?
     let durationSeconds: Int
     let size: Int
     let mode: RecordingMode?
     var syncStatus: RecordingSyncStatus
     var recordingId: Int64?
-    var documentId: Int64?
+    var documentInfo: [DocumentLink] = []
+    var isProcessing: Bool = false
+
+    /// Backward-compatible computed property.
+    var documentId: Int64? { documentInfo.first?.id }
 
     // Sortable proxy properties
     var sortableDate: Double { createdAt?.timeIntervalSince1970 ?? 0 }
@@ -54,15 +59,24 @@ final class RecordingSourceViewModel {
 
     private let recordingRepository: any RecordingRepositoryV2
     private let sourceRepository: any SourceRepository
+    private let recordingSourceService: RecordingSourceService
+    private let llmQueueState: LLMQueueState
 
     // Store device files for later access (needed for import operations)
     private var deviceFilesByFilename: [String: DeviceFileInfo] = [:]
 
     // MARK: - Initialization
 
-    init(recordingRepository: any RecordingRepositoryV2, sourceRepository: any SourceRepository) {
+    init(
+        recordingRepository: any RecordingRepositoryV2,
+        sourceRepository: any SourceRepository,
+        recordingSourceService: RecordingSourceService,
+        llmQueueState: LLMQueueState
+    ) {
         self.recordingRepository = recordingRepository
         self.sourceRepository = sourceRepository
+        self.recordingSourceService = recordingSourceService
+        self.llmQueueState = llmQueueState
     }
 
     // MARK: - Actions
@@ -103,13 +117,13 @@ final class RecordingSourceViewModel {
                     unified.append(UnifiedRecordingRow(
                         id: file.filename,
                         filename: file.filename,
+                        filepath: localRec?.filepath,
                         createdAt: file.createdAt,
                         durationSeconds: file.durationSeconds,
                         size: file.size,
                         mode: file.mode,
                         syncStatus: status,
-                        recordingId: localRec?.id,
-                        documentId: nil
+                        recordingId: localRec?.id
                     ))
                 }
 
@@ -118,13 +132,13 @@ final class RecordingSourceViewModel {
                     unified.append(UnifiedRecordingRow(
                         id: rec.filename,
                         filename: rec.filename,
+                        filepath: rec.filepath,
                         createdAt: rec.createdAt,
                         durationSeconds: rec.durationSeconds ?? 0,
                         size: rec.fileSizeBytes ?? 0,
                         mode: rec.recordingMode,
                         syncStatus: .localOnly,
-                        recordingId: rec.id,
-                        documentId: nil
+                        recordingId: rec.id
                     ))
                 }
 
@@ -136,21 +150,22 @@ final class RecordingSourceViewModel {
                     UnifiedRecordingRow(
                         id: rec.filename,
                         filename: rec.filename,
+                        filepath: rec.filepath,
                         createdAt: rec.createdAt,
                         durationSeconds: rec.durationSeconds ?? 0,
                         size: rec.fileSizeBytes ?? 0,
                         mode: rec.recordingMode,
                         syncStatus: .localOnly,
-                        recordingId: rec.id,
-                        documentId: nil
+                        recordingId: rec.id
                     )
                 }
             }
 
             lastLoadIncludedDevice = deviceController?.isConnected == true
 
-            // Populate document IDs from the sources table
-            await populateDocumentIds()
+            // Populate document info and processing status
+            await populateDocumentInfo()
+            updateProcessingStatus()
         } catch {
             errorMessage = error.localizedDescription
             AppLogger.recordings.error("Failed to load recordings: \(error.localizedDescription)")
@@ -191,8 +206,9 @@ final class RecordingSourceViewModel {
             }
         }
 
-        // Refresh document IDs (import creates new documents)
-        await populateDocumentIds()
+        // Refresh document info (import creates new documents)
+        await populateDocumentInfo()
+        updateProcessingStatus()
     }
 
     /// Return DeviceFileInfo objects for selected filenames (for import).
@@ -200,20 +216,91 @@ final class RecordingSourceViewModel {
         filenames.compactMap { deviceFilesByFilename[$0] }
     }
 
+    /// Delete local copies for selected filenames from a specific source.
+    func deleteLocalCopies(filenames: Set<String>, sourceId: Int64) async {
+        for filename in filenames {
+            guard let row = rows.first(where: { $0.filename == filename }),
+                  let recordingId = row.recordingId else { continue }
+            do {
+                try await recordingSourceService.deleteLocalCopy(recordingId: recordingId)
+            } catch {
+                AppLogger.recordings.error("Failed to delete local copy of \(filename): \(error.localizedDescription)")
+            }
+        }
+        // Refresh after deletion
+        await refreshImportStatus(sourceId: sourceId)
+    }
+
+    /// Create documents for selected filenames.
+    func createDocuments(
+        filenames: Set<String>,
+        sourceId: Int64,
+        documentService: DocumentService,
+        importService: RecordingImportServiceV2
+    ) async {
+        for filename in filenames {
+            guard let row = rows.first(where: { $0.filename == filename }),
+                  row.documentInfo.isEmpty,
+                  let recordingId = row.recordingId else { continue }
+            do {
+                guard let recording = try await recordingRepository.fetchById(recordingId) else { continue }
+                _ = try await documentService.createDocumentWithSource(
+                    title: recording.displayTitle,
+                    audioRelativePath: recording.filepath,
+                    originalFilename: recording.filename,
+                    durationSeconds: recording.durationSeconds,
+                    fileSizeBytes: recording.fileSizeBytes,
+                    deviceSerial: recording.deviceSerial,
+                    deviceModel: recording.deviceModel,
+                    recordingMode: recording.recordingMode?.rawValue,
+                    recordedAt: recording.createdAt,
+                    recordingId: recordingId
+                )
+            } catch {
+                AppLogger.recordings.error("Failed to create document for \(filename): \(error.localizedDescription)")
+            }
+        }
+        await populateDocumentInfo()
+    }
+
     // MARK: - Private
 
-    /// Batch-fetch document IDs for all rows that have recording IDs.
-    private func populateDocumentIds() async {
+    /// Batch-fetch document info (id + title) for all rows that have recording IDs.
+    private func populateDocumentInfo() async {
         let recordingIds = rows.compactMap(\.recordingId)
         guard !recordingIds.isEmpty else { return }
 
-        let docIdMap = (try? await sourceRepository.fetchDocumentIdsByRecordingIds(recordingIds)) ?? [:]
-        guard !docIdMap.isEmpty else { return }
+        let docInfoMap: [Int64: [DocumentLink]]
+        do {
+            docInfoMap = try await sourceRepository.fetchDocumentInfoByRecordingIds(recordingIds)
+        } catch {
+            AppLogger.recordings.error("Failed to fetch document info: \(error.localizedDescription)")
+            docInfoMap = [:]
+        }
 
         for i in rows.indices {
-            if let recId = rows[i].recordingId, let docId = docIdMap[recId] {
-                rows[i].documentId = docId
+            if let recId = rows[i].recordingId, let info = docInfoMap[recId] {
+                rows[i].documentInfo = info
+            } else {
+                rows[i].documentInfo = []
             }
+        }
+    }
+
+    /// Derive processing status from LLM queue state.
+    private func updateProcessingStatus() {
+        let activeDocIds = Set(llmQueueState.activeJobs.compactMap(\.documentId))
+        let pendingDocIds = Set(llmQueueState.pendingJobs.compactMap(\.documentId))
+        let processingDocIds = activeDocIds.union(pendingDocIds)
+
+        guard !processingDocIds.isEmpty else {
+            for i in rows.indices { rows[i].isProcessing = false }
+            return
+        }
+
+        for i in rows.indices {
+            let docIds = Set(rows[i].documentInfo.map(\.id))
+            rows[i].isProcessing = !docIds.isDisjoint(with: processingDocIds)
         }
     }
 }

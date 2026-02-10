@@ -115,6 +115,15 @@ final class SQLiteRecordingRepositoryV2: RecordingRepositoryV2, Sendable {
         }
     }
 
+    func updateSyncStatus(id: Int64, syncStatus: RecordingSyncStatus) async throws {
+        _ = try await db.asyncWrite { database in
+            try database.execute(
+                sql: "UPDATE recordings SET sync_status = ? WHERE id = ?",
+                arguments: [syncStatus.rawValue, id]
+            )
+        }
+    }
+
     func observeBySourceId(_ sourceId: Int64) -> AsyncThrowingStream<[RecordingV2], Error> {
         AsyncThrowingStream { continuation in
             let observation = ValueObservation.tracking { database -> [RecordingV2DTO] in

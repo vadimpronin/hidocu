@@ -2,54 +2,50 @@
 //  AllRecordingsView.swift
 //  HiDocu
 //
-//  Simple flat table of ALL recordings across all sources.
+//  Flat table of ALL recordings across all sources with enriched status columns.
 //  Shown when "All Recordings" is selected in the sidebar.
 //
 
 import SwiftUI
+import QuickLook
 
 struct AllRecordingsView: View {
-    let recordingRepository: any RecordingRepositoryV2
-    let recordingSourceRepository: any RecordingSourceRepository
+    var viewModel: AllRecordingsViewModel
+    var connectedSourceIds: Set<Int64>
+    var documentService: DocumentService
+    var fileSystemService: FileSystemService
+    var importService: RecordingImportServiceV2
+    var onNavigateToDocument: ((Int64) -> Void)?
 
-    @State private var recordings: [RecordingV2] = []
-    @State private var sources: [Int64: RecordingSource] = [:]  // sourceId -> source for display
-    @State private var selection: Set<Int64> = []
-    @State private var sortOrder: [KeyPathComparator<RecordingV2>] = [
-        .init(\.createdAt, order: .reverse)
-    ]
-    @State private var isLoading: Bool = false
-    @State private var errorMessage: String?
-
-    var sortedRecordings: [RecordingV2] {
-        recordings.sorted(using: sortOrder)
-    }
+    @State private var idsToDeleteImported: Set<Int64> = []
+    @State private var quickLookURL: URL?
 
     var body: some View {
         Group {
-            if isLoading && recordings.isEmpty {
+            if viewModel.isLoading && viewModel.rows.isEmpty {
                 ProgressView("Loading recordings...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if recordings.isEmpty {
+            } else if viewModel.rows.isEmpty {
                 emptyState
             } else {
                 recordingTable
             }
         }
         .navigationTitle("All Recordings")
+        .quickLookPreview($quickLookURL)
         .task {
-            await loadData()
+            await viewModel.loadData()
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
-                    Task { await loadData() }
+                    Task { await viewModel.loadData() }
                 } label: {
                     Label("Refresh", systemImage: "arrow.clockwise")
                 }
                 .keyboardShortcut("r", modifiers: .command)
                 .help("Refresh recordings")
-                .disabled(isLoading)
+                .disabled(viewModel.isLoading)
             }
         }
     }
@@ -57,29 +53,30 @@ struct AllRecordingsView: View {
     // MARK: - Recording Table
 
     private var recordingTable: some View {
-        Table(sortedRecordings, selection: $selection, sortOrder: $sortOrder) {
-            TableColumn("Source") { recording in
-                if let sourceId = recording.recordingSourceId,
-                   let source = sources[sourceId] {
-                    Text(source.name)
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text("Unknown")
-                        .foregroundStyle(.tertiary)
-                }
+        @Bindable var bindableVM = viewModel
+        return Table(viewModel.sortedRows, selection: $bindableVM.selection, sortOrder: $bindableVM.sortOrder) {
+            // Source icon column
+            TableColumn("") { (row: AllRecordingsRow) in
+                sourceIcon(for: row)
             }
-            .width(min: 120, ideal: 150)
+            .width(28)
 
-            TableColumn("Name", value: \.filename) { recording in
-                Text(recording.filename)
+            TableColumn("Source") { (row: AllRecordingsRow) in
+                Text(row.sourceName ?? "Unknown")
+                    .foregroundStyle(row.sourceName != nil ? .secondary : .tertiary)
+            }
+            .width(min: 100, ideal: 130)
+
+            TableColumn("Name", value: \.filename) { row in
+                Text(row.filename)
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .monospacedDigit()
             }
-            .width(min: 150, ideal: 270)
+            .width(min: 150, ideal: 250)
 
-            TableColumn("Date", value: \.createdAt) { recording in
-                Text(recording.createdAt.formatted(
+            TableColumn("Date", value: \.createdAt) { row in
+                Text(row.createdAt.formatted(
                     .dateTime
                         .day(.twoDigits)
                         .month(.abbreviated)
@@ -92,8 +89,8 @@ struct AllRecordingsView: View {
             }
             .width(min: 180, ideal: 190)
 
-            TableColumn("Duration") { recording in
-                if let duration = recording.durationSeconds {
+            TableColumn("Duration") { (row: AllRecordingsRow) in
+                if let duration = row.durationSeconds {
                     Text(duration.formattedDurationFull)
                         .monospacedDigit()
                 } else {
@@ -103,13 +100,13 @@ struct AllRecordingsView: View {
             }
             .width(min: 70, ideal: 80)
 
-            TableColumn("Mode") { recording in
-                Text(recording.recordingMode?.displayName ?? "—")
+            TableColumn("Mode") { (row: AllRecordingsRow) in
+                Text(row.recordingMode?.displayName ?? "—")
             }
             .width(min: 55, ideal: 70)
 
-            TableColumn("Size") { recording in
-                if let size = recording.fileSizeBytes {
+            TableColumn("Size") { (row: AllRecordingsRow) in
+                if let size = row.fileSizeBytes {
                     Text(size.formattedFileSize)
                         .monospacedDigit()
                 } else {
@@ -119,12 +116,121 @@ struct AllRecordingsView: View {
             }
             .width(min: 60, ideal: 80)
 
-            TableColumn("Status", sortUsing: KeyPathComparator(\.syncStatus)) { recording in
-                StatusBadge(status: recording.syncStatus)
+            TableColumn("") { (row: AllRecordingsRow) in
+                AvailabilityStatusIcon(
+                    syncStatus: row.syncStatus,
+                    isDeviceOnline: row.recordingSourceId.map { connectedSourceIds.contains($0) } ?? false
+                )
             }
-            .width(min: 70, ideal: 90)
+            .width(28)
+
+            TableColumn("") { (row: AllRecordingsRow) in
+                DocumentStatusCell(
+                    documentInfo: row.documentInfo,
+                    isProcessing: row.isProcessing,
+                    onNavigateToDocument: { docId in
+                        onNavigateToDocument?(docId)
+                    },
+                    onCreateDocument: {
+                        Task {
+                            await createDocument(for: row)
+                        }
+                    }
+                )
+            }
+            .width(min: 80, ideal: 120)
+        }
+        .contextMenu(forSelectionType: Int64.self) { selectedIds in
+            if !selectedIds.isEmpty {
+                let selectedRows = viewModel.rows.filter { selectedIds.contains($0.id) }
+                let hasLocal = selectedRows.contains { $0.syncStatus != .onDeviceOnly }
+
+                RecordingContextMenu(
+                    hasLocalFile: hasLocal,
+                    isDeviceOnly: false,
+                    isDeviceOnline: false,
+                    isImporting: false,
+                    onOpen: {
+                        if let row = selectedRows.first {
+                            openFile(filepath: row.filepath)
+                        }
+                    },
+                    onShowInFinder: {
+                        if let row = selectedRows.first {
+                            showInFinder(filepath: row.filepath)
+                        }
+                    },
+                    onCreateDocument: {
+                        Task {
+                            for row in selectedRows where row.documentInfo.isEmpty {
+                                await createDocument(for: row)
+                            }
+                        }
+                    },
+                    onDeleteImported: {
+                        idsToDeleteImported = selectedIds.filter { id in
+                            selectedRows.first(where: { $0.id == id })?.syncStatus != .onDeviceOnly
+                        }
+                    }
+                )
+            }
+        }
+        .onKeyPress(.space) {
+            if let id = viewModel.selection.first,
+               let row = viewModel.rows.first(where: { $0.id == id }),
+               row.syncStatus != .onDeviceOnly,
+               !row.filepath.isEmpty {
+                let url = fileSystemService.recordingFileURL(relativePath: row.filepath)
+                if FileManager.default.fileExists(atPath: url.path) {
+                    quickLookURL = url
+                }
+            }
+            return .handled
+        }
+        .confirmationDialog(
+            "Delete Imported",
+            isPresented: Binding(
+                get: { !idsToDeleteImported.isEmpty },
+                set: { if !$0 { idsToDeleteImported = [] } }
+            )
+        ) {
+            Button("Delete \(idsToDeleteImported.count) local cop\(idsToDeleteImported.count == 1 ? "y" : "ies")", role: .destructive) {
+                let ids = idsToDeleteImported
+                idsToDeleteImported = []
+                Task {
+                    await viewModel.deleteLocalCopies(ids: ids)
+                }
+            }
+        } message: {
+            Text("This will remove the local copy. The file will remain on the device if still connected.")
         }
     }
+
+    // MARK: - Source Icon
+
+    @ViewBuilder
+    private func sourceIcon(for row: AllRecordingsRow) -> some View {
+        if let modelStr = row.sourceDeviceModel,
+           let model = DeviceModel(rawValue: modelStr) {
+            if let imageName = model.imageName {
+                Image(imageName)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 16, height: 16)
+                    .foregroundStyle(.secondary)
+            } else {
+                Image(systemName: model.sfSymbolName)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            Image(systemName: "square.and.arrow.down")
+                .font(.system(size: 13))
+                .foregroundStyle(.tertiary)
+        }
+    }
+
+    // MARK: - Empty State
 
     private var emptyState: some View {
         VStack(spacing: 12) {
@@ -142,87 +248,58 @@ struct AllRecordingsView: View {
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 300)
 
-            if let error = errorMessage {
+            if let error = viewModel.errorMessage {
                 Text(error)
                     .font(.caption)
                     .foregroundStyle(.red)
             }
 
             Button {
-                Task { await loadData() }
+                Task { await viewModel.loadData() }
             } label: {
                 Label("Refresh", systemImage: "arrow.clockwise")
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
             .padding(.top, 4)
-            .disabled(isLoading)
+            .disabled(viewModel.isLoading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: - Data Loading
+    // MARK: - Actions
 
-    private func loadData() async {
-        guard !isLoading else { return }
-        isLoading = true
-        errorMessage = nil
+    private func openFile(filepath: String) {
+        let url = fileSystemService.recordingFileURL(relativePath: filepath)
+        if FileManager.default.fileExists(atPath: url.path) {
+            NSWorkspace.shared.open(url)
+        }
+    }
 
+    private func showInFinder(filepath: String) {
+        let url = fileSystemService.recordingFileURL(relativePath: filepath)
+        if FileManager.default.fileExists(atPath: url.path) {
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+        }
+    }
+
+    private func createDocument(for row: AllRecordingsRow) async {
         do {
-            // Load recordings and sources in parallel
-            async let recordingsTask = recordingRepository.fetchAll()
-            async let sourcesTask = recordingSourceRepository.fetchAll()
-
-            let (loadedRecordings, loadedSources) = try await (recordingsTask, sourcesTask)
-
-            recordings = loadedRecordings
-            sources = Dictionary(
-                loadedSources.map { ($0.id, $0) },
-                uniquingKeysWith: { first, _ in first }
+            _ = try await documentService.createDocumentWithSource(
+                title: row.displayTitle,
+                audioRelativePath: row.filepath,
+                originalFilename: row.filename,
+                durationSeconds: row.durationSeconds,
+                fileSizeBytes: row.fileSizeBytes,
+                deviceSerial: nil,
+                deviceModel: row.sourceDeviceModel,
+                recordingMode: row.recordingMode?.rawValue,
+                recordedAt: row.createdAt,
+                recordingId: row.id
             )
+            await viewModel.loadData()
         } catch {
-            errorMessage = error.localizedDescription
-            AppLogger.recordings.error("Failed to load all recordings: \(error.localizedDescription)")
-        }
-
-        isLoading = false
-    }
-}
-
-// MARK: - Status Badge
-
-private struct StatusBadge: View {
-    let status: RecordingSyncStatus
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Circle()
-                .fill(statusColor)
-                .frame(width: 6, height: 6)
-            Text(statusLabel)
-                .font(.caption2)
-        }
-    }
-
-    private var statusColor: Color {
-        switch status {
-        case .onDeviceOnly:
-            return .orange
-        case .synced:
-            return .green
-        case .localOnly:
-            return .blue
-        }
-    }
-
-    private var statusLabel: String {
-        switch status {
-        case .onDeviceOnly:
-            return "On Device"
-        case .synced:
-            return "Synced"
-        case .localOnly:
-            return "Local Only"
+            AppLogger.recordings.error("Failed to create document: \(error.localizedDescription)")
         }
     }
 }

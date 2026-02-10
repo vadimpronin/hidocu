@@ -148,6 +148,10 @@
 		8D6F1D4C8176BC1DE48C7C59 /* RecordingSourceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A39E440C62C1A3D0620AACD4 /* RecordingSourceViewModel.swift */; };
 		F0F2FF9D8D0B1BF5A52461FD /* RecordingSourceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2E77ED394B3F03BE48200F2 /* RecordingSourceDetailView.swift */; };
 		D7FFE2A012B3C7DDB6FE64A9 /* AllRecordingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9157D5BF5831DA5A2CBCF95D /* AllRecordingsView.swift */; };
+		AB1234567890ABCD12340011 /* AllRecordingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340001 /* AllRecordingsViewModel.swift */; };
+		AB1234567890ABCD12340012 /* AvailabilityStatusIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340002 /* AvailabilityStatusIcon.swift */; };
+		AB1234567890ABCD12340013 /* DocumentStatusCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340003 /* DocumentStatusCell.swift */; };
+		AB1234567890ABCD12340014 /* RecordingContextMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340004 /* RecordingContextMenu.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -302,6 +306,10 @@
 		A39E440C62C1A3D0620AACD4 /* RecordingSourceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSourceViewModel.swift; sourceTree = "<group>"; };
 		C2E77ED394B3F03BE48200F2 /* RecordingSourceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSourceDetailView.swift; sourceTree = "<group>"; };
 		9157D5BF5831DA5A2CBCF95D /* AllRecordingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllRecordingsView.swift; sourceTree = "<group>"; };
+		AB1234567890ABCD12340001 /* AllRecordingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllRecordingsViewModel.swift; sourceTree = "<group>"; };
+		AB1234567890ABCD12340002 /* AvailabilityStatusIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvailabilityStatusIcon.swift; sourceTree = "<group>"; };
+		AB1234567890ABCD12340003 /* DocumentStatusCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentStatusCell.swift; sourceTree = "<group>"; };
+		AB1234567890ABCD12340004 /* RecordingContextMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingContextMenu.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -638,6 +646,7 @@
 				DBA3562E4C531972E9D61F66 /* SourcesViewModel.swift */,
 				FF00000500000005 /* LLMSettingsViewModel.swift */,
 							A39E440C62C1A3D0620AACD4 /* RecordingSourceViewModel.swift */,
+				AB1234567890ABCD12340001 /* AllRecordingsViewModel.swift */,
 );
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -701,10 +710,21 @@
 		FB2DDE62926C7C5A52D00344 /* Recordings */ = {
 			isa = PBXGroup;
 			children = (
+				AB1234567890ABCD12340020 /* Components */,
 							C2E77ED394B3F03BE48200F2 /* RecordingSourceDetailView.swift */,
 				9157D5BF5831DA5A2CBCF95D /* AllRecordingsView.swift */,
 );
 			path = Recordings;
+			sourceTree = "<group>";
+		};
+		AB1234567890ABCD12340020 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				AB1234567890ABCD12340002 /* AvailabilityStatusIcon.swift */,
+				AB1234567890ABCD12340003 /* DocumentStatusCell.swift */,
+				AB1234567890ABCD12340004 /* RecordingContextMenu.swift */,
+			);
+			path = Components;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -960,6 +980,10 @@
 				92AEDC85782DB00613E2A128 /* ToolbarJobMonitorView.swift in Sources */,							8D6F1D4C8176BC1DE48C7C59 /* RecordingSourceViewModel.swift in Sources */,
 				F0F2FF9D8D0B1BF5A52461FD /* RecordingSourceDetailView.swift in Sources */,
 				D7FFE2A012B3C7DDB6FE64A9 /* AllRecordingsView.swift in Sources */,
+				AB1234567890ABCD12340011 /* AllRecordingsViewModel.swift in Sources */,
+				AB1234567890ABCD12340012 /* AvailabilityStatusIcon.swift in Sources */,
+				AB1234567890ABCD12340013 /* DocumentStatusCell.swift in Sources */,
+				AB1234567890ABCD12340014 /* RecordingContextMenu.swift in Sources */,
 );
 			runOnlyForDeploymentPostprocessing = 0;
 		};

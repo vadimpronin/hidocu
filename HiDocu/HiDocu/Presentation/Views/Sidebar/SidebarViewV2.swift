@@ -79,7 +79,18 @@ struct SidebarViewV2: View {
                 Label("All Recordings", systemImage: "waveform")
                     .tag(SidebarItemV2.allRecordings)
 
-                ForEach(recordingSources) { source in
+                // Show "Imported" sources first
+                ForEach(importSources) { source in
+                    RecordingSourceSidebarRow(
+                        source: source,
+                        isOnline: false,
+                        controller: nil
+                    )
+                    .tag(SidebarItemV2.recordingSource(id: source.id))
+                }
+
+                // Then device sources
+                ForEach(deviceSources) { source in
                     RecordingSourceSidebarRow(
                         source: source,
                         isOnline: connectedSourceIds.contains(source.id),
@@ -104,6 +115,14 @@ struct SidebarViewV2: View {
         .errorBanner($errorMessage)
     }
 
+    private var importSources: [RecordingSource] {
+        recordingSources.filter { $0.type == .upload }
+    }
+
+    private var deviceSources: [RecordingSource] {
+        recordingSources.filter { $0.type != .upload }
+    }
+
     private func findController(for source: RecordingSource) -> DeviceController? {
         deviceManager.connectedDevices.first { controller in
             controller.recordingSourceId == source.id
@@ -118,12 +137,21 @@ private struct RecordingSourceSidebarRow: View {
     let isOnline: Bool
     let controller: DeviceController?
 
+    private var isImportSource: Bool { source.type == .upload }
+
     private var model: DeviceModel {
         DeviceModel(rawValue: source.deviceModel ?? "") ?? .unknown
     }
 
     var body: some View {
-        if isOnline, let controller = controller {
+        if isImportSource {
+            // Upload/Import source
+            Label {
+                Text(source.name)
+            } icon: {
+                Image(systemName: "square.and.arrow.down")
+            }
+        } else if isOnline, let controller = controller {
             // Online: show normal state with optional battery indicator
             switch controller.connectionState {
             case .connecting:

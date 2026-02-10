@@ -15,6 +15,7 @@ struct ContentViewV2: View {
     @State private var documentDetailVM: DocumentDetailViewModel?
     @State private var deviceDashboardVMs: [UInt64: DeviceDashboardViewModel] = [:]
     @State private var recordingSourceVMs: [Int64: RecordingSourceViewModel] = [:]
+    @State private var allRecordingsVM: AllRecordingsViewModel?
     @State private var recordingSources: [RecordingSource] = []
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var recordingSourcesTask: Task<Void, Never>?
@@ -188,10 +189,17 @@ struct ContentViewV2: View {
 
     @ViewBuilder
     private var detailColumn: some View {
-        if case .allRecordings = navigationVM.selectedSidebarItem {
+        if case .allRecordings = navigationVM.selectedSidebarItem,
+           let allRecVM = allRecordingsVM {
             AllRecordingsView(
-                recordingRepository: container.recordingRepositoryV2,
-                recordingSourceRepository: container.recordingSourceRepository
+                viewModel: allRecVM,
+                connectedSourceIds: connectedSourceIds,
+                documentService: container.documentService,
+                fileSystemService: container.fileSystemService,
+                importService: container.importServiceV2,
+                onNavigateToDocument: { docId in
+                    navigateToDocument(docId)
+                }
             )
         } else if case .recordingSource(let sourceId) = navigationVM.selectedSidebarItem {
             if let source = recordingSources.first(where: { $0.id == sourceId }),
@@ -202,13 +210,12 @@ struct ContentViewV2: View {
                     viewModel: viewModel,
                     importService: container.importServiceV2,
                     deviceController: controller,
+                    recordingSourceService: container.recordingSourceService,
+                    documentService: container.documentService,
+                    fileSystemService: container.fileSystemService,
+                    llmQueueState: container.llmQueueState,
                     onNavigateToDocument: { docId in
-                        if navigationVM.selectedSidebarItem == .allDocuments {
-                            navigationVM.selectedDocumentIds = [docId]
-                        } else {
-                            pendingDocumentNavigation = docId
-                            navigationVM.selectedSidebarItem = .allDocuments
-                        }
+                        navigateToDocument(docId)
                     }
                 )
             } else {
@@ -255,7 +262,9 @@ struct ContentViewV2: View {
         guard recordingSourceVMs[sourceId] == nil else { return }
         recordingSourceVMs[sourceId] = RecordingSourceViewModel(
             recordingRepository: container.recordingRepositoryV2,
-            sourceRepository: container.sourceRepository
+            sourceRepository: container.sourceRepository,
+            recordingSourceService: container.recordingSourceService,
+            llmQueueState: container.llmQueueState
         )
     }
 
@@ -268,6 +277,15 @@ struct ContentViewV2: View {
     private func connectedDeviceController(for source: RecordingSource) -> DeviceController? {
         container.deviceManager.connectedDevices.first { controller in
             controller.recordingSourceId == source.id
+        }
+    }
+
+    private func navigateToDocument(_ docId: Int64) {
+        if navigationVM.selectedSidebarItem == .allDocuments {
+            navigationVM.selectedDocumentIds = [docId]
+        } else {
+            pendingDocumentNavigation = docId
+            navigationVM.selectedSidebarItem = .allDocuments
         }
     }
 
@@ -294,6 +312,14 @@ struct ContentViewV2: View {
 
         let ddvm = DocumentDetailViewModel(documentService: container.documentService, llmService: container.llmService, llmQueueService: container.llmQueueService, settingsService: container.settingsService)
         documentDetailVM = ddvm
+
+        allRecordingsVM = AllRecordingsViewModel(
+            recordingRepository: container.recordingRepositoryV2,
+            recordingSourceRepository: container.recordingSourceRepository,
+            sourceRepository: container.sourceRepository,
+            recordingSourceService: container.recordingSourceService,
+            llmQueueState: container.llmQueueState
+        )
 
         // Observe recording sources
         recordingSourcesTask = Task {

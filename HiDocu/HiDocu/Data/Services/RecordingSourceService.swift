@@ -119,6 +119,57 @@ final class RecordingSourceService {
         return inserted
     }
 
+    // MARK: - Delete Local Copy
+
+    /// Delete the local copy of a recording file.
+    /// For HiDock sources: updates sync status to onDeviceOnly, then removes file from disk.
+    /// For upload sources: deletes recording from DB, then removes file from disk.
+    func deleteLocalCopy(recordingId: Int64) async throws {
+        guard let recording = try await recordingRepository.fetchById(recordingId) else {
+            AppLogger.recordings.warning("deleteLocalCopy: recording \(recordingId) not found")
+            return
+        }
+
+        let fileURL = fileSystemService.recordingFileURL(relativePath: recording.filepath)
+
+        // Update DB first to avoid inconsistent state if DB operation fails
+        let isHiDockSource: Bool
+        if let sourceId = recording.recordingSourceId,
+           let source = try await recordingSourceRepository.fetchById(sourceId) {
+            if source.type == .hidock {
+                try await recordingRepository.updateSyncStatus(id: recordingId, syncStatus: .onDeviceOnly)
+                AppLogger.recordings.info("Reverted recording \(recordingId) to onDeviceOnly")
+                isHiDockSource = true
+            } else {
+                try await recordingRepository.delete(id: recordingId)
+                AppLogger.recordings.info("Deleted upload recording \(recordingId) from DB")
+                isHiDockSource = false
+            }
+        } else {
+            try await recordingRepository.delete(id: recordingId)
+            isHiDockSource = false
+        }
+
+        // Delete file from disk after DB is updated.
+        // Call removeItem directly and handle "file not found" gracefully (avoids TOCTOU race).
+        do {
+            try FileManager.default.removeItem(at: fileURL)
+            AppLogger.recordings.info("Deleted local file: \(recording.filepath)")
+        } catch let error as NSError where error.domain == NSCocoaErrorDomain && error.code == NSFileNoSuchFileError {
+            AppLogger.recordings.info("File already removed: \(recording.filepath)")
+        } catch {
+            // File deletion failed — attempt to roll back DB change for non-HiDock sources
+            // to avoid orphaned files with no DB record
+            if !isHiDockSource {
+                AppLogger.recordings.error("File deletion failed, re-inserting recording \(recordingId): \(error.localizedDescription)")
+                _ = try? await recordingRepository.insert(recording)
+            } else {
+                AppLogger.recordings.error("File deletion failed for recording \(recordingId): \(error.localizedDescription)")
+            }
+            throw error
+        }
+    }
+
     // MARK: - Dedup Helpers
 
     /// Check if a recording with the given filename already exists for a specific source.

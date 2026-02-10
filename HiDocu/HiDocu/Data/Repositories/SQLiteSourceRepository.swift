@@ -112,4 +112,30 @@ final class SQLiteSourceRepository: SourceRepository, Sendable {
             return result
         }
     }
+
+    func fetchDocumentInfoByRecordingIds(_ recordingIds: [Int64]) async throws -> [Int64: [DocumentLink]] {
+        guard !recordingIds.isEmpty else { return [:] }
+        return try await db.asyncRead { database in
+            let placeholders = recordingIds.map { _ in "?" }.joined(separator: ",")
+            let rows = try Row.fetchAll(
+                database,
+                sql: """
+                    SELECT DISTINCT s.recording_id, d.id AS document_id, d.title
+                    FROM sources s
+                    JOIN documents d ON d.id = s.document_id
+                    WHERE s.recording_id IN (\(placeholders))
+                    ORDER BY d.title
+                    """,
+                arguments: StatementArguments(recordingIds))
+            var result: [Int64: [DocumentLink]] = [:]
+            for row in rows {
+                if let recId: Int64 = row["recording_id"],
+                   let docId: Int64 = row["document_id"],
+                   let title: String = row["title"] {
+                    result[recId, default: []].append(DocumentLink(id: docId, title: title))
+                }
+            }
+            return result
+        }
+    }
 }
