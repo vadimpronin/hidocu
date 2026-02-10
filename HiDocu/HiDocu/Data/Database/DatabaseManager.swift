@@ -641,6 +641,75 @@ final class DatabaseManager: Sendable {
             AppLogger.database.info("Migration v15_recording_sources complete")
         }
 
+        // v16: Change filename uniqueness from global to per-source (compound unique index)
+        migrator.registerMigration("v16_filename_unique_per_source") { db in
+            try db.execute(sql: "PRAGMA foreign_keys = OFF")
+
+            try db.execute(sql: """
+                CREATE TABLE recordings_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    filename TEXT NOT NULL,
+                    filepath TEXT NOT NULL,
+                    title TEXT,
+                    file_size_bytes INTEGER,
+                    duration_seconds INTEGER,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    device_serial TEXT,
+                    device_model TEXT,
+                    recording_mode TEXT,
+                    recording_source_id INTEGER REFERENCES recording_sources(id) ON DELETE SET NULL,
+                    sync_status TEXT NOT NULL DEFAULT 'local_only'
+                )
+                """)
+            try db.execute(sql: """
+                INSERT INTO recordings_new
+                SELECT id, filename, filepath, title, file_size_bytes, duration_seconds,
+                       created_at, modified_at, device_serial, device_model, recording_mode,
+                       recording_source_id, sync_status
+                FROM recordings
+                """)
+            try db.execute(sql: "DROP TABLE recordings")
+            try db.execute(sql: "ALTER TABLE recordings_new RENAME TO recordings")
+
+            // Compound unique index: same filename allowed across different sources
+            try db.execute(sql: """
+                CREATE UNIQUE INDEX idx_recordings_filename_source
+                    ON recordings(filename, recording_source_id)
+                """)
+            try db.execute(sql: """
+                CREATE INDEX idx_recordings_source
+                    ON recordings(recording_source_id)
+                """)
+            try db.execute(sql: """
+                CREATE INDEX idx_recordings_source_created
+                    ON recordings(recording_source_id, created_at DESC)
+                """)
+
+            try db.execute(sql: "PRAGMA foreign_keys = ON")
+
+            AppLogger.database.info("Migration v16_filename_unique_per_source complete")
+        }
+
+        // v17: Consolidate llm_model_limits into llm_models
+        migrator.registerMigration("v17_consolidate_model_limits") { db in
+            // Add limit columns from llm_model_limits
+            try db.execute(sql: "ALTER TABLE llm_models ADD COLUMN max_input_tokens INTEGER")
+            try db.execute(sql: "ALTER TABLE llm_models ADD COLUMN max_output_tokens INTEGER")
+            try db.execute(sql: "ALTER TABLE llm_models ADD COLUMN daily_request_limit INTEGER")
+            try db.execute(sql: "ALTER TABLE llm_models ADD COLUMN tokens_per_minute INTEGER")
+
+            // Rename accept_* → supports_*
+            try db.execute(sql: "ALTER TABLE llm_models RENAME COLUMN accept_text TO supports_text")
+            try db.execute(sql: "ALTER TABLE llm_models RENAME COLUMN accept_audio TO supports_audio")
+            try db.execute(sql: "ALTER TABLE llm_models RENAME COLUMN accept_image TO supports_image")
+
+            // Drop the redundant table
+            try db.execute(sql: "DROP TABLE IF EXISTS llm_model_limits")
+
+            AppLogger.database.info("Migration v17_consolidate_model_limits complete")
+        }
+
         return migrator
     }
     

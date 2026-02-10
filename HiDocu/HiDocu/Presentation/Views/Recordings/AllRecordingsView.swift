@@ -284,6 +284,7 @@ struct AllRecordingsView: View {
     }
 
     private func createDocument(for row: AllRecordingsRow) async {
+        guard row.syncStatus != .onDeviceOnly, !row.filepath.isEmpty else { return }
         do {
             _ = try await documentService.createDocumentWithSource(
                 title: row.displayTitle,

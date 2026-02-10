@@ -301,7 +301,64 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
 
         let sortedModels = modelIds.sorted()
         AppLogger.llm.info("Fetched \(sortedModels.count) Gemini models from quota endpoint")
-        return sortedModels.map { ModelInfo(id: $0, displayName: $0, acceptText: true, acceptAudio: true, acceptImage: true) }
+
+        var results = sortedModels.map { ModelInfo(id: $0, displayName: $0, supportsText: true, supportsAudio: true, supportsImage: true) }
+
+        // Fetch token limits from the models API and merge into results
+        let limits = await fetchModelLimits(accessToken: accessToken)
+        if !limits.isEmpty {
+            results = results.map { info in
+                guard let limit = limits[info.id] else { return info }
+                var updated = info
+                updated.maxInputTokens = limit.inputTokenLimit
+                updated.maxOutputTokens = limit.outputTokenLimit
+                return updated
+            }
+        }
+
+        return results
+    }
+
+    /// Fetches model metadata (token limits) from the Google AI models API.
+    /// Returns a dictionary keyed by model ID (without `models/` prefix).
+    /// Non-fatal: returns empty dictionary on failure.
+    private func fetchModelLimits(accessToken: String) async -> [String: (inputTokenLimit: Int, outputTokenLimit: Int)] {
+        guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models") else { return [:] }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.timeoutInterval = 15
+
+        do {
+            let (data, response) = try await urlSession.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                AppLogger.llm.debug("fetchModelLimits: non-2xx response, skipping token limits")
+                return [:]
+            }
+
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let models = json["models"] as? [[String: Any]] else {
+                return [:]
+            }
+
+            var result: [String: (inputTokenLimit: Int, outputTokenLimit: Int)] = [:]
+            for model in models {
+                guard let name = model["name"] as? String,
+                      let inputLimit = model["inputTokenLimit"] as? Int,
+                      let outputLimit = model["outputTokenLimit"] as? Int else { continue }
+                // Strip "models/" prefix
+                let modelId = name.hasPrefix("models/") ? String(name.dropFirst(7)) : name
+                result[modelId] = (inputTokenLimit: inputLimit, outputTokenLimit: outputLimit)
+            }
+            AppLogger.llm.debug("fetchModelLimits: got limits for \(result.count) models")
+            return result
+        } catch {
+            AppLogger.llm.debug("fetchModelLimits failed (non-fatal): \(error.localizedDescription)")
+            return [:]
+        }
     }
 
     /// Sends a chat completion request to the Cloud Code Assist API.

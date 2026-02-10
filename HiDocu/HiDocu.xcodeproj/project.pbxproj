@@ -68,7 +68,6 @@
 		BB00000700000007 /* LLMAccountRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000700000007 /* LLMAccountRepository.swift */; };
 		BB00000700000008 /* LLMJobRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000700000008 /* LLMJobRepository.swift */; };
 		BB00000700000009 /* LLMUsageRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000700000009 /* LLMUsageRepository.swift */; };
-		BB00000700000010 /* LLMModelLimitRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000700000010 /* LLMModelLimitRepository.swift */; };
 		BB00000700000011 /* LLMModelRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000700000011 /* LLMModelRepository.swift */; };
 		BB00000800000008 /* APILogRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000800000008 /* APILogRepository.swift */; };
 		BB00000900000009 /* PKCEHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000900000009 /* PKCEHelper.swift */; };
@@ -83,11 +82,9 @@
 		BM00000000000001 /* LLMJob.swift in Sources */ = {isa = PBXBuildFile; fileRef = DM00000000000001 /* LLMJob.swift */; };
 		BM00000000000002 /* LLMJobPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = DM00000000000002 /* LLMJobPayload.swift */; };
 		BM00000000000003 /* LLMUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = DM00000000000003 /* LLMUsage.swift */; };
-		BM00000000000004 /* LLMModelLimit.swift in Sources */ = {isa = PBXBuildFile; fileRef = DM00000000000004 /* LLMModelLimit.swift */; };
 		BM00000000000005 /* LLMModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DM00000000000005 /* LLMModel.swift */; };
 		BTO0000000000001 /* LLMJobDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DTO0000000000001 /* LLMJobDTO.swift */; };
 		BTO0000000000002 /* LLMUsageDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DTO0000000000002 /* LLMUsageDTO.swift */; };
-		BTO0000000000003 /* LLMModelLimitDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DTO0000000000003 /* LLMModelLimitDTO.swift */; };
 		BTO0000000000004 /* LLMModelDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DTO0000000000004 /* LLMModelDTO.swift */; };
 		BTO0000000000005 /* LLMAccountModelDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DTO0000000000005 /* LLMAccountModelDTO.swift */; };
 		C28F8D0E49B151F81D6633B4 /* TranscriptStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 905223C42AFE09B648A3121F /* TranscriptStudioView.swift */; };
@@ -108,7 +105,6 @@
 		EE00000300000003 /* SQLiteLLMAccountRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000300000003 /* SQLiteLLMAccountRepository.swift */; };
 		EE00000300000004 /* SQLiteLLMUsageRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000300000004 /* SQLiteLLMUsageRepository.swift */; };
 		EE00000300000005 /* SQLiteLLMJobRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000300000005 /* SQLiteLLMJobRepository.swift */; };
-		EE00000300000006 /* SQLiteLLMModelLimitRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000300000006 /* SQLiteLLMModelLimitRepository.swift */; };
 		EE00000300000007 /* SQLiteLLMModelRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000300000007 /* SQLiteLLMModelRepository.swift */; };
 		EE00000400000004 /* SQLiteAPILogRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000400000004 /* SQLiteAPILogRepository.swift */; };
 		F0000001F0000001 /* HiDocuApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000011F0000011 /* HiDocuApp.swift */; };
@@ -224,7 +220,6 @@
 		AA00000700000007 /* LLMAccountRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMAccountRepository.swift; sourceTree = "<group>"; };
 		AA00000700000008 /* LLMJobRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMJobRepository.swift; sourceTree = "<group>"; };
 		AA00000700000009 /* LLMUsageRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMUsageRepository.swift; sourceTree = "<group>"; };
-		AA00000700000010 /* LLMModelLimitRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMModelLimitRepository.swift; sourceTree = "<group>"; };
 		AA00000700000011 /* LLMModelRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMModelRepository.swift; sourceTree = "<group>"; };
 		AA00000800000008 /* APILogRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APILogRepository.swift; sourceTree = "<group>"; };
 		AA00000900000009 /* PKCEHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PKCEHelper.swift; sourceTree = "<group>"; };
@@ -251,7 +246,6 @@
 		DD00000300000003 /* SQLiteLLMAccountRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteLLMAccountRepository.swift; sourceTree = "<group>"; };
 		DD00000300000004 /* SQLiteLLMUsageRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteLLMUsageRepository.swift; sourceTree = "<group>"; };
 		DD00000300000005 /* SQLiteLLMJobRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteLLMJobRepository.swift; sourceTree = "<group>"; };
-		DD00000300000006 /* SQLiteLLMModelLimitRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteLLMModelLimitRepository.swift; sourceTree = "<group>"; };
 		DD00000300000007 /* SQLiteLLMModelRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteLLMModelRepository.swift; sourceTree = "<group>"; };
 		DD00000400000004 /* SQLiteAPILogRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteAPILogRepository.swift; sourceTree = "<group>"; };
 		DD0000C00000000C /* MarkdownEditableView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MarkdownEditableView.swift; sourceTree = "<group>"; };
@@ -259,11 +253,9 @@
 		DM00000000000001 /* LLMJob.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMJob.swift; sourceTree = "<group>"; };
 		DM00000000000002 /* LLMJobPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMJobPayload.swift; sourceTree = "<group>"; };
 		DM00000000000003 /* LLMUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMUsage.swift; sourceTree = "<group>"; };
-		DM00000000000004 /* LLMModelLimit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMModelLimit.swift; sourceTree = "<group>"; };
 		DM00000000000005 /* LLMModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMModel.swift; sourceTree = "<group>"; };
 		DTO0000000000001 /* LLMJobDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMJobDTO.swift; sourceTree = "<group>"; };
 		DTO0000000000002 /* LLMUsageDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMUsageDTO.swift; sourceTree = "<group>"; };
-		DTO0000000000003 /* LLMModelLimitDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMModelLimitDTO.swift; sourceTree = "<group>"; };
 		DTO0000000000004 /* LLMModelDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMModelDTO.swift; sourceTree = "<group>"; };
 		DTO0000000000005 /* LLMAccountModelDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMAccountModelDTO.swift; sourceTree = "<group>"; };
 		E4C310BB2F07F16244282199 /* Document.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Document.swift; sourceTree = "<group>"; };
@@ -499,7 +491,6 @@
 				F5A077FC9AD84D72A3E071BC /* RecordingSource.swift */,
 				AA00000100000001 /* LLMProvider.swift */,
 				AA00000200000002 /* LLMAccount.swift */,
-				DM00000000000004 /* LLMModelLimit.swift */,
 				DM00000000000005 /* LLMModel.swift */,
 				DM00000000000003 /* LLMUsage.swift */,
 				DM00000000000002 /* LLMJobPayload.swift */,
@@ -528,7 +519,6 @@
 				AA00000700000007 /* LLMAccountRepository.swift */,
 				AA00000700000008 /* LLMJobRepository.swift */,
 				AA00000700000009 /* LLMUsageRepository.swift */,
-				AA00000700000010 /* LLMModelLimitRepository.swift */,
 				AA00000700000011 /* LLMModelRepository.swift */,
 				AA00000800000008 /* APILogRepository.swift */,
 			);
@@ -582,7 +572,6 @@
 				DAB94EA38DBD470B850CBA1F /* SQLiteRecordingSourceRepository.swift */,
 				AAA3834F987CA973FCD8506B /* SQLiteDeletionLogRepository.swift */,
 				DD00000300000003 /* SQLiteLLMAccountRepository.swift */,
-				DD00000300000006 /* SQLiteLLMModelLimitRepository.swift */,
 				DD00000300000007 /* SQLiteLLMModelRepository.swift */,
 				DD00000300000005 /* SQLiteLLMJobRepository.swift */,
 				DD00000300000004 /* SQLiteLLMUsageRepository.swift */,
@@ -602,7 +591,6 @@
 				A9D040E8C768C4EB7680B474 /* RecordingV2DTO.swift */,
 				D99C1960DB53454796885B23 /* RecordingSourceDTO.swift */,
 				DD00000100000001 /* LLMAccountDTO.swift */,
-				DTO0000000000003 /* LLMModelLimitDTO.swift */,
 				DTO0000000000004 /* LLMModelDTO.swift */,
 				DTO0000000000005 /* LLMAccountModelDTO.swift */,
 				DTO0000000000002 /* LLMUsageDTO.swift */,
@@ -930,7 +918,6 @@
 				6FBDED703B6FC6EC14A8324E /* PathSanitizer.swift in Sources */,
 				BB00000100000001 /* LLMProvider.swift in Sources */,
 				BB00000200000002 /* LLMAccount.swift in Sources */,
-				BM00000000000004 /* LLMModelLimit.swift in Sources */,
 				BM00000000000005 /* LLMModel.swift in Sources */,
 				BM00000000000003 /* LLMUsage.swift in Sources */,
 				BM00000000000002 /* LLMJobPayload.swift in Sources */,
@@ -944,7 +931,6 @@
 				BB00000700000007 /* LLMAccountRepository.swift in Sources */,
 				BB00000700000008 /* LLMJobRepository.swift in Sources */,
 				BB00000700000009 /* LLMUsageRepository.swift in Sources */,
-				BB00000700000010 /* LLMModelLimitRepository.swift in Sources */,
 				BB00000700000011 /* LLMModelRepository.swift in Sources */,
 				BB00000800000008 /* APILogRepository.swift in Sources */,
 				BB00000900000009 /* PKCEHelper.swift in Sources */,
@@ -952,14 +938,12 @@
 				BB0000110000000B /* OAuthCallbackServer.swift in Sources */,
 				BB0000120000000C /* SSEParser.swift in Sources */,
 				EE00000100000001 /* LLMAccountDTO.swift in Sources */,
-				BTO0000000000003 /* LLMModelLimitDTO.swift in Sources */,
 				BTO0000000000004 /* LLMModelDTO.swift in Sources */,
 				BTO0000000000005 /* LLMAccountModelDTO.swift in Sources */,
 				BTO0000000000002 /* LLMUsageDTO.swift in Sources */,
 				BTO0000000000001 /* LLMJobDTO.swift in Sources */,
 				EE00000200000002 /* APILogDTO.swift in Sources */,
 				EE00000300000003 /* SQLiteLLMAccountRepository.swift in Sources */,
-				EE00000300000006 /* SQLiteLLMModelLimitRepository.swift in Sources */,
 				EE00000300000007 /* SQLiteLLMModelRepository.swift in Sources */,
 				EE00000300000005 /* SQLiteLLMJobRepository.swift in Sources */,
 				EE00000300000004 /* SQLiteLLMUsageRepository.swift in Sources */,

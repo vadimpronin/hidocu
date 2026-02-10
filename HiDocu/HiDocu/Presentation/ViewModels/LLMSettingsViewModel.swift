@@ -45,9 +45,9 @@ final class LLMSettingsViewModel {
         llmService.availableModels
     }
 
-    /// Models that accept audio input (for transcription).
+    /// Models that support audio input (for transcription).
     var audioCapableModels: [AvailableModel] {
-        llmService.availableModels.filter(\.acceptAudio)
+        llmService.availableModels.filter(\.supportsAudio)
     }
 
     /// Combined selection identifier ("provider:modelId").

@@ -20,4 +20,12 @@ protocol RecordingRepositoryV2: Sendable {
     func fetchFilenamesForSource(_ sourceId: Int64) async throws -> Set<String>
     func observeBySourceId(_ sourceId: Int64) -> AsyncThrowingStream<[RecordingV2], Error>
     func updateSyncStatus(id: Int64, syncStatus: RecordingSyncStatus) async throws
+    func fetchByFilenameAndSourceId(_ filename: String, sourceId: Int64) async throws -> RecordingV2?
+    func updateAfterImport(id: Int64, filepath: String, syncStatus: RecordingSyncStatus) async throws
+    func deleteOnDeviceOnlyBySourceExcluding(sourceId: Int64, keepFilenames: Set<String>) async throws
+    func batchInsertAndCleanupDeviceOnly(
+        newRecordings: [RecordingV2],
+        sourceId: Int64,
+        keepFilenames: Set<String>
+    ) async throws
 }

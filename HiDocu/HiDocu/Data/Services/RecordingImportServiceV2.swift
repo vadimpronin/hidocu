@@ -335,8 +335,13 @@ final class RecordingImportServiceV2 {
 
         // Dedup: check scoped to recording source if available, otherwise fall back to display name
         if let sourceId {
-            if try await recordingSourceService.recordingExists(filename: filename, sourceId: sourceId) {
-                return .skipped
+            if let existing = try await recordingRepository.fetchByFilenameAndSourceId(filename, sourceId: sourceId) {
+                if existing.syncStatus != .onDeviceOnly {
+                    return .skipped  // already imported (.synced or .localOnly)
+                }
+                // Device-only record exists — download and update it in place
+                try await downloadAndStore(fileInfo, from: controller, session: session, existingRecordingId: existing.id)
+                return .downloaded
             }
         } else {
             if try await sourceRepository.existsByDisplayName(filename) {
@@ -348,7 +353,7 @@ final class RecordingImportServiceV2 {
         return .downloaded
     }
 
-    private func downloadAndStore(_ fileInfo: DeviceFileInfo, from controller: any DeviceFileProvider, session: ImportSession) async throws {
+    private func downloadAndStore(_ fileInfo: DeviceFileInfo, from controller: any DeviceFileProvider, session: ImportSession, existingRecordingId: Int64? = nil) async throws {
         let filename = fileInfo.filename
         let tempDir = FileManager.default.temporaryDirectory
         let tempURL = tempDir.appendingPathComponent("download_v2_\(UUID().uuidString)_\(filename)")
@@ -390,21 +395,29 @@ final class RecordingImportServiceV2 {
             )
         }
 
-        // Create Recording entry if recording source is available
+        // Create or update Recording entry if recording source is available
         var recordingV2Id: Int64?
         if let sourceId = deviceController?.recordingSourceId {
-            let recording = try await recordingSourceService.createRecording(
-                filename: filename,
-                filepath: audioRelativePath,
-                sourceId: sourceId,
-                fileSizeBytes: fileInfo.size,
-                durationSeconds: fileInfo.durationSeconds,
-                deviceSerial: controller.connectionInfo?.serialNumber,
-                deviceModel: controller.connectionInfo?.model.rawValue,
-                recordingMode: fileInfo.mode,
-                syncStatus: .synced
-            )
-            recordingV2Id = recording.id
+            if let existingId = existingRecordingId {
+                // Update existing device-only record with local filepath
+                try await recordingRepository.updateAfterImport(
+                    id: existingId, filepath: audioRelativePath, syncStatus: .synced
+                )
+                recordingV2Id = existingId
+            } else {
+                let recording = try await recordingSourceService.createRecording(
+                    filename: filename,
+                    filepath: audioRelativePath,
+                    sourceId: sourceId,
+                    fileSizeBytes: fileInfo.size,
+                    durationSeconds: fileInfo.durationSeconds,
+                    deviceSerial: controller.connectionInfo?.serialNumber,
+                    deviceModel: controller.connectionInfo?.model.rawValue,
+                    recordingMode: fileInfo.mode,
+                    syncStatus: .synced
+                )
+                recordingV2Id = recording.id
+            }
         }
 
         // Generate document title
@@ -428,6 +441,12 @@ final class RecordingImportServiceV2 {
         } catch {
             let audioURL = fileSystemService.dataDirectory.appendingPathComponent(audioRelativePath)
             try? FileManager.default.removeItem(at: audioURL)
+            // Revert recording row if we were updating a device-only record
+            if let existingId = existingRecordingId {
+                try? await recordingRepository.updateAfterImport(
+                    id: existingId, filepath: "", syncStatus: .onDeviceOnly
+                )
+            }
             throw error
         }
 

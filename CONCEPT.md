@@ -1715,3 +1715,85 @@ UI/UX приложения соответствует современным с�
 - **Двухколонный Layout для работы с устройствами:**
     - **Main View:** подробная информация о выбранном устройстве, список записей, настройки импорта и т.п.
 
+=====
+
+```markdown
+- Company X
+    - 1:1s:
+        - 1:1s with John (содержит документы-стенограммы всех встреч с John и личные заметки по этим встречам)
+        - 1:1s with Sarah
+    - Project Artemis (содержит документы, связанные с этим проектом: планы, задачи, документацию, стенограммы встреч по
+      этому проекту и т.п.)
+    - Goals and OKRs
+        - Objective 1
+            - Sub Objective 1.1
+            - Sub Objective 1.2
+        - Objective 2
+        - Objective 3
+- My Startup
+    - Hiring
+        - Position A
+            - Candidate 1 (содержит документы-стенограммы всех интервью с этим кандидатом и заметки по этим интервью)
+            - Candidate 2
+        - Position B
+    - Vibe-coding (документы с исходным кодом, architecture decisions и т.п.)
+- Personal
+    - Health
+        - Doctor Visits (документы-стенограммы всех визитов к врачу и заметки по этим визитам)
+        - Workout Routines
+        - Therapy Sessions
+    - Finances
+        - Budget 2026
+        - Investment Research
+
+```
+
+Side Panel:
+
+- Context
+  - All Documents
+  - Uncategorized
+  - Trash
+  - Company X [<add subfolder icon>]
+    - 1:1s [<add subfolder icon>]
+      - 1:1s with John [<add subfolder icon>]
+      - 1:1s with Sarah [<add subfolder icon>]
+  - My Startup [<add subfolder icon>]
+    - Hiring [<add subfolder icon>]
+      - Position A [<add subfolder icon>]
+        - Candidate 1 [<add subfolder icon>]
+        - Candidate 2 [<add subfolder icon>]
+    - Vibe-coding [<add subfolder icon>]
+  - Personal [<add subfolder icon>]
+    - Health [<add subfolder icon>]
+      - Doctor Visits [<add subfolder icon>]
+      - Workout Routines [<add subfolder icon>]
+      - Therapy Sessions [<add subfolder icon>]
+    - Finances [<add subfolder icon>]
+      - Budget 2026 [<add subfolder icon>]
+  - <add folder icon>
+- Recordings
+  - All Recordings
+  - Imported
+  - HiDock P1
+  - HiDock P1 mini
+  - John's iPhone
+  - iCloud Drive
+  - Dropbox
+  - MyFiles (Local Folder Watch)
+  - <add source icon>
+- Calendars
+  - All Events
+  - Google Calendar X
+  - Apple Calendar Y
+  - Outlook Calendar Z
+  - <add calendar account icon>
+- LLMs
+  - Queue (текущая очередь на транскрипцию и анализ)
+    - In Progress (waiting + processing)
+    - Completed
+    - Failed
+  - Settings (Accounts, API Keys, Local Models)
+  - Usage (Limits, Token Usage, Cost Estimation)
+  - Prompts
+```

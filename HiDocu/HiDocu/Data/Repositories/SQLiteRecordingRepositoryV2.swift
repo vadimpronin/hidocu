@@ -124,6 +124,74 @@ final class SQLiteRecordingRepositoryV2: RecordingRepositoryV2, Sendable {
         }
     }
 
+    func fetchByFilenameAndSourceId(_ filename: String, sourceId: Int64) async throws -> RecordingV2? {
+        try await db.asyncRead { database in
+            try RecordingV2DTO
+                .filter(RecordingV2DTO.Columns.filename == filename)
+                .filter(RecordingV2DTO.Columns.recordingSourceId == sourceId)
+                .fetchOne(database)?
+                .toDomain()
+        }
+    }
+
+    func updateAfterImport(id: Int64, filepath: String, syncStatus: RecordingSyncStatus) async throws {
+        _ = try await db.asyncWrite { database in
+            try database.execute(
+                sql: "UPDATE recordings SET filepath = ?, sync_status = ?, modified_at = ? WHERE id = ?",
+                arguments: [filepath, syncStatus.rawValue, Date(), id]
+            )
+        }
+    }
+
+    func deleteOnDeviceOnlyBySourceExcluding(sourceId: Int64, keepFilenames: Set<String>) async throws {
+        _ = try await db.asyncWrite { database in
+            if keepFilenames.isEmpty {
+                try database.execute(
+                    sql: "DELETE FROM recordings WHERE recording_source_id = ? AND sync_status = ?",
+                    arguments: [sourceId, RecordingSyncStatus.onDeviceOnly.rawValue]
+                )
+            } else {
+                let placeholders = Array(repeating: "?", count: keepFilenames.count).joined(separator: ", ")
+                var args: [any DatabaseValueConvertible] = [sourceId, RecordingSyncStatus.onDeviceOnly.rawValue]
+                args.append(contentsOf: keepFilenames.sorted())
+                try database.execute(
+                    sql: "DELETE FROM recordings WHERE recording_source_id = ? AND sync_status = ? AND filename NOT IN (\(placeholders))",
+                    arguments: StatementArguments(args)
+                )
+            }
+        }
+    }
+
+    func batchInsertAndCleanupDeviceOnly(
+        newRecordings: [RecordingV2],
+        sourceId: Int64,
+        keepFilenames: Set<String>
+    ) async throws {
+        _ = try await db.asyncWrite { database in
+            // Insert new device-only records
+            for recording in newRecordings {
+                var dto = RecordingV2DTO(from: recording)
+                try dto.insert(database)
+            }
+
+            // Delete stale on_device_only records not in keepFilenames
+            if keepFilenames.isEmpty {
+                try database.execute(
+                    sql: "DELETE FROM recordings WHERE recording_source_id = ? AND sync_status = ?",
+                    arguments: [sourceId, RecordingSyncStatus.onDeviceOnly.rawValue]
+                )
+            } else {
+                let placeholders = Array(repeating: "?", count: keepFilenames.count).joined(separator: ", ")
+                var args: [any DatabaseValueConvertible] = [sourceId, RecordingSyncStatus.onDeviceOnly.rawValue]
+                args.append(contentsOf: keepFilenames.sorted())
+                try database.execute(
+                    sql: "DELETE FROM recordings WHERE recording_source_id = ? AND sync_status = ? AND filename NOT IN (\(placeholders))",
+                    arguments: StatementArguments(args)
+                )
+            }
+        }
+    }
+
     func observeBySourceId(_ sourceId: Int64) -> AsyncThrowingStream<[RecordingV2], Error> {
         AsyncThrowingStream { continuation in
             let observation = ValueObservation.tracking { database -> [RecordingV2DTO] in

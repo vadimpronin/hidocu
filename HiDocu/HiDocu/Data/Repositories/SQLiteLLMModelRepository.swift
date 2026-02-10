@@ -29,9 +29,11 @@ final class SQLiteLLMModelRepository: LLMModelRepository, Sendable {
                     m.provider,
                     m.model_id,
                     m.display_name,
-                    m.accept_text,
-                    m.accept_audio,
-                    m.accept_image,
+                    m.supports_text,
+                    m.supports_audio,
+                    m.supports_image,
+                    m.max_input_tokens,
+                    m.max_output_tokens,
                     COALESCE(SUM(CASE WHEN am.is_available = 1 AND a.is_active = 1 THEN 1 ELSE 0 END), 0) AS available_count,
                     COALESCE(pc.total_count, 0) AS total_count
                 FROM llm_models m
@@ -51,9 +53,11 @@ final class SQLiteLLMModelRepository: LLMModelRepository, Sendable {
                 }
                 let availableCount: Int = row["available_count"] ?? 0
                 let totalCount: Int = row["total_count"] ?? 0
-                let acceptText: Bool = row["accept_text"] ?? true
-                let acceptAudio: Bool = row["accept_audio"] ?? false
-                let acceptImage: Bool = row["accept_image"] ?? false
+                let supportsText: Bool = row["supports_text"] ?? true
+                let supportsAudio: Bool = row["supports_audio"] ?? false
+                let supportsImage: Bool = row["supports_image"] ?? false
+                let maxInputTokens: Int? = row["max_input_tokens"]
+                let maxOutputTokens: Int? = row["max_output_tokens"]
 
                 return AvailableModel(
                     provider: provider,
@@ -61,9 +65,11 @@ final class SQLiteLLMModelRepository: LLMModelRepository, Sendable {
                     displayName: displayName,
                     availableAccountCount: availableCount,
                     totalAccountCount: totalCount,
-                    acceptText: acceptText,
-                    acceptAudio: acceptAudio,
-                    acceptImage: acceptImage
+                    supportsText: supportsText,
+                    supportsAudio: supportsAudio,
+                    supportsImage: supportsImage,
+                    maxInputTokens: maxInputTokens,
+                    maxOutputTokens: maxOutputTokens
                 )
             }
         }
@@ -89,9 +95,11 @@ final class SQLiteLLMModelRepository: LLMModelRepository, Sendable {
                 let modelDbId: Int64
                 if var existing = existingModel {
                     existing.displayName = modelInfo.displayName
-                    existing.acceptText = modelInfo.acceptText
-                    existing.acceptAudio = modelInfo.acceptAudio
-                    existing.acceptImage = modelInfo.acceptImage
+                    existing.supportsText = modelInfo.supportsText
+                    existing.supportsAudio = modelInfo.supportsAudio
+                    existing.supportsImage = modelInfo.supportsImage
+                    existing.maxInputTokens = modelInfo.maxInputTokens
+                    existing.maxOutputTokens = modelInfo.maxOutputTokens
                     existing.lastSeenAt = now
                     try existing.update(database)
                     modelDbId = existing.id!
@@ -102,9 +110,13 @@ final class SQLiteLLMModelRepository: LLMModelRepository, Sendable {
                             provider: provider,
                             modelId: modelInfo.id,
                             displayName: modelInfo.displayName,
-                            acceptText: modelInfo.acceptText,
-                            acceptAudio: modelInfo.acceptAudio,
-                            acceptImage: modelInfo.acceptImage,
+                            supportsText: modelInfo.supportsText,
+                            supportsAudio: modelInfo.supportsAudio,
+                            supportsImage: modelInfo.supportsImage,
+                            maxInputTokens: modelInfo.maxInputTokens,
+                            maxOutputTokens: modelInfo.maxOutputTokens,
+                            dailyRequestLimit: nil,
+                            tokensPerMinute: nil,
                             firstSeenAt: now,
                             lastSeenAt: now
                         )

@@ -15,9 +15,13 @@ struct LLMModelDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
     var provider: String
     var modelId: String
     var displayName: String
-    var acceptText: Bool
-    var acceptAudio: Bool
-    var acceptImage: Bool
+    var supportsText: Bool
+    var supportsAudio: Bool
+    var supportsImage: Bool
+    var maxInputTokens: Int?
+    var maxOutputTokens: Int?
+    var dailyRequestLimit: Int?
+    var tokensPerMinute: Int?
     var firstSeenAt: Date
     var lastSeenAt: Date
 
@@ -26,9 +30,13 @@ struct LLMModelDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         static let provider = Column(CodingKeys.provider)
         static let modelId = Column(CodingKeys.modelId)
         static let displayName = Column(CodingKeys.displayName)
-        static let acceptText = Column(CodingKeys.acceptText)
-        static let acceptAudio = Column(CodingKeys.acceptAudio)
-        static let acceptImage = Column(CodingKeys.acceptImage)
+        static let supportsText = Column(CodingKeys.supportsText)
+        static let supportsAudio = Column(CodingKeys.supportsAudio)
+        static let supportsImage = Column(CodingKeys.supportsImage)
+        static let maxInputTokens = Column(CodingKeys.maxInputTokens)
+        static let maxOutputTokens = Column(CodingKeys.maxOutputTokens)
+        static let dailyRequestLimit = Column(CodingKeys.dailyRequestLimit)
+        static let tokensPerMinute = Column(CodingKeys.tokensPerMinute)
         static let firstSeenAt = Column(CodingKeys.firstSeenAt)
         static let lastSeenAt = Column(CodingKeys.lastSeenAt)
     }
@@ -38,9 +46,13 @@ struct LLMModelDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         case provider
         case modelId = "model_id"
         case displayName = "display_name"
-        case acceptText = "accept_text"
-        case acceptAudio = "accept_audio"
-        case acceptImage = "accept_image"
+        case supportsText = "supports_text"
+        case supportsAudio = "supports_audio"
+        case supportsImage = "supports_image"
+        case maxInputTokens = "max_input_tokens"
+        case maxOutputTokens = "max_output_tokens"
+        case dailyRequestLimit = "daily_request_limit"
+        case tokensPerMinute = "tokens_per_minute"
         case firstSeenAt = "first_seen_at"
         case lastSeenAt = "last_seen_at"
     }
@@ -50,9 +62,13 @@ struct LLMModelDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
         self.provider = domain.provider.rawValue
         self.modelId = domain.modelId
         self.displayName = domain.displayName
-        self.acceptText = domain.acceptText
-        self.acceptAudio = domain.acceptAudio
-        self.acceptImage = domain.acceptImage
+        self.supportsText = domain.supportsText
+        self.supportsAudio = domain.supportsAudio
+        self.supportsImage = domain.supportsImage
+        self.maxInputTokens = domain.maxInputTokens
+        self.maxOutputTokens = domain.maxOutputTokens
+        self.dailyRequestLimit = domain.dailyRequestLimit
+        self.tokensPerMinute = domain.tokensPerMinute
         self.firstSeenAt = domain.firstSeenAt
         self.lastSeenAt = domain.lastSeenAt
     }
@@ -63,9 +79,13 @@ struct LLMModelDTO: Codable, FetchableRecord, PersistableRecord, Sendable {
             provider: LLMProvider(rawValue: provider) ?? .claude,
             modelId: modelId,
             displayName: displayName,
-            acceptText: acceptText,
-            acceptAudio: acceptAudio,
-            acceptImage: acceptImage,
+            supportsText: supportsText,
+            supportsAudio: supportsAudio,
+            supportsImage: supportsImage,
+            maxInputTokens: maxInputTokens,
+            maxOutputTokens: maxOutputTokens,
+            dailyRequestLimit: dailyRequestLimit,
+            tokensPerMinute: tokensPerMinute,
             firstSeenAt: firstSeenAt,
             lastSeenAt: lastSeenAt
         )

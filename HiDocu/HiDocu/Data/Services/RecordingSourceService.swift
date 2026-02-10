@@ -130,6 +130,12 @@ final class RecordingSourceService {
             return
         }
 
+        // No local file to delete for device-only recordings
+        guard recording.syncStatus != .onDeviceOnly else {
+            AppLogger.recordings.debug("deleteLocalCopy: skipping device-only recording \(recordingId)")
+            return
+        }
+
         let fileURL = fileSystemService.recordingFileURL(relativePath: recording.filepath)
 
         // Update DB first to avoid inconsistent state if DB operation fails
@@ -168,6 +174,46 @@ final class RecordingSourceService {
             }
             throw error
         }
+    }
+
+    // MARK: - Device File Persistence
+
+    /// Persist device-only files to the database so they survive app restarts.
+    /// Creates `.onDeviceOnly` records for new files and cleans up stale ones.
+    /// All inserts and cleanup run in a single write transaction for atomicity.
+    func persistDeviceFiles(
+        _ deviceFiles: [DeviceFileInfo],
+        sourceId: Int64,
+        deviceSerial: String?,
+        deviceModel: String?
+    ) async throws {
+        let existingFilenames = try await recordingRepository.fetchFilenamesForSource(sourceId)
+        let deviceFilenames = Set(deviceFiles.map(\.filename))
+
+        // Build list of new records to insert
+        let newRecordings = deviceFiles
+            .filter { !existingFilenames.contains($0.filename) }
+            .map { file in
+                RecordingV2(
+                    filename: file.filename,
+                    filepath: "",
+                    fileSizeBytes: file.size,
+                    durationSeconds: file.durationSeconds,
+                    createdAt: file.createdAt ?? Date(),
+                    deviceSerial: deviceSerial,
+                    deviceModel: deviceModel,
+                    recordingMode: file.mode,
+                    recordingSourceId: sourceId,
+                    syncStatus: .onDeviceOnly
+                )
+            }
+
+        // Atomic: insert new records + cleanup stale on_device_only in one transaction
+        try await recordingRepository.batchInsertAndCleanupDeviceOnly(
+            newRecordings: newRecordings,
+            sourceId: sourceId,
+            keepFilenames: deviceFilenames
+        )
     }
 
     // MARK: - Dedup Helpers

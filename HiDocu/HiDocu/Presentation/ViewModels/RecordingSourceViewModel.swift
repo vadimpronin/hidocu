@@ -91,14 +91,25 @@ final class RecordingSourceViewModel {
         do {
             // Fetch local recordings for this source
             let localRecordings = try await recordingRepository.fetchBySourceId(sourceId)
-            let localByFilename = Dictionary(
-                localRecordings.map { ($0.filename, $0) },
-                uniquingKeysWith: { first, _ in first }
-            )
 
             if let controller = deviceController, controller.isConnected {
                 // Online: merge device files with local recordings
                 let deviceFiles = try await controller.listFiles()
+
+                // Persist device-only files to DB for offline visibility
+                try await recordingSourceService.persistDeviceFiles(
+                    deviceFiles,
+                    sourceId: sourceId,
+                    deviceSerial: controller.connectionInfo?.serialNumber,
+                    deviceModel: controller.connectionInfo?.model.rawValue
+                )
+
+                // Re-fetch local recordings so the merge picks up newly persisted records
+                let refreshedRecordings = try await recordingRepository.fetchBySourceId(sourceId)
+                let refreshedByFilename = Dictionary(
+                    refreshedRecordings.map { ($0.filename, $0) },
+                    uniquingKeysWith: { first, _ in first }
+                )
 
                 // Store device files for later access (import operations)
                 deviceFilesByFilename = Dictionary(
@@ -112,8 +123,8 @@ final class RecordingSourceViewModel {
                 // Process device files
                 for file in deviceFiles {
                     seenFilenames.insert(file.filename)
-                    let localRec = localByFilename[file.filename]
-                    let status: RecordingSyncStatus = localRec != nil ? .synced : .onDeviceOnly
+                    let localRec = refreshedByFilename[file.filename]
+                    let status: RecordingSyncStatus = (localRec != nil && localRec?.syncStatus != .onDeviceOnly) ? .synced : .onDeviceOnly
                     unified.append(UnifiedRecordingRow(
                         id: file.filename,
                         filename: file.filename,
@@ -128,7 +139,7 @@ final class RecordingSourceViewModel {
                 }
 
                 // Add local-only recordings (not on device anymore)
-                for rec in localRecordings where !seenFilenames.contains(rec.filename) {
+                for rec in refreshedRecordings where !seenFilenames.contains(rec.filename) {
                     unified.append(UnifiedRecordingRow(
                         id: rec.filename,
                         filename: rec.filename,
@@ -144,7 +155,7 @@ final class RecordingSourceViewModel {
 
                 rows = unified
             } else {
-                // Offline: show local recordings only
+                // Offline: show local recordings with their stored sync status
                 deviceFilesByFilename = [:]
                 rows = localRecordings.map { rec in
                     UnifiedRecordingRow(
@@ -155,7 +166,7 @@ final class RecordingSourceViewModel {
                         durationSeconds: rec.durationSeconds ?? 0,
                         size: rec.fileSizeBytes ?? 0,
                         mode: rec.recordingMode,
-                        syncStatus: .localOnly,
+                        syncStatus: rec.syncStatus,
                         recordingId: rec.id
                     )
                 }
@@ -196,6 +207,9 @@ final class RecordingSourceViewModel {
                 rows[i].syncStatus = .synced
             } else if onDevice {
                 rows[i].syncStatus = .onDeviceOnly
+            } else if let localRec = localByFilename[rows[i].filename] {
+                // Preserve DB status (e.g. .onDeviceOnly if device disconnected mid-refresh)
+                rows[i].syncStatus = localRec.syncStatus
             } else {
                 rows[i].syncStatus = .localOnly
             }
@@ -241,6 +255,7 @@ final class RecordingSourceViewModel {
         for filename in filenames {
             guard let row = rows.first(where: { $0.filename == filename }),
                   row.documentInfo.isEmpty,
+                  row.syncStatus != .onDeviceOnly,
                   let recordingId = row.recordingId else { continue }
             do {
                 guard let recording = try await recordingRepository.fetchById(recordingId) else { continue }

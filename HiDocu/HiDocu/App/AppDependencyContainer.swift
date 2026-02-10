@@ -41,7 +41,6 @@ final class AppDependencyContainer {
     let apiLogRepository: SQLiteAPILogRepository
     let llmUsageRepository: SQLiteLLMUsageRepository
     let llmJobRepository: SQLiteLLMJobRepository
-    let llmModelLimitRepository: SQLiteLLMModelLimitRepository
     let llmModelRepository: SQLiteLLMModelRepository
     let recordingSourceRepository: SQLiteRecordingSourceRepository
 
@@ -91,7 +90,6 @@ final class AppDependencyContainer {
         self.apiLogRepository = SQLiteAPILogRepository(databaseManager: databaseManager)
         self.llmUsageRepository = SQLiteLLMUsageRepository(databaseManager: databaseManager)
         self.llmJobRepository = SQLiteLLMJobRepository(databaseManager: databaseManager)
-        self.llmModelLimitRepository = SQLiteLLMModelLimitRepository(databaseManager: databaseManager)
         self.llmModelRepository = SQLiteLLMModelRepository(databaseManager: databaseManager)
         self.recordingSourceRepository = SQLiteRecordingSourceRepository(databaseManager: databaseManager)
 

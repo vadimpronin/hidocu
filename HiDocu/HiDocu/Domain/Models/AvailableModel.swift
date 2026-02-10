@@ -11,9 +11,11 @@ import Foundation
 struct ModelInfo: Sendable, Equatable {
     let id: String
     let displayName: String
-    var acceptText: Bool = true
-    var acceptAudio: Bool = false
-    var acceptImage: Bool = false
+    var supportsText: Bool = true
+    var supportsAudio: Bool = false
+    var supportsImage: Bool = false
+    var maxInputTokens: Int?
+    var maxOutputTokens: Int?
 }
 
 /// A model available from a specific LLM provider.
@@ -29,14 +31,20 @@ struct AvailableModel: Hashable, Identifiable, Sendable {
     /// Total number of active accounts for this provider.
     let totalAccountCount: Int
 
-    /// Whether this model accepts text input.
-    let acceptText: Bool
+    /// Whether this model supports text input.
+    let supportsText: Bool
 
-    /// Whether this model accepts audio input.
-    let acceptAudio: Bool
+    /// Whether this model supports audio input.
+    let supportsAudio: Bool
 
-    /// Whether this model accepts image input.
-    let acceptImage: Bool
+    /// Whether this model supports image input.
+    let supportsImage: Bool
+
+    /// Maximum input token limit, if known.
+    let maxInputTokens: Int?
+
+    /// Maximum output token limit, if known.
+    let maxOutputTokens: Int?
 
     var id: String { "\(provider.rawValue):\(modelId)" }
 
@@ -72,9 +80,11 @@ extension AvailableModel {
             displayName: displayName,
             availableAccountCount: 1,
             totalAccountCount: 1,
-            acceptText: true,
-            acceptAudio: false,
-            acceptImage: false
+            supportsText: true,
+            supportsAudio: false,
+            supportsImage: false,
+            maxInputTokens: nil,
+            maxOutputTokens: nil
         )
     }
 }
