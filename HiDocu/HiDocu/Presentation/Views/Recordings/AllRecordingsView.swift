@@ -26,7 +26,13 @@ struct AllRecordingsView: View {
                 ProgressView("Loading recordings...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if viewModel.rows.isEmpty {
-                emptyState
+                RecordingEmptyStateView(
+                    title: "No Recordings",
+                    subtitle: "Import recordings from a connected device to get started.",
+                    errorMessage: viewModel.errorMessage,
+                    isLoading: viewModel.isLoading,
+                    onRefresh: { Task { await viewModel.loadData() } }
+                )
             } else {
                 recordingTable
             }
@@ -55,17 +61,16 @@ struct AllRecordingsView: View {
     private var recordingTable: some View {
         @Bindable var bindableVM = viewModel
         return Table(viewModel.sortedRows, selection: $bindableVM.selection, sortOrder: $bindableVM.sortOrder) {
-            // Source icon column
             TableColumn("") { (row: AllRecordingsRow) in
                 sourceIcon(for: row)
             }
-            .width(28)
+            .width(RecordingTableConstants.sourceIconColumnWidth)
 
             TableColumn("Source") { (row: AllRecordingsRow) in
                 Text(row.sourceName ?? "Unknown")
                     .foregroundStyle(row.sourceName != nil ? .secondary : .tertiary)
             }
-            .width(min: 100, ideal: 130)
+            .width(min: RecordingTableConstants.sourceColumnWidth.min, ideal: RecordingTableConstants.sourceColumnWidth.ideal)
 
             TableColumn("Name", value: \.filename) { row in
                 Text(row.filename)
@@ -73,21 +78,13 @@ struct AllRecordingsView: View {
                     .truncationMode(.middle)
                     .monospacedDigit()
             }
-            .width(min: 150, ideal: 250)
+            .width(min: RecordingTableConstants.nameColumnWidth.min, ideal: RecordingTableConstants.nameColumnWidth.ideal)
 
             TableColumn("Date", value: \.createdAt) { row in
-                Text(row.createdAt.formatted(
-                    .dateTime
-                        .day(.twoDigits)
-                        .month(.abbreviated)
-                        .year()
-                        .hour(.twoDigits(amPM: .omitted))
-                        .minute(.twoDigits)
-                        .second(.twoDigits)
-                ))
-                .monospacedDigit()
+                Text(row.createdAt.formatted(RecordingTableConstants.dateFormat))
+                    .monospacedDigit()
             }
-            .width(min: 180, ideal: 190)
+            .width(min: RecordingTableConstants.dateColumnWidth.min, ideal: RecordingTableConstants.dateColumnWidth.ideal)
 
             TableColumn("Duration") { (row: AllRecordingsRow) in
                 if let duration = row.durationSeconds {
@@ -98,12 +95,12 @@ struct AllRecordingsView: View {
                         .foregroundStyle(.tertiary)
                 }
             }
-            .width(min: 70, ideal: 80)
+            .width(min: RecordingTableConstants.durationColumnWidth.min, ideal: RecordingTableConstants.durationColumnWidth.ideal)
 
             TableColumn("Mode") { (row: AllRecordingsRow) in
-                Text(row.recordingMode?.displayName ?? "—")
+                Text(row.recordingMode?.displayName ?? "\u{2014}")
             }
-            .width(min: 55, ideal: 70)
+            .width(min: RecordingTableConstants.modeColumnWidth.min, ideal: RecordingTableConstants.modeColumnWidth.ideal)
 
             TableColumn("Size") { (row: AllRecordingsRow) in
                 if let size = row.fileSizeBytes {
@@ -114,7 +111,7 @@ struct AllRecordingsView: View {
                         .foregroundStyle(.tertiary)
                 }
             }
-            .width(min: 60, ideal: 80)
+            .width(min: RecordingTableConstants.sizeColumnWidth.min, ideal: RecordingTableConstants.sizeColumnWidth.ideal)
 
             TableColumn("") { (row: AllRecordingsRow) in
                 AvailabilityStatusIcon(
@@ -122,7 +119,7 @@ struct AllRecordingsView: View {
                     isDeviceOnline: row.recordingSourceId.map { connectedSourceIds.contains($0) } ?? false
                 )
             }
-            .width(28)
+            .width(RecordingTableConstants.statusIconColumnWidth)
 
             TableColumn("") { (row: AllRecordingsRow) in
                 DocumentStatusCell(
@@ -138,7 +135,7 @@ struct AllRecordingsView: View {
                     }
                 )
             }
-            .width(min: 80, ideal: 120)
+            .width(min: RecordingTableConstants.documentColumnWidth.min, ideal: RecordingTableConstants.documentColumnWidth.ideal)
         }
         .contextMenu(forSelectionType: Int64.self) { selectedIds in
             if !selectedIds.isEmpty {
@@ -212,59 +209,10 @@ struct AllRecordingsView: View {
     private func sourceIcon(for row: AllRecordingsRow) -> some View {
         if let modelStr = row.sourceDeviceModel,
            let model = DeviceModel(rawValue: modelStr) {
-            if let imageName = model.imageName {
-                Image(imageName)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 16, height: 16)
-                    .foregroundStyle(.secondary)
-            } else {
-                Image(systemName: model.sfSymbolName)
-                    .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
-            }
+            DeviceIconView(model: model, size: 16)
         } else {
-            Image(systemName: "square.and.arrow.down")
-                .font(.system(size: 13))
-                .foregroundStyle(.tertiary)
+            DeviceIconView(model: nil, size: 16)
         }
-    }
-
-    // MARK: - Empty State
-
-    private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "waveform.slash")
-                .font(.system(size: 36))
-                .foregroundStyle(.tertiary)
-
-            Text("No Recordings")
-                .font(.title3)
-                .foregroundStyle(.secondary)
-
-            Text("Import recordings from a connected device to get started.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 300)
-
-            if let error = viewModel.errorMessage {
-                Text(error)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-            }
-
-            Button {
-                Task { await viewModel.loadData() }
-            } label: {
-                Label("Refresh", systemImage: "arrow.clockwise")
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .padding(.top, 4)
-            .disabled(viewModel.isLoading)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Actions

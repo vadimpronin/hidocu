@@ -148,6 +148,12 @@
 		AB1234567890ABCD12340012 /* AvailabilityStatusIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340002 /* AvailabilityStatusIcon.swift */; };
 		AB1234567890ABCD12340013 /* DocumentStatusCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340003 /* DocumentStatusCell.swift */; };
 		AB1234567890ABCD12340014 /* RecordingContextMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340004 /* RecordingContextMenu.swift */; };
+		4621EB24B602474480B72556 /* DeviceIconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6445531941E4C1AAAA93677 /* DeviceIconView.swift */; };
+		844B76E919A0453990DD9A7F /* ImportButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B2CD920910D4121B523536E /* ImportButton.swift */; };
+		BE6826ADC71A49FBBFAF5A6E /* ImportProgressViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 225966B851CE4A9A86ECCBBF /* ImportProgressViews.swift */; };
+		C4D7FF49786E48F89353B64C /* DeviceHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAE7D44C08D44BD683B1959C /* DeviceHeaderView.swift */; };
+		E056915D9F9F40CC9DD3D09F /* RecordingTableConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40494DDD4B60440EA94DFA54 /* RecordingTableConstants.swift */; };
+		EC1985E36FA9478FA3CC9FEF /* RecordingEmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 278128D2641A4FA4ACAE9282 /* RecordingEmptyStateView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -302,6 +308,12 @@
 		AB1234567890ABCD12340002 /* AvailabilityStatusIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvailabilityStatusIcon.swift; sourceTree = "<group>"; };
 		AB1234567890ABCD12340003 /* DocumentStatusCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentStatusCell.swift; sourceTree = "<group>"; };
 		AB1234567890ABCD12340004 /* RecordingContextMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingContextMenu.swift; sourceTree = "<group>"; };
+		B6445531941E4C1AAAA93677 /* DeviceIconView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceIconView.swift; sourceTree = "<group>"; };
+		2B2CD920910D4121B523536E /* ImportButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportButton.swift; sourceTree = "<group>"; };
+		225966B851CE4A9A86ECCBBF /* ImportProgressViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportProgressViews.swift; sourceTree = "<group>"; };
+		FAE7D44C08D44BD683B1959C /* DeviceHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceHeaderView.swift; sourceTree = "<group>"; };
+		40494DDD4B60440EA94DFA54 /* RecordingTableConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingTableConstants.swift; sourceTree = "<group>"; };
+		278128D2641A4FA4ACAE9282 /* RecordingEmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingEmptyStateView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -393,7 +405,12 @@
 				DD0000C00000000C /* MarkdownEditableView.swift */,				02EA9E22A4AFD964CEEF863C /* JobMonitorPopoverView.swift */,
 				48AB4784CE383DE158F98103 /* ToolbarQuotaIndicatorView.swift */,
 				0B943509DFD1D703D9B64291 /* QuotaPopoverView.swift */,
-				23ED289FB59AE3C4686E8DFC /* ToolbarJobMonitorView.swift */,			);
+				23ED289FB59AE3C4686E8DFC /* ToolbarJobMonitorView.swift */,
+				B6445531941E4C1AAAA93677 /* DeviceIconView.swift */,
+				2B2CD920910D4121B523536E /* ImportButton.swift */,
+				225966B851CE4A9A86ECCBBF /* ImportProgressViews.swift */,
+				FAE7D44C08D44BD683B1959C /* DeviceHeaderView.swift */,
+			);
 			path = Components;
 			sourceTree = "<group>";
 		};
@@ -711,6 +728,8 @@
 				AB1234567890ABCD12340002 /* AvailabilityStatusIcon.swift */,
 				AB1234567890ABCD12340003 /* DocumentStatusCell.swift */,
 				AB1234567890ABCD12340004 /* RecordingContextMenu.swift */,
+				40494DDD4B60440EA94DFA54 /* RecordingTableConstants.swift */,
+				278128D2641A4FA4ACAE9282 /* RecordingEmptyStateView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -968,6 +987,12 @@
 				AB1234567890ABCD12340012 /* AvailabilityStatusIcon.swift in Sources */,
 				AB1234567890ABCD12340013 /* DocumentStatusCell.swift in Sources */,
 				AB1234567890ABCD12340014 /* RecordingContextMenu.swift in Sources */,
+				4621EB24B602474480B72556 /* DeviceIconView.swift in Sources */,
+				844B76E919A0453990DD9A7F /* ImportButton.swift in Sources */,
+				BE6826ADC71A49FBBFAF5A6E /* ImportProgressViews.swift in Sources */,
+				C4D7FF49786E48F89353B64C /* DeviceHeaderView.swift in Sources */,
+				E056915D9F9F40CC9DD3D09F /* RecordingTableConstants.swift in Sources */,
+				EC1985E36FA9478FA3CC9FEF /* RecordingEmptyStateView.swift in Sources */,
 );
 			runOnlyForDeploymentPostprocessing = 0;
 		};
