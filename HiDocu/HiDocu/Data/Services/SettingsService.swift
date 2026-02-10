@@ -47,6 +47,7 @@ struct AppSettings: Codable, Sendable {
         var defaultTranscriptionModel: String = ""
         var defaultJudgeProvider: String = "gemini"
         var defaultJudgeModel: String = ""
+        var apiDebugLogging: Bool = false
         var summaryPromptTemplate: String = Self.defaultPromptTemplate
 
         static let defaultPromptTemplate: String = """
@@ -170,6 +171,11 @@ final class SettingsService {
 
     func updateJudgeModel(_ model: String) {
         settings.llm.defaultJudgeModel = model
+        save()
+    }
+
+    func updateAPIDebugLogging(_ enabled: Bool) {
+        settings.llm.apiDebugLogging = enabled
         save()
     }
 }

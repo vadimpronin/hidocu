@@ -112,7 +112,7 @@ actor TokenManager {
         }
 
         // Call provider's refresh endpoint
-        let newBundle = try await strategy.refreshToken(currentToken.refreshToken)
+        let newBundle = try await strategy.refreshToken(currentToken.refreshToken, account: account.email)
 
         // Build new token data, preserving clientId from current token
         let newTokenData = TokenData(

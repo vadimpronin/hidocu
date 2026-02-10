@@ -54,11 +54,13 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
 
     let provider: LLMProvider = .gemini
     private let urlSession: URLSession
+    private let debugLogger: APIDebugLogger?
 
     // MARK: - Initialization
 
-    init(urlSession: URLSession = .shared) {
+    init(urlSession: URLSession = .shared, debugLogger: APIDebugLogger? = nil) {
         self.urlSession = urlSession
+        self.debugLogger = debugLogger
     }
 
     /// Initiates OAuth2 authentication flow without PKCE.
@@ -143,7 +145,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
     /// - Parameter refreshToken: Valid refresh token
     /// - Returns: New token bundle with refreshed access token and project ID
     /// - Throws: `LLMError.tokenRefreshFailed` if refresh fails
-    func refreshToken(_ refreshToken: String) async throws -> OAuthTokenBundle {
+    func refreshToken(_ refreshToken: String, account: String? = nil) async throws -> OAuthTokenBundle {
         AppLogger.llm.info("Refreshing Gemini access token")
 
         // Build form body
@@ -169,17 +171,14 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         request.httpBody = bodyData
 
         // Execute request
-        let (data, response): (Data, URLResponse)
+        let data: Data
+        let httpResponse: HTTPURLResponse
 
         do {
-            (data, response) = try await urlSession.data(for: request)
+            (data, httpResponse) = try await performRequest(request, model: "token-refresh", debugContext: nil, account: account)
         } catch {
             AppLogger.llm.error("Token refresh network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMError.invalidResponse(detail: "Not an HTTP response")
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
@@ -213,10 +212,10 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         AppLogger.llm.debug("Token refresh successful, expires at: \(expiresAt)")
 
         // Fetch user email (we need it for the token bundle)
-        let email = try await fetchUserEmail(accessToken: accessToken)
+        let email = try await fetchUserEmail(accessToken: accessToken, account: account)
 
         // Re-fetch project ID with new access token
-        let projectId = try await fetchProjectId(accessToken: accessToken)
+        let projectId = try await fetchProjectId(accessToken: accessToken, account: account)
 
         return OAuthTokenBundle(
             accessToken: accessToken,
@@ -247,7 +246,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
     ///   - accountId: Account ID (unused, kept for protocol conformance)
     /// - Returns: Sorted array of unique model identifiers
     /// - Throws: `LLMError` if fetch fails
-    func fetchModels(accessToken: String, accountId: String?, tokenData: TokenData? = nil) async throws -> [ModelInfo] {
+    func fetchModels(accessToken: String, accountId: String?, tokenData: TokenData? = nil, account: String? = nil) async throws -> [ModelInfo] {
         let url = URL(string: "\(Self.apiBaseURL):retrieveUserQuota")!
 
         var request = URLRequest(url: url)
@@ -265,17 +264,14 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, response): (Data, URLResponse)
+        let data: Data
+        let httpResponse: HTTPURLResponse
 
         do {
-            (data, response) = try await urlSession.data(for: request)
+            (data, httpResponse) = try await performRequest(request, model: "fetch-models", debugContext: nil, account: account)
         } catch {
             AppLogger.llm.error("fetchModels network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMError.invalidResponse(detail: "Not an HTTP response")
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
@@ -305,7 +301,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         var results = sortedModels.map { ModelInfo(id: $0, displayName: $0, supportsText: true, supportsAudio: true, supportsImage: true) }
 
         // Fetch token limits from the models API and merge into results
-        let limits = await fetchModelLimits(accessToken: accessToken)
+        let limits = await fetchModelLimits(accessToken: accessToken, account: account)
         if !limits.isEmpty {
             results = results.map { info in
                 guard let limit = limits[info.id] else { return info }
@@ -322,7 +318,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
     /// Fetches model metadata (token limits) from the Google AI models API.
     /// Returns a dictionary keyed by model ID (without `models/` prefix).
     /// Non-fatal: returns empty dictionary on failure.
-    private func fetchModelLimits(accessToken: String) async -> [String: (inputTokenLimit: Int, outputTokenLimit: Int)] {
+    private func fetchModelLimits(accessToken: String, account: String? = nil) async -> [String: (inputTokenLimit: Int, outputTokenLimit: Int)] {
         guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models") else { return [:] }
 
         var request = URLRequest(url: url)
@@ -331,10 +327,9 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         request.timeoutInterval = 15
 
         do {
-            let (data, response) = try await urlSession.data(for: request)
+            let (data, httpResponse) = try await performRequest(request, model: "fetch-model-limits", debugContext: nil, account: account)
 
-            guard let httpResponse = response as? HTTPURLResponse,
-                  (200...299).contains(httpResponse.statusCode) else {
+            guard (200...299).contains(httpResponse.statusCode) else {
                 AppLogger.llm.debug("fetchModelLimits: non-2xx response, skipping token limits")
                 return [:]
             }
@@ -383,7 +378,8 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         model: String,
         accessToken: String,
         options: LLMRequestOptions,
-        tokenData: TokenData? = nil
+        tokenData: TokenData? = nil,
+        account: String? = nil
     ) async throws -> LLMResponse {
         AppLogger.llm.info("Sending chat request to Gemini Cloud Code API, model: \(model)")
 
@@ -474,22 +470,23 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         request.setValue(Self.cliMetadata, forHTTPHeaderField: "Client-Metadata")
         request.httpBody = bodyData
 
-        // Execute request
-        let (data, response): (Data, URLResponse)
+        // Execute request with debug logging
+        let data: Data
+        let httpResponse: HTTPURLResponse
 
         let requestStart = Date()
         do {
-            (data, response) = try await urlSession.data(for: request)
+            (data, httpResponse) = try await performRequest(
+                request, model: model, debugContext: options.debugContext, account: account
+            )
+        } catch let llmError as LLMError {
+            throw llmError
         } catch {
             AppLogger.llm.error("Chat request network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
         }
         let elapsed = Date().timeIntervalSince(requestStart)
         AppLogger.llm.info("Gemini response received in \(String(format: "%.1f", elapsed))s (\(data.count) bytes)")
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMError.invalidResponse(detail: "Not an HTTP response")
-        }
 
         // Handle non-2xx status codes
         guard (200...299).contains(httpResponse.statusCode) else {
@@ -549,6 +546,25 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         )
     }
 
+    // MARK: - Debug-Instrumented Request
+
+    private func performRequest(
+        _ request: URLRequest,
+        model: String,
+        debugContext: APIDebugContext?,
+        account: String? = nil
+    ) async throws -> (Data, HTTPURLResponse) {
+        try await performDebugLoggingRequest(
+            request,
+            urlSession: urlSession,
+            provider: provider,
+            model: model,
+            debugContext: debugContext,
+            debugLogger: debugLogger,
+            account: account
+        )
+    }
+
     // MARK: - Private Helpers
 
     /// Fetches the Google Cloud Project ID required for the Cloud Code API.
@@ -559,7 +575,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
     /// - Parameter accessToken: Valid access token
     /// - Returns: Cloud AI Companion project ID
     /// - Throws: `LLMError` if fetch fails
-    private func fetchProjectId(accessToken: String) async throws -> String {
+    private func fetchProjectId(accessToken: String, account: String? = nil) async throws -> String {
         let url = URL(string: "\(Self.apiBaseURL):loadCodeAssist")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -578,17 +594,14 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, response): (Data, URLResponse)
+        let data: Data
+        let httpResponse: HTTPURLResponse
 
         do {
-            (data, response) = try await urlSession.data(for: request)
+            (data, httpResponse) = try await performRequest(request, model: "load-code-assist", debugContext: nil, account: account)
         } catch {
             AppLogger.llm.error("loadCodeAssist network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMError.invalidResponse(detail: "Not an HTTP response")
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
@@ -632,7 +645,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         }
 
         // Activate Code Assist and return the project ID
-        return try await activateCodeAssist(accessToken: accessToken, tierID: tierID)
+        return try await activateCodeAssist(accessToken: accessToken, tierID: tierID, account: account)
     }
 
     /// Activates Code Assist by calling the onboardUser endpoint with polling.
@@ -645,7 +658,7 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
     ///   - tierID: Tier ID to activate (typically extracted from allowedTiers in loadCodeAssist)
     /// - Returns: Cloud AI Companion project ID after successful activation
     /// - Throws: `LLMError` if activation fails or times out
-    private func activateCodeAssist(accessToken: String, tierID: String) async throws -> String {
+    private func activateCodeAssist(accessToken: String, tierID: String, account: String? = nil) async throws -> String {
         AppLogger.llm.info("Activating Code Assist with tier: \(tierID)")
 
         let url = URL(string: "\(Self.apiBaseURL):onboardUser")!
@@ -685,17 +698,14 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
             request.setValue(Self.cliMetadata, forHTTPHeaderField: "Client-Metadata")
             request.httpBody = bodyData
 
-            let (data, response): (Data, URLResponse)
+            let data: Data
+            let httpResponse: HTTPURLResponse
 
             do {
-                (data, response) = try await urlSession.data(for: request)
+                (data, httpResponse) = try await performRequest(request, model: "onboard-user", debugContext: nil, account: account)
             } catch {
                 AppLogger.llm.error("onboardUser network error: \(error.localizedDescription)")
                 throw LLMError.networkError(underlying: error.localizedDescription)
-            }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw LLMError.invalidResponse(detail: "Not an HTTP response")
             }
 
             guard (200...299).contains(httpResponse.statusCode) else {
@@ -792,17 +802,14 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
         request.httpBody = bodyData
 
         // Execute request
-        let (data, response): (Data, URLResponse)
+        let data: Data
+        let httpResponse: HTTPURLResponse
 
         do {
-            (data, response) = try await urlSession.data(for: request)
+            (data, httpResponse) = try await performRequest(request, model: "token-exchange", debugContext: nil)
         } catch {
             AppLogger.llm.error("Token exchange network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMError.invalidResponse(detail: "Not an HTTP response")
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
@@ -851,23 +858,20 @@ final class GeminiProvider: LLMProviderStrategy, Sendable {
     /// - Parameter accessToken: Valid access token
     /// - Returns: User email address
     /// - Throws: `LLMError` if fetch fails
-    private func fetchUserEmail(accessToken: String) async throws -> String {
+    private func fetchUserEmail(accessToken: String, account: String? = nil) async throws -> String {
         var request = URLRequest(url: URL(string: Self.userinfoURL)!)
         request.httpMethod = "GET"
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let (data, response): (Data, URLResponse)
+        let data: Data
+        let httpResponse: HTTPURLResponse
 
         do {
-            (data, response) = try await urlSession.data(for: request)
+            (data, httpResponse) = try await performRequest(request, model: "fetch-user-email", debugContext: nil, account: account)
         } catch {
             AppLogger.llm.error("Userinfo request network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMError.invalidResponse(detail: "Not an HTTP response")
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {

@@ -33,11 +33,13 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
 
     let provider: LLMProvider = .claude
     private let urlSession: URLSession
+    private let debugLogger: APIDebugLogger?
 
     // MARK: - Initialization
 
-    init(urlSession: URLSession = .shared) {
+    init(urlSession: URLSession = .shared, debugLogger: APIDebugLogger? = nil) {
         self.urlSession = urlSession
+        self.debugLogger = debugLogger
     }
 
     // MARK: - LLMProviderStrategy
@@ -82,7 +84,7 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
         )
     }
 
-    func refreshToken(_ refreshToken: String) async throws -> OAuthTokenBundle {
+    func refreshToken(_ refreshToken: String, account: String? = nil) async throws -> OAuthTokenBundle {
         AppLogger.llm.info("Refreshing Claude access token")
 
         guard !refreshToken.isEmpty else {
@@ -103,11 +105,7 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.httpBody = jsonData
 
-        let (data, response) = try await urlSession.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMError.invalidResponse(detail: "Response is not HTTP")
-        }
+        let (data, httpResponse) = try await performRequest(request, model: "token-refresh", debugContext: nil, account: account)
 
         guard httpResponse.statusCode == 200 else {
             let message = String(data: data, encoding: .utf8) ?? "Unknown error"
@@ -123,7 +121,7 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
         expiresAt.timeIntervalSinceNow < 300
     }
 
-    func fetchModels(accessToken: String, accountId: String?, tokenData: TokenData? = nil) async throws -> [ModelInfo] {
+    func fetchModels(accessToken: String, accountId: String?, tokenData: TokenData? = nil, account: String? = nil) async throws -> [ModelInfo] {
         AppLogger.llm.debug("Fetching model list from Claude API")
         var request = URLRequest(url: URL(string: "\(Self.apiBaseURL)/v1/models")!)
         request.httpMethod = "GET"
@@ -146,11 +144,7 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
         request.setValue("60", forHTTPHeaderField: "X-Stainless-Timeout")
         request.setValue("keep-alive", forHTTPHeaderField: "Connection")
 
-        let (data, response) = try await urlSession.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMError.invalidResponse(detail: "Response is not HTTP")
-        }
+        let (data, httpResponse) = try await performRequest(request, model: "fetch-models", debugContext: nil, account: account)
 
         guard (200..<300).contains(httpResponse.statusCode) else {
             let message = String(data: data, encoding: .utf8) ?? "Unknown error"
@@ -179,7 +173,8 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
         model: String,
         accessToken: String,
         options: LLMRequestOptions,
-        tokenData: TokenData? = nil
+        tokenData: TokenData? = nil,
+        account: String? = nil
     ) async throws -> LLMResponse {
         AppLogger.llm.info("Sending chat request to Claude API with model: \(model)")
 
@@ -268,11 +263,9 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
 
         AppLogger.llm.debug("Sending request to \(request.url?.absoluteString ?? "unknown")")
 
-        let (data, response) = try await urlSession.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMError.invalidResponse(detail: "Response is not HTTP")
-        }
+        let (data, httpResponse) = try await performRequest(
+            request, model: model, debugContext: options.debugContext, account: account
+        )
 
         guard (200..<300).contains(httpResponse.statusCode) else {
             let message = String(data: data, encoding: .utf8) ?? "Unknown error"
@@ -307,6 +300,25 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
             inputTokens: inputTokens,
             outputTokens: outputTokens,
             finishReason: finishReason
+        )
+    }
+
+    // MARK: - Debug-Instrumented Request
+
+    private func performRequest(
+        _ request: URLRequest,
+        model: String,
+        debugContext: APIDebugContext?,
+        account: String? = nil
+    ) async throws -> (Data, HTTPURLResponse) {
+        try await performDebugLoggingRequest(
+            request,
+            urlSession: urlSession,
+            provider: provider,
+            model: model,
+            debugContext: debugContext,
+            debugLogger: debugLogger,
+            account: account
         )
     }
 
@@ -364,11 +376,7 @@ final class ClaudeProvider: LLMProviderStrategy, Sendable {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.httpBody = jsonData
 
-        let (data, response) = try await urlSession.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMError.invalidResponse(detail: "Response is not HTTP")
-        }
+        let (data, httpResponse) = try await performRequest(request, model: "token-exchange", debugContext: nil)
 
         guard httpResponse.statusCode == 200 else {
             let message = String(data: data, encoding: .utf8) ?? "Unknown error"

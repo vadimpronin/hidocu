@@ -15,6 +15,7 @@ struct HiDocuApp: App {
     @State private var navigationVM = NavigationViewModelV2()
     @State private var importError: String?
     @State private var showImportError = false
+    @State private var isAPIDebugEnabled = false
     #if DEBUG
     @State private var showClearStorageConfirmation = false
     #endif
@@ -24,9 +25,16 @@ struct HiDocuApp: App {
             ContentViewV2(container: container, navigationVM: navigationVM)
                 .withDependencies(container)
                 .task {
+                    isAPIDebugEnabled = container.settingsService.settings.llm.apiDebugLogging
                     await container.trashService.autoCleanup()
                     await container.llmService.reloadModelsFromDB()
                     await container.llmService.refreshAvailableModels()
+                }
+                .onChange(of: isAPIDebugEnabled) { _, newValue in
+                    container.settingsService.updateAPIDebugLogging(newValue)
+                    Task {
+                        await container.apiDebugLogger.setEnabled(newValue)
+                    }
                 }
                 .alert("Import Failed", isPresented: $showImportError) {
                     Button("OK") {}
@@ -67,8 +75,21 @@ struct HiDocuApp: App {
                 .keyboardShortcut("o")
             }
 
-            #if DEBUG
             CommandMenu("Debug") {
+                Toggle("API Debug Logging", isOn: $isAPIDebugEnabled)
+                    .keyboardShortcut("l", modifiers: [.command, .shift, .option])
+
+                Button("Open Debug Logs") {
+                    Task {
+                        let url = await container.apiDebugLogger.logDirectoryURL
+                        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+                        NSWorkspace.shared.activateFileViewerSelecting([url])
+                    }
+                }
+
+                #if DEBUG
+                Divider()
+
                 Button("Simulate Device Connection") {
                     Task { @MainActor in
                         container.deviceManager.simulateDeviceConnection()
@@ -81,8 +102,8 @@ struct HiDocuApp: App {
                 Button("Clear All Local Storage...") {
                     showClearStorageConfirmation = true
                 }
+                #endif
             }
-            #endif
         }
 
         Settings {

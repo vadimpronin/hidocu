@@ -133,6 +133,26 @@ struct TrashView: View {
                 }
                 .disabled(viewModel.entries.isEmpty)
             }
+            ToolbarItem(placement: .secondaryAction) {
+                Menu {
+                    Button("Date Deleted (Newest First)") {
+                        bindableVM.sortOrder = [.init(\.deletedAt, order: .reverse)]
+                    }
+                    Button("Date Deleted (Oldest First)") {
+                        bindableVM.sortOrder = [.init(\.deletedAt)]
+                    }
+                    Divider()
+                    Button("Title (A-Z)") {
+                        bindableVM.sortOrder = [.init(\.title)]
+                    }
+                    Divider()
+                    Button("Days Remaining") {
+                        bindableVM.sortOrder = [.init(\.sortableDaysRemaining)]
+                    }
+                } label: {
+                    Label("Sort By", systemImage: "arrow.up.arrow.down")
+                }
+            }
         }
         .navigationTitle("Trash")
         .task {

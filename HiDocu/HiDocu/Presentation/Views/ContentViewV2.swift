@@ -177,7 +177,7 @@ struct ContentViewV2: View {
 
         case .trash:
             TrashView(trashService: container.trashService)
-                .navigationSplitViewColumnWidth(min: 220, ideal: 280, max: 400)
+                .navigationSplitViewColumnWidth(min: 300, ideal: 400, max: 500)
 
         case .allRecordings, .recordingSource:
             // Recordings: hide content column, show directly in detail

@@ -60,6 +60,7 @@ final class AppDependencyContainer {
     let llmQueueService: LLMQueueService
     let recordingSourceService: RecordingSourceService
     let eventService: AppEventService
+    let apiDebugLogger: APIDebugLogger
 
     // MARK: - Initialization
 
@@ -128,11 +129,17 @@ final class AppDependencyContainer {
             fileSystemService: fileSystemService
         )
 
+        // Initialize API debug logger
+        self.apiDebugLogger = APIDebugLogger(
+            baseDirectory: fileSystemService.dataDirectory,
+            isEnabled: settingsService.settings.llm.apiDebugLogging
+        )
+
         // Initialize provider strategies (shared between TokenManager and LLMService)
-        let claudeProvider = ClaudeProvider()
-        let codexProvider = CodexProvider()
-        let geminiProvider = GeminiProvider()
-        let antigravityProvider = AntigravityProvider()
+        let claudeProvider = ClaudeProvider(debugLogger: apiDebugLogger)
+        let codexProvider = CodexProvider(debugLogger: apiDebugLogger)
+        let geminiProvider = GeminiProvider(debugLogger: apiDebugLogger)
+        let antigravityProvider = AntigravityProvider(debugLogger: apiDebugLogger)
         let providerMap: [LLMProvider: any LLMProviderStrategy] = [
             .claude: claudeProvider,
             .codex: codexProvider,

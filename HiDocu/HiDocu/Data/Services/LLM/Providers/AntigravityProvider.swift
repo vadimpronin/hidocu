@@ -56,11 +56,13 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
 
     let provider: LLMProvider = .antigravity
     private let urlSession: URLSession
+    private let debugLogger: APIDebugLogger?
 
     // MARK: - Initialization
 
-    init(urlSession: URLSession = .shared) {
+    init(urlSession: URLSession = .shared, debugLogger: APIDebugLogger? = nil) {
         self.urlSession = urlSession
+        self.debugLogger = debugLogger
     }
 
     // MARK: - LLMProviderStrategy
@@ -119,7 +121,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         return bundleWithProject
     }
 
-    func refreshToken(_ refreshToken: String) async throws -> OAuthTokenBundle {
+    func refreshToken(_ refreshToken: String, account: String? = nil) async throws -> OAuthTokenBundle {
         AppLogger.llm.info("Refreshing Antigravity access token")
 
         let bodyParams = [
@@ -144,17 +146,14 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         request.setValue("oauth2.googleapis.com", forHTTPHeaderField: "Host")
         request.httpBody = bodyData
 
-        let (data, response): (Data, URLResponse)
+        let data: Data
+        let httpResponse: HTTPURLResponse
 
         do {
-            (data, response) = try await urlSession.data(for: request)
+            (data, httpResponse) = try await performRequest(request, model: "token-refresh", debugContext: nil, account: account)
         } catch {
             AppLogger.llm.error("Token refresh network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMError.invalidResponse(detail: "Not an HTTP response")
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
@@ -182,8 +181,8 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         let newRefreshToken = (json["refresh_token"] as? String) ?? refreshToken
         let expiresAt = Date(timeIntervalSinceNow: TimeInterval(expiresIn))
 
-        let email = try await fetchUserEmail(accessToken: accessToken)
-        let projectId = try await fetchProjectId(accessToken: accessToken)
+        let email = try await fetchUserEmail(accessToken: accessToken, account: account)
+        let projectId = try await fetchProjectId(accessToken: accessToken, account: account)
 
         return OAuthTokenBundle(
             accessToken: accessToken,
@@ -204,7 +203,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         "chat_20706", "chat_23310", "gemini-2.5-flash-thinking", "gemini-3-pro-low", "gemini-2.5-pro"
     ]
 
-    func fetchModels(accessToken: String, accountId: String?, tokenData: TokenData? = nil) async throws -> [ModelInfo] {
+    func fetchModels(accessToken: String, accountId: String?, tokenData: TokenData? = nil, account: String? = nil) async throws -> [ModelInfo] {
         let url = URL(string: "\(Self.apiBaseURL):fetchAvailableModels")!
 
         var request = URLRequest(url: url)
@@ -214,17 +213,14 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         request.setValue(Self.apiUserAgent, forHTTPHeaderField: "User-Agent")
         request.httpBody = "{}".data(using: .utf8)
 
-        let (data, response): (Data, URLResponse)
+        let data: Data
+        let httpResponse: HTTPURLResponse
 
         do {
-            (data, response) = try await urlSession.data(for: request)
+            (data, httpResponse) = try await performRequest(request, model: "fetch-models", debugContext: nil, account: account)
         } catch {
             AppLogger.llm.error("fetchAvailableModels network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMError.invalidResponse(detail: "Not an HTTP response")
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
@@ -248,7 +244,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         var results = modelIds.map { ModelInfo(id: $0, displayName: $0, supportsText: true, supportsAudio: true, supportsImage: true) }
 
         // Fetch token limits from the models API and merge into results
-        let limits = await fetchModelLimits(accessToken: accessToken)
+        let limits = await fetchModelLimits(accessToken: accessToken, account: account)
         if !limits.isEmpty {
             results = results.map { info in
                 guard let limit = limits[info.id] else { return info }
@@ -265,7 +261,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
     /// Fetches model metadata (token limits) from the Google AI models API.
     /// Returns a dictionary keyed by model ID (without `models/` prefix).
     /// Non-fatal: returns empty dictionary on failure.
-    private func fetchModelLimits(accessToken: String) async -> [String: (inputTokenLimit: Int, outputTokenLimit: Int)] {
+    private func fetchModelLimits(accessToken: String, account: String? = nil) async -> [String: (inputTokenLimit: Int, outputTokenLimit: Int)] {
         guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models") else { return [:] }
 
         var request = URLRequest(url: url)
@@ -274,10 +270,9 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         request.timeoutInterval = 15
 
         do {
-            let (data, response) = try await urlSession.data(for: request)
+            let (data, httpResponse) = try await performRequest(request, model: "fetch-model-limits", debugContext: nil, account: account)
 
-            guard let httpResponse = response as? HTTPURLResponse,
-                  (200...299).contains(httpResponse.statusCode) else {
+            guard (200...299).contains(httpResponse.statusCode) else {
                 AppLogger.llm.debug("fetchModelLimits: non-2xx response, skipping token limits")
                 return [:]
             }
@@ -309,7 +304,8 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         model: String,
         accessToken: String,
         options: LLMRequestOptions,
-        tokenData: TokenData? = nil
+        tokenData: TokenData? = nil,
+        account: String? = nil
     ) async throws -> LLMResponse {
         AppLogger.llm.info("Sending chat request to Antigravity API, model: \(model)")
 
@@ -402,21 +398,22 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         request.setValue(Self.apiUserAgent, forHTTPHeaderField: "User-Agent")
         request.httpBody = bodyData
 
-        let (data, response): (Data, URLResponse)
+        let data: Data
+        let httpResponse: HTTPURLResponse
 
         let requestStart = Date()
         do {
-            (data, response) = try await urlSession.data(for: request)
+            (data, httpResponse) = try await performRequest(
+                request, model: model, debugContext: options.debugContext, account: account
+            )
+        } catch let llmError as LLMError {
+            throw llmError
         } catch {
             AppLogger.llm.error("Chat request network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
         }
         let elapsed = Date().timeIntervalSince(requestStart)
         AppLogger.llm.info("Antigravity response received in \(String(format: "%.1f", elapsed))s (\(data.count) bytes)")
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMError.invalidResponse(detail: "Not an HTTP response")
-        }
 
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
@@ -469,9 +466,28 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         )
     }
 
+    // MARK: - Debug-Instrumented Request
+
+    private func performRequest(
+        _ request: URLRequest,
+        model: String,
+        debugContext: APIDebugContext?,
+        account: String? = nil
+    ) async throws -> (Data, HTTPURLResponse) {
+        try await performDebugLoggingRequest(
+            request,
+            urlSession: urlSession,
+            provider: provider,
+            model: model,
+            debugContext: debugContext,
+            debugLogger: debugLogger,
+            account: account
+        )
+    }
+
     // MARK: - Private Helpers
 
-    private func fetchProjectId(accessToken: String) async throws -> String {
+    private func fetchProjectId(accessToken: String, account: String? = nil) async throws -> String {
         let url = URL(string: "\(Self.apiBaseURL):loadCodeAssist")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -490,17 +506,14 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, response): (Data, URLResponse)
+        let data: Data
+        let httpResponse: HTTPURLResponse
 
         do {
-            (data, response) = try await urlSession.data(for: request)
+            (data, httpResponse) = try await performRequest(request, model: "load-code-assist", debugContext: nil, account: account)
         } catch {
             AppLogger.llm.error("loadCodeAssist network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMError.invalidResponse(detail: "Not an HTTP response")
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
@@ -542,7 +555,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         }
 
         AppLogger.llm.debug("Using tier ID: \(tierID) for Code Assist activation")
-        return try await activateCodeAssist(accessToken: accessToken, tierID: tierID)
+        return try await activateCodeAssist(accessToken: accessToken, tierID: tierID, account: account)
     }
 
     /// Activates Code Assist for the user by calling the onboardUser API and polling until activation is complete.
@@ -550,9 +563,10 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
     /// - Parameters:
     ///   - accessToken: OAuth access token for authentication.
     ///   - tierID: The tier ID to activate (typically extracted from loadCodeAssist's allowedTiers).
+    ///   - account: Optional account identifier for debug logging.
     /// - Returns: The activated project ID.
     /// - Throws: `LLMError.networkError` on network failure, `LLMError.apiError` on API error or timeout.
-    private func activateCodeAssist(accessToken: String, tierID: String) async throws -> String {
+    private func activateCodeAssist(accessToken: String, tierID: String, account: String? = nil) async throws -> String {
         let url = URL(string: "\(Self.apiBaseURL):onboardUser")!
 
         let body: [String: Any] = [
@@ -586,17 +600,14 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
             request.setValue(Self.authClientMetadata, forHTTPHeaderField: "Client-Metadata")
             request.httpBody = bodyData
 
-            let (data, response): (Data, URLResponse)
+            let data: Data
+            let httpResponse: HTTPURLResponse
 
             do {
-                (data, response) = try await urlSession.data(for: request)
+                (data, httpResponse) = try await performRequest(request, model: "onboard-user", debugContext: nil, account: account)
             } catch {
                 AppLogger.llm.error("onboardUser network error (attempt \(attempt)/\(maxAttempts)): \(error.localizedDescription)")
                 throw LLMError.networkError(underlying: error.localizedDescription)
-            }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw LLMError.invalidResponse(detail: "Not an HTTP response")
             }
 
             guard (200...299).contains(httpResponse.statusCode) else {
@@ -683,17 +694,14 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.httpBody = bodyData
 
-        let (data, response): (Data, URLResponse)
+        let data: Data
+        let httpResponse: HTTPURLResponse
 
         do {
-            (data, response) = try await urlSession.data(for: request)
+            (data, httpResponse) = try await performRequest(request, model: "token-exchange", debugContext: nil, account: nil)
         } catch {
             AppLogger.llm.error("Token exchange network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMError.invalidResponse(detail: "Not an HTTP response")
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
@@ -724,7 +732,7 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
 
         let expiresAt = Date(timeIntervalSinceNow: TimeInterval(expiresIn))
 
-        let email = try await fetchUserEmail(accessToken: accessToken)
+        let email = try await fetchUserEmail(accessToken: accessToken, account: nil)
 
         return OAuthTokenBundle(
             accessToken: accessToken,
@@ -755,22 +763,19 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
         return "-\(Int64.random(in: 0..<9_000_000_000_000_000_000))"
     }
 
-    private func fetchUserEmail(accessToken: String) async throws -> String {
+    private func fetchUserEmail(accessToken: String, account: String? = nil) async throws -> String {
         var request = URLRequest(url: URL(string: Self.userinfoURL)!)
         request.httpMethod = "GET"
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
 
-        let (data, response): (Data, URLResponse)
+        let data: Data
+        let httpResponse: HTTPURLResponse
 
         do {
-            (data, response) = try await urlSession.data(for: request)
+            (data, httpResponse) = try await performRequest(request, model: "fetch-user-email", debugContext: nil, account: account)
         } catch {
             AppLogger.llm.error("Userinfo request network error: \(error.localizedDescription)")
             throw LLMError.networkError(underlying: error.localizedDescription)
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMError.invalidResponse(detail: "Not an HTTP response")
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {

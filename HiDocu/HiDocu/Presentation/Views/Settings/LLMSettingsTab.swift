@@ -14,8 +14,12 @@ struct LLMSettingsTab: View {
 
     var body: some View {
         Group {
-            if let viewModel {
-                LLMSettingsContent(viewModel: viewModel)
+            if let viewModel, let container {
+                LLMSettingsContent(
+                    viewModel: viewModel,
+                    settingsService: container.settingsService,
+                    debugLogger: container.apiDebugLogger
+                )
             } else {
                 ProgressView()
             }
@@ -36,12 +40,15 @@ struct LLMSettingsTab: View {
 
 private struct LLMSettingsContent: View {
     @Bindable var viewModel: LLMSettingsViewModel
+    let settingsService: SettingsService
+    let debugLogger: APIDebugLogger
 
     var body: some View {
         Form {
             accountsSection
             modelSection
             promptTemplateSection
+            DebugSettingsSection(settingsService: settingsService, debugLogger: debugLogger)
         }
         .formStyle(.grouped)
     }
@@ -135,25 +142,25 @@ private struct LLMSettingsContent: View {
 
     @ViewBuilder
     private func addAccountButton(provider: LLMProvider) -> some View {
-        Button {
-            Task {
-                await viewModel.addAccount(provider: provider)
-            }
-        } label: {
-            if viewModel.oauthState[provider] == .authenticating {
-                HStack(spacing: 4) {
-                    ProgressView()
-                        .controlSize(.small)
-                    Text("Waiting...")
-                        .font(.caption)
+        if viewModel.oauthState[provider] == .authenticating {
+            HStack(spacing: 4) {
+                ProgressView()
+                    .controlSize(.small)
+                Button("Cancel") {
+                    viewModel.cancelAuthentication(provider: provider)
                 }
-            } else {
+                .buttonStyle(.borderless)
+                .font(.caption)
+            }
+        } else {
+            Button {
+                viewModel.addAccount(provider: provider)
+            } label: {
                 Text("Add \(provider.displayName)")
             }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
         }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
-        .disabled(viewModel.oauthState[provider] == .authenticating)
     }
 
     // MARK: - Model Section

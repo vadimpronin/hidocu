@@ -197,7 +197,7 @@ final class LLMService {
         }
 
         // Fetch models from provider
-        let models = try await strategy.fetchModels(accessToken: accessToken, accountId: tokenData.accountId, tokenData: tokenData)
+        let models = try await strategy.fetchModels(accessToken: accessToken, accountId: tokenData.accountId, tokenData: tokenData, account: account.email)
         AppLogger.llm.info("Fetched \(models.count) models for \(provider.rawValue)")
         return models
     }
@@ -273,7 +273,7 @@ final class LLMService {
             do {
                 let (accessToken, tokenData) = try await tokenManager.getValidAccessToken(for: account)
                 let models = try await strategy.fetchModels(
-                    accessToken: accessToken, accountId: tokenData.accountId, tokenData: tokenData
+                    accessToken: accessToken, accountId: tokenData.accountId, tokenData: tokenData, account: account.email
                 )
                 results.append((accountId: account.id, models: models))
             } catch {
@@ -361,9 +361,13 @@ final class LLMService {
         ]
 
         let options = LLMRequestOptions(
-//            maxTokens: 4096,
             temperature: nil,
-//            systemPrompt: systemPrompt
+            debugContext: APIDebugContext(
+                jobType: "summary",
+                documentId: document.id,
+                sourceId: nil,
+                transcriptId: nil
+            )
         )
 
         // Make API call with retry on 401
@@ -374,7 +378,8 @@ final class LLMService {
                 model: model,
                 accessToken: accessToken,
                 options: options,
-                tokenData: currentTokenData
+                tokenData: currentTokenData,
+                account: account.email
             )
         } catch let error as LLMError {
             // On rate limit, record in quota service and rethrow
@@ -392,7 +397,8 @@ final class LLMService {
                     model: model,
                     accessToken: newAccessToken,
                     options: options,
-                    tokenData: refreshedTokenData
+                    tokenData: refreshedTokenData,
+                    account: account.email
                 )
             } else {
                 logSummaryError(error: error, account: account, model: model, startTime: startTime, documentId: document.id)
@@ -639,7 +645,15 @@ final class LLMService {
 
         let message = LLMMessage(role: .user, content: prompt, attachments: attachments)
         let messages = [message]
-        let options = LLMRequestOptions(temperature: nil)
+        let options = LLMRequestOptions(
+            temperature: nil,
+            debugContext: APIDebugContext(
+                jobType: "transcription",
+                documentId: documentId,
+                sourceId: sourceId,
+                transcriptId: transcriptId
+            )
+        )
 
         // Select Gemini account and get credentials
         let account = try await resolveAccount(accountId: accountId, provider: .gemini)
@@ -654,7 +668,7 @@ final class LLMService {
             do {
                 return try await strategy.chat(
                     messages: messages, model: model, accessToken: accessToken,
-                    options: options, tokenData: tokenData
+                    options: options, tokenData: tokenData, account: account.email
                 )
             } catch let error as LLMError {
                 if case .rateLimited(_, let retryAfter) = error {
@@ -666,7 +680,7 @@ final class LLMService {
                     let (newToken, refreshedData) = try await self.tokenManager.refreshAndGetToken(for: account)
                     return try await strategy.chat(
                         messages: messages, model: model, accessToken: newToken,
-                        options: options, tokenData: refreshedData
+                        options: options, tokenData: refreshedData, account: account.email
                     )
                 }
                 throw error
@@ -866,7 +880,15 @@ final class LLMService {
         }
 
         let messages = [LLMMessage(role: .user, content: prompt)]
-        let options = LLMRequestOptions(temperature: nil)
+        let options = LLMRequestOptions(
+            temperature: nil,
+            debugContext: APIDebugContext(
+                jobType: "evaluation",
+                documentId: documentId,
+                sourceId: nil,
+                transcriptId: nil
+            )
+        )
 
         // Make API call with retry on 401
         let response: LLMResponse
@@ -876,7 +898,8 @@ final class LLMService {
                 model: model,
                 accessToken: accessToken,
                 options: options,
-                tokenData: currentTokenData
+                tokenData: currentTokenData,
+                account: account.email
             )
         } catch let error as LLMError {
             if case .rateLimited(_, let retryAfter) = error {
@@ -892,7 +915,8 @@ final class LLMService {
                     model: model,
                     accessToken: newAccessToken,
                     options: options,
-                    tokenData: refreshedTokenData
+                    tokenData: refreshedTokenData,
+                    account: account.email
                 )
             } else {
                 logEvaluationError(error: error, account: account, model: model, startTime: startTime, documentId: documentId)

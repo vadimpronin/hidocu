@@ -44,12 +44,23 @@ struct LLMRequestOptions: Sendable, Equatable {
     let maxTokens: Int?
     let temperature: Double?
     let systemPrompt: String?
+    let debugContext: APIDebugContext?
 
-    init(maxTokens: Int? = nil, temperature: Double? = nil, systemPrompt: String? = nil) {
+    init(maxTokens: Int? = nil, temperature: Double? = nil, systemPrompt: String? = nil, debugContext: APIDebugContext? = nil) {
         self.maxTokens = maxTokens
         self.temperature = temperature
         self.systemPrompt = systemPrompt
+        self.debugContext = debugContext
     }
+
+}
+
+/// Job context passed through `LLMRequestOptions` for debug log correlation.
+struct APIDebugContext: Sendable, Equatable {
+    let jobType: String
+    let documentId: Int64?
+    let sourceId: Int64?
+    let transcriptId: Int64?
 }
 
 /// Response from an LLM chat completion request.

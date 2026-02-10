@@ -162,6 +162,9 @@
 		91A4E8F95A3D4E2AB0011001 /* StandardEmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91A4E8F95A3D4E2AB0012001 /* StandardEmptyStateView.swift */; };
 		91A4E8F95A3D4E2AB0011002 /* UnifiedRecordingListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91A4E8F95A3D4E2AB0012002 /* UnifiedRecordingListView.swift */; };
 		91A4E8F95A3D4E2AB0011003 /* DataStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91A4E8F95A3D4E2AB0012003 /* DataStateView.swift */; };
+		DB10000100000001 /* APIDebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB00000100000001 /* APIDebugLogger.swift */; };
+		DB10000200000002 /* PostmanExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB00000200000002 /* PostmanExporter.swift */; };
+		DB10000300000003 /* DebugSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB00000300000003 /* DebugSettingsSection.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -330,6 +333,9 @@
 		91A4E8F95A3D4E2AB0012001 /* StandardEmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StandardEmptyStateView.swift; sourceTree = "<group>"; };
 		91A4E8F95A3D4E2AB0012002 /* UnifiedRecordingListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedRecordingListView.swift; sourceTree = "<group>"; };
 		91A4E8F95A3D4E2AB0012003 /* DataStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStateView.swift; sourceTree = "<group>"; };
+		DB00000100000001 /* APIDebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIDebugLogger.swift; sourceTree = "<group>"; };
+		DB00000200000002 /* PostmanExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostmanExporter.swift; sourceTree = "<group>"; };
+		DB00000300000003 /* DebugSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugSettingsSection.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -407,6 +413,8 @@
 				QS00000000000001 /* QuotaService.swift */,
 				LQS0000000000001 /* LLMQueueState.swift */,
 				LQV0000000000001 /* LLMQueueService.swift */,
+				DB00000100000001 /* APIDebugLogger.swift */,
+				DB00000200000002 /* PostmanExporter.swift */,
 				FF20000100000001 /* Providers */,
 			);
 			path = LLM;
@@ -713,6 +721,7 @@
 			children = (
 				BC12039CA327089CC1010027 /* SettingsViewV2.swift */,
 				FF00000600000006 /* LLMSettingsTab.swift */,
+				DB00000300000003 /* DebugSettingsSection.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -1025,6 +1034,9 @@
 				91A4E8F95A3D4E2AB0011001 /* StandardEmptyStateView.swift in Sources */,
 				91A4E8F95A3D4E2AB0011002 /* UnifiedRecordingListView.swift in Sources */,
 				91A4E8F95A3D4E2AB0011003 /* DataStateView.swift in Sources */,
+				DB10000100000001 /* APIDebugLogger.swift in Sources */,
+				DB10000200000002 /* PostmanExporter.swift in Sources */,
+				DB10000300000003 /* DebugSettingsSection.swift in Sources */,
 );
 			runOnlyForDeploymentPostprocessing = 0;
 		};

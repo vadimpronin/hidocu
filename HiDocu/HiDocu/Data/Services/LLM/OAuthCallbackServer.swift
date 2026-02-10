@@ -30,6 +30,7 @@ actor OAuthCallbackServer {
     private var listener: NWListener?
     private var continuation: CheckedContinuation<OAuthResult, Error>?
     private var timeoutTask: Task<Void, Never>?
+    private var isCancelled = false
 
     init(port: UInt16, callbackPath: String, provider: LLMProvider) {
         self.port = port
@@ -39,24 +40,48 @@ actor OAuthCallbackServer {
 
     /// Starts the server, opens the authorization URL in the browser, and waits for the callback.
     ///
+    /// Supports cooperative cancellation — if the parent Task is cancelled, the server
+    /// stops the listener and resumes with `CancellationError`.
+    ///
     /// - Parameters:
     ///   - authorizationURL: OAuth authorization URL to open in browser
-    ///   - timeout: Maximum time to wait for callback (default: 300 seconds)
+    ///   - timeout: Maximum time to wait for callback (default: 120 seconds)
     /// - Returns: OAuth result containing code and state
-    /// - Throws: `LLMError.portInUse`, `LLMError.oauthTimeout`, or network errors
-    func awaitCallback(authorizationURL: URL, timeout: TimeInterval = 300) async throws -> OAuthResult {
-        try await withCheckedThrowingContinuation { continuation in
-            self.continuation = continuation
+    /// - Throws: `CancellationError`, `LLMError.portInUse`, `LLMError.oauthTimeout`, or network errors
+    func awaitCallback(authorizationURL: URL, timeout: TimeInterval = 120) async throws -> OAuthResult {
+        try Task.checkCancellation()
 
-            do {
-                try startListener()
-                openBrowser(url: authorizationURL)
-                scheduleTimeout(timeout)
-            } catch {
-                continuation.resume(throwing: error)
-                self.continuation = nil
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                if isCancelled {
+                    continuation.resume(throwing: CancellationError())
+                    return
+                }
+                self.continuation = continuation
+
+                do {
+                    try startListener()
+                    openBrowser(url: authorizationURL)
+                    scheduleTimeout(timeout)
+                } catch {
+                    continuation.resume(throwing: error)
+                    self.continuation = nil
+                }
             }
+        } onCancel: {
+            Task { await self.cancel() }
         }
+    }
+
+    /// Cancels the ongoing OAuth flow, stopping the listener and resuming
+    /// the continuation with `CancellationError`.
+    func cancel() {
+        isCancelled = true
+        timeoutTask?.cancel()
+        timeoutTask = nil
+        continuation?.resume(throwing: CancellationError())
+        continuation = nil
+        stopListener()
     }
 
     // MARK: - Private

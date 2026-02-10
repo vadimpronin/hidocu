@@ -19,10 +19,12 @@ protocol LLMProviderStrategy: Sendable {
     func authenticate() async throws -> OAuthTokenBundle
 
     /// Refreshes an expired access token using the refresh token.
-    /// - Parameter refreshToken: Valid refresh token
+    /// - Parameters:
+    ///   - refreshToken: Valid refresh token
+    ///   - account: Account email for debug logging (nil during initial authentication)
     /// - Returns: New token bundle with refreshed credentials
     /// - Throws: `LLMError` if refresh fails
-    func refreshToken(_ refreshToken: String) async throws -> OAuthTokenBundle
+    func refreshToken(_ refreshToken: String, account: String?) async throws -> OAuthTokenBundle
 
     /// Checks if a token has expired based on its expiration date.
     /// - Parameter expiresAt: Token expiration timestamp
@@ -34,9 +36,10 @@ protocol LLMProviderStrategy: Sendable {
     ///   - accessToken: Valid access token
     ///   - accountId: Optional provider-specific account ID (e.g., chatgpt_account_id for Codex)
     ///   - tokenData: Optional token data with provider-specific metadata (e.g., projectId for Gemini)
+    ///   - account: Account email for debug logging
     /// - Returns: Array of model info pairs (id + display name)
     /// - Throws: `LLMError` if fetch fails
-    func fetchModels(accessToken: String, accountId: String?, tokenData: TokenData?) async throws -> [ModelInfo]
+    func fetchModels(accessToken: String, accountId: String?, tokenData: TokenData?, account: String?) async throws -> [ModelInfo]
 
     /// Sends a chat completion request to the provider's API.
     /// - Parameters:
@@ -45,6 +48,7 @@ protocol LLMProviderStrategy: Sendable {
     ///   - accessToken: Valid access token
     ///   - options: Request configuration (max tokens, temperature, etc.)
     ///   - tokenData: Optional token data with provider-specific metadata (e.g., projectId for Gemini)
+    ///   - account: Account email for debug logging
     /// - Returns: Completed response with content and metadata
     /// - Throws: `LLMError` if request fails
     func chat(
@@ -52,6 +56,7 @@ protocol LLMProviderStrategy: Sendable {
         model: String,
         accessToken: String,
         options: LLMRequestOptions,
-        tokenData: TokenData?
+        tokenData: TokenData?,
+        account: String?
     ) async throws -> LLMResponse
 }

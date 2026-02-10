@@ -29,6 +29,12 @@ final class LLMSettingsViewModel {
     private let settingsService: SettingsService
     private let llmQueueService: LLMQueueService?
 
+    /// Active OAuth tasks, keyed by provider, for cancellation support.
+    private var oauthTasks: [LLMProvider: Task<Void, Never>] = [:]
+
+    /// Generation counter to avoid stale cancelled tasks overwriting active state.
+    private var oauthGenerations: [LLMProvider: Int] = [:]
+
     // MARK: - Published State
 
     /// All configured LLM accounts
@@ -131,25 +137,52 @@ final class LLMSettingsViewModel {
         }
     }
 
-    func addAccount(provider: LLMProvider) async {
-        oauthState[provider] = .authenticating
-        authError = nil
+    func addAccount(provider: LLMProvider) {
+        oauthTasks[provider]?.cancel()
 
-        do {
-            _ = try await llmService.addAccount(provider: provider)
-            oauthState[provider] = .idle
-            await loadAccounts()
-            autoSelectModelIfNeeded()
-            // Wake queue so deferred jobs can use the new account
-            if let llmQueueService {
-                await llmQueueService.notifyAccountsChanged(provider: provider)
+        let generation = (oauthGenerations[provider] ?? 0) + 1
+        oauthGenerations[provider] = generation
+
+        let task = Task { [weak self] in
+            guard let self else { return }
+            oauthState[provider] = .authenticating
+            authError = nil
+
+            do {
+                _ = try await llmService.addAccount(provider: provider)
+                guard oauthGenerations[provider] == generation else { return }
+                oauthState[provider] = .idle
+                await loadAccounts()
+                autoSelectModelIfNeeded()
+                // Wake queue so deferred jobs can use the new account
+                if let llmQueueService {
+                    await llmQueueService.notifyAccountsChanged(provider: provider)
+                }
+            } catch is CancellationError {
+                // Only reset to idle if this is still the current generation
+                guard oauthGenerations[provider] == generation else { return }
+                oauthState[provider] = .idle
+            } catch {
+                guard oauthGenerations[provider] == generation else { return }
+                AppLogger.general.error("Failed to add \(provider.rawValue) account: \(error.localizedDescription)")
+                let errorMessage = "Authentication failed: \(error.localizedDescription)"
+                oauthState[provider] = .error(errorMessage)
+                authError = errorMessage
             }
-        } catch {
-            AppLogger.general.error("Failed to add \(provider.rawValue) account: \(error.localizedDescription)")
-            let errorMessage = "Authentication failed: \(error.localizedDescription)"
-            oauthState[provider] = .error(errorMessage)
-            authError = errorMessage
+
+            if oauthGenerations[provider] == generation {
+                oauthTasks[provider] = nil
+            }
         }
+        oauthTasks[provider] = task
+    }
+
+    /// Cancels an in-progress OAuth authentication for the given provider.
+    func cancelAuthentication(provider: LLMProvider) {
+        oauthTasks[provider]?.cancel()
+        oauthTasks[provider] = nil
+        oauthState[provider] = .idle
+        authError = nil
     }
 
     func removeAccount(_ account: LLMAccount) async {

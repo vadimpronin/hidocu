@@ -32,11 +32,15 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
 
     let provider: LLMProvider = .codex
     private let urlSession: URLSession
+    // Note: Debug logging not yet implemented for SSE-based streaming chat.
+    // The debugLogger dependency is accepted for forward compatibility.
+    private let debugLogger: APIDebugLogger?
 
     // MARK: - Initialization
 
-    init(urlSession: URLSession = .shared) {
+    init(urlSession: URLSession = .shared, debugLogger: APIDebugLogger? = nil) {
         self.urlSession = urlSession
+        self.debugLogger = debugLogger
     }
 
     // MARK: - LLMProviderStrategy
@@ -79,7 +83,7 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
         return try await exchangeCodeForTokens(code: result.code, pkceCodes: pkceCodes)
     }
 
-    func refreshToken(_ refreshToken: String) async throws -> OAuthTokenBundle {
+    func refreshToken(_ refreshToken: String, account: String? = nil) async throws -> OAuthTokenBundle {
         AppLogger.llm.info("Refreshing Codex access token")
 
         guard !refreshToken.isEmpty else {
@@ -126,7 +130,7 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
         expiresAt.timeIntervalSinceNow < 300
     }
 
-    func fetchModels(accessToken: String, accountId: String?, tokenData: TokenData? = nil) async throws -> [ModelInfo] {
+    func fetchModels(accessToken: String, accountId: String?, tokenData: TokenData? = nil, account: String? = nil) async throws -> [ModelInfo] {
         AppLogger.llm.info("Fetching Codex models from API")
 
         var request = URLRequest(url: URL(string: "\(Self.apiBaseURL)/models?client_version=\(Self.clientVersion)")!)
@@ -179,7 +183,8 @@ final class CodexProvider: LLMProviderStrategy, Sendable {
         model: String,
         accessToken: String,
         options: LLMRequestOptions,
-        tokenData: TokenData? = nil
+        tokenData: TokenData? = nil,
+        account: String? = nil
     ) async throws -> LLMResponse {
         AppLogger.llm.info("Sending chat request to Codex API with model: \(model)")
 
