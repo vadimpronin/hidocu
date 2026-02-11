@@ -43,9 +43,9 @@ struct AppSettings: Codable, Sendable {
     struct LLMSettings: Codable, Sendable {
         var defaultProvider: String = "claude"
         var defaultModel: String = ""
-        var defaultTranscriptionProvider: String = "gemini"
+        var defaultTranscriptionProvider: String = ""
         var defaultTranscriptionModel: String = ""
-        var defaultJudgeProvider: String = "gemini"
+        var defaultJudgeProvider: String = ""
         var defaultJudgeModel: String = ""
         var apiDebugLogging: Bool = false
         var summaryPromptTemplate: String = Self.defaultPromptTemplate

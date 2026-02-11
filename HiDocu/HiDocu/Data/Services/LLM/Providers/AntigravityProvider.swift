@@ -350,9 +350,9 @@ final class AntigravityProvider: LLMProviderStrategy, Sendable {
 
         var geminiRequest: [String: Any] = [
             "contents": contents,
-            "generationConfig": [
-                "maxOutputTokens": options.maxTokens ?? 65536
-            ]
+//            "generationConfig": [
+//                "maxOutputTokens": options.maxTokens ?? 65536
+//            ]
         ]
 
         // Build system prompt: Antigravity base prompt + user-provided system prompt

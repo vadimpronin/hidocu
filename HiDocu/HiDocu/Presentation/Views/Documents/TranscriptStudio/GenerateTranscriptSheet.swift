@@ -11,6 +11,7 @@ struct GenerateTranscriptSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.container) private var container
 
+    /// Callback with full model identifier ("provider:modelId") and variant count.
     var onGenerate: (String, Int) -> Void
 
     @State private var selectedModelId: String = ""
@@ -45,9 +46,7 @@ struct GenerateTranscriptSheet: View {
                     .keyboardShortcut(.cancelAction)
                 Spacer()
                 Button("Generate") {
-                    // Extract just the modelId (after the colon) for the callback
-                    let modelIdOnly = selectedModelId.split(separator: ":", maxSplits: 1).last.map(String.init) ?? selectedModelId
-                    onGenerate(modelIdOnly, variantCount)
+                    onGenerate(selectedModelId, variantCount)
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)

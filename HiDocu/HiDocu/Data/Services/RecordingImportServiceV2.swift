@@ -549,7 +549,6 @@ final class RecordingImportServiceV2 {
         triggerAutoTranscription(documentId: documentId, sourceId: sourceId, source: source)
     }
 
-    private static let autoTranscriptionModel = "gemini-3-pro-preview"
     private static let autoTranscriptionCount = 3
 
     private func triggerAutoTranscription(documentId: Int64, sourceId: Int64, source: Source) {
@@ -562,8 +561,15 @@ final class RecordingImportServiceV2 {
         // Get transcription settings
         let settings = await MainActor.run { settingsService.settings.llm }
         let providerString = settings.defaultTranscriptionProvider
-        let provider = LLMProvider(rawValue: providerString) ?? .gemini
-        let model = settings.defaultTranscriptionModel.isEmpty ? Self.autoTranscriptionModel : settings.defaultTranscriptionModel
+        guard let provider = LLMProvider(rawValue: providerString) else {
+            AppLogger.llm.warning("No transcription provider configured, skipping auto-transcription for document \(documentId)")
+            return
+        }
+        guard !settings.defaultTranscriptionModel.isEmpty else {
+            AppLogger.llm.warning("No transcription model configured, skipping auto-transcription for document \(documentId)")
+            return
+        }
+        let model = settings.defaultTranscriptionModel
         let count = Self.autoTranscriptionCount
 
         // Check if accounts are configured for the provider

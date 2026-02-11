@@ -55,11 +55,15 @@ struct TranscriptStudioView: View {
             AddTranscriptSheet(documentId: documentId, viewModel: viewModel)
         }
         .sheet(isPresented: $showGenerateSheet) {
-            GenerateTranscriptSheet { model, count in
+            GenerateTranscriptSheet { selectedModelId, count in
                 guard let container else { return }
-                // Determine provider from settings (defaultTranscriptionProvider)
-                let providerString = container.settingsService.settings.llm.defaultTranscriptionProvider
-                let provider = LLMProvider(rawValue: providerString) ?? .gemini
+                // Extract provider and model from "provider:modelId" format
+                let parts = selectedModelId.split(separator: ":", maxSplits: 1)
+                guard parts.count == 2, let provider = LLMProvider(rawValue: String(parts[0])) else {
+                    AppLogger.general.error("Invalid model selection format: \(selectedModelId)")
+                    return
+                }
+                let model = String(parts[1])
                 Task {
                     await viewModel.generateTranscripts(
                         documentId: documentId,
@@ -217,11 +221,16 @@ struct TranscriptStudioView: View {
                 onGenerate: { showGenerateSheet = true },
                 onJudge: {
                     guard let container else { return }
-                    // Determine provider and model from settings (defaultJudgeProvider/Model)
                     let settings = container.settingsService.settings.llm
-                    let providerString = settings.defaultJudgeProvider
-                    let provider = LLMProvider(rawValue: providerString) ?? .gemini
-                    let model = settings.defaultJudgeModel.isEmpty ? "gemini-3-pro-preview" : settings.defaultJudgeModel
+                    guard let provider = LLMProvider(rawValue: settings.defaultJudgeProvider) else {
+                        AppLogger.general.warning("No judge provider configured, skipping judge")
+                        return
+                    }
+                    guard !settings.defaultJudgeModel.isEmpty else {
+                        AppLogger.general.warning("No judge model configured, skipping judge")
+                        return
+                    }
+                    let model = settings.defaultJudgeModel
                     Task {
                         await viewModel.judgeTranscripts(
                             documentId: documentId,
