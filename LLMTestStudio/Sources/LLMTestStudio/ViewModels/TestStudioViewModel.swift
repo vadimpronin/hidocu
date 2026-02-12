@@ -1,0 +1,256 @@
+import Foundation
+import LLMService
+import OSLog
+
+@Observable
+@MainActor
+final class TestStudioViewModel {
+    // MARK: - State
+
+    var selectedProvider: LLMProvider = .claudeCode
+    var selectedModelId: String?
+    var models: [LLMModelInfo] = []
+    var chatHistories: [LLMProvider: [ChatMessage]] = [:]
+    var isStreaming = false
+    var currentStreamingMessage: ChatMessage?
+    var debugEnabled = false
+    var logEntries: [LogEntry] = []
+    var inputText = ""
+    var thinkingEnabled = false
+    var thinkingBudget: Int = 10000
+
+    // MARK: - Private
+
+    private var sessions: [LLMProvider: InMemoryAccountSession] = [:]
+    private var services: [LLMProvider: LLMService] = [:]
+    private let logger = Logger(subsystem: "com.llmteststudio", category: "viewmodel")
+    private var streamTask: Task<Void, Never>?
+    private var streamGeneration = 0
+
+    // MARK: - Init
+
+    init() {
+        for provider in Self.supportedProviders {
+            sessions[provider] = InMemoryAccountSession(provider: provider)
+            chatHistories[provider] = []
+        }
+    }
+
+    static let supportedProviders: [LLMProvider] = [.claudeCode, .geminiCLI, .antigravity]
+
+    // MARK: - Session Access
+
+    private func session(for provider: LLMProvider) -> InMemoryAccountSession {
+        if let existing = sessions[provider] {
+            return existing
+        }
+        let session = InMemoryAccountSession(provider: provider)
+        sessions[provider] = session
+        return session
+    }
+
+    func isLoggedIn(for provider: LLMProvider) -> Bool {
+        session(for: provider).isLoggedIn
+    }
+
+    var currentMessages: [ChatMessage] {
+        get { chatHistories[selectedProvider] ?? [] }
+        set { chatHistories[selectedProvider] = newValue }
+    }
+
+    // MARK: - Service Management
+
+    private func service(for provider: LLMProvider) -> LLMService {
+        if let existing = services[provider] {
+            return existing
+        }
+        let sess = session(for: provider)
+        let config = makeLoggingConfig()
+        let svc = LLMService(session: sess, loggingConfig: config)
+        services[provider] = svc
+        return svc
+    }
+
+    private func makeLoggingConfig() -> LLMLoggingConfig {
+        let dir: URL? = debugEnabled
+            ? FileManager.default.temporaryDirectory.appendingPathComponent("LLMTestStudio_logs")
+            : nil
+        return LLMLoggingConfig(
+            subsystem: "com.llmteststudio",
+            storageDirectory: dir
+        )
+    }
+
+    // MARK: - Auth
+
+    func login(provider: LLMProvider) async {
+        log("Starting login for \(provider.rawValue)...", level: .info)
+        do {
+            let svc = service(for: provider)
+            try await svc.login()
+            log("Login succeeded for \(provider.rawValue)", level: .info)
+        } catch {
+            log("Login failed for \(provider.rawValue): \(error.localizedDescription)", level: .error)
+        }
+    }
+
+    func logout(provider: LLMProvider) {
+        session(for: provider).logout()
+        services[provider] = nil
+        log("Logged out from \(provider.rawValue)", level: .info)
+    }
+
+    // MARK: - Models
+
+    func loadModels() async {
+        log("Loading models for \(selectedProvider.rawValue)...", level: .info)
+        do {
+            let svc = service(for: selectedProvider)
+            models = try await svc.listModels()
+            log("Loaded \(models.count) models for \(selectedProvider.rawValue)", level: .info)
+            if selectedModelId == nil, let first = models.first {
+                selectedModelId = first.id
+            }
+        } catch {
+            log("Failed to load models: \(error.localizedDescription)", level: .error)
+            models = []
+        }
+    }
+
+    // MARK: - Chat
+
+    func sendMessage() {
+        let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty, !isStreaming else { return }
+        guard let modelId = selectedModelId else {
+            log("No model selected", level: .warning)
+            return
+        }
+
+        streamTask?.cancel()
+        streamGeneration += 1
+        let generation = streamGeneration
+
+        let userMessage = ChatMessage(role: .user, text: text)
+        currentMessages.append(userMessage)
+        inputText = ""
+        isStreaming = true
+        currentStreamingMessage = ChatMessage(role: .assistant, text: "", isStreaming: true)
+
+        log("Sending message to \(selectedProvider.rawValue) model \(modelId)", level: .info)
+
+        let svc = service(for: selectedProvider)
+        let messages = buildLLMMessages()
+        let thinking: ThinkingConfig? = thinkingEnabled
+            ? .enabled(budgetTokens: thinkingBudget)
+            : nil
+
+        streamTask = Task {
+            do {
+                let stream = svc.chatStream(
+                    modelId: modelId,
+                    messages: messages,
+                    thinking: thinking
+                )
+
+                for try await chunk in stream {
+                    guard generation == self.streamGeneration else { return }
+                    switch chunk.partType {
+                    case .text:
+                        currentStreamingMessage?.text += chunk.delta
+                    case .thinking:
+                        currentStreamingMessage?.thinkingText += chunk.delta
+                    case .toolCall(let id, let function):
+                        currentStreamingMessage?.text += "\n[Tool call: \(function) (id: \(id))]\n\(chunk.delta)"
+                    }
+                }
+
+                guard generation == self.streamGeneration else { return }
+                if var msg = currentStreamingMessage {
+                    msg.isStreaming = false
+                    currentMessages.append(msg)
+                    log("Response received (\(msg.text.count) chars)", level: .info)
+                }
+            } catch is CancellationError {
+                guard generation == self.streamGeneration else { return }
+                if var msg = currentStreamingMessage, !msg.text.isEmpty {
+                    msg.isStreaming = false
+                    currentMessages.append(msg)
+                }
+                log("Stream cancelled", level: .warning)
+            } catch {
+                guard generation == self.streamGeneration else { return }
+                if var msg = currentStreamingMessage, !msg.text.isEmpty {
+                    msg.isStreaming = false
+                    currentMessages.append(msg)
+                }
+                log("Stream error: \(error.localizedDescription)", level: .error)
+            }
+            guard generation == self.streamGeneration else { return }
+            currentStreamingMessage = nil
+            isStreaming = false
+            streamTask = nil
+        }
+    }
+
+    func cancelStream() {
+        streamTask?.cancel()
+        streamTask = nil
+    }
+
+    private func buildLLMMessages() -> [LLMMessage] {
+        currentMessages.map { msg in
+            switch msg.role {
+            case .user:
+                return LLMMessage(role: .user, content: [.text(msg.text)])
+            case .assistant:
+                var content: [LLMContent] = []
+                if !msg.thinkingText.isEmpty {
+                    content.append(.thinking(msg.thinkingText, signature: nil))
+                }
+                if !msg.text.isEmpty {
+                    content.append(.text(msg.text))
+                }
+                return LLMMessage(role: .assistant, content: content)
+            }
+        }
+    }
+
+    // MARK: - Debug
+
+    func toggleDebug() {
+        debugEnabled.toggle()
+        services.removeAll()
+        log("Debug logging \(debugEnabled ? "enabled" : "disabled") — services recreated", level: .info)
+    }
+
+    func exportHAR(lastMinutes: Int) async -> Data? {
+        log("Exporting HAR (last \(lastMinutes) min)...", level: .info)
+        do {
+            let svc = service(for: selectedProvider)
+            let data = try await svc.exportHAR(lastMinutes: lastMinutes)
+            log("HAR exported (\(data.count) bytes)", level: .info)
+            return data
+        } catch {
+            log("HAR export failed: \(error.localizedDescription)", level: .error)
+            return nil
+        }
+    }
+
+    // MARK: - Logging
+
+    func log(_ message: String, level: LogEntry.Level) {
+        let entry = LogEntry(timestamp: Date(), level: level, message: message)
+        logEntries.append(entry)
+        switch level {
+        case .info: logger.info("\(message)")
+        case .warning: logger.warning("\(message)")
+        case .error: logger.error("\(message)")
+        case .debug: logger.debug("\(message)")
+        }
+    }
+
+    func clearLog() {
+        logEntries.removeAll()
+    }
+}

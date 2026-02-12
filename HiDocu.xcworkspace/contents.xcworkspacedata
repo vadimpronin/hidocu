@@ -10,4 +10,10 @@
    <FileRef
       location = "group:hidock-cli">
    </FileRef>
+   <FileRef
+      location = "group:LLMService">
+   </FileRef>
+   <FileRef
+      location = "group:LLMTestStudio">
+   </FileRef>
 </Workspace>
