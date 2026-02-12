@@ -3,6 +3,14 @@ import Foundation
 
 enum AntigravityRequestBuilder {
 
+    // MARK: - Constants
+
+    /// System instruction preamble injected for Claude and gemini-3-pro-high models.
+    /// Matches Go reference: antigravity_executor.go line 51.
+    private static let antigravitySystemInstruction = "You are Antigravity, a powerful agentic AI coding assistant designed by the Google Deepmind team working on Advanced Agentic Coding.You are pair programming with a USER to solve their coding task. The task may require creating a new codebase, modifying or debugging an existing codebase, or simply answering a question.**Absolute paths only****Proactiveness**"
+
+    // MARK: - Public API
+
     /// Build an Antigravity API request from LLMMessage array.
     /// Returns a fully wrapped Antigravity envelope with the inner Google Cloud request.
     /// Does NOT include SafetySettings (Antigravity does not support them).
@@ -17,27 +25,42 @@ enum AntigravityRequestBuilder {
         maxOutputTokens: Int? = nil,
         tools: [[String: Any]]? = nil
     ) -> [String: Any] {
+        let useAntigravitySchema = needsAntigravitySchema(modelName)
+
         // 1. Build inner request body (Gemini format, no safety settings)
         var requestBody = buildInnerRequest(
+            modelName: modelName,
             messages: messages,
             thinking: thinking,
             temperature: temperature,
             topP: topP,
             topK: topK,
             maxOutputTokens: maxOutputTokens,
-            tools: tools
+            tools: tools,
+            useAntigravitySchema: useAntigravitySchema
         )
 
         // 2. Add session ID derived from first user message
         requestBody["sessionId"] = generateSessionId(messages: messages)
 
-        // 3. For Claude models, set toolConfig.functionCallingConfig.mode = "VALIDATED"
+        // 3. Model-specific post-processing (matches Go lines 1313-1317)
         if isClaudeModel(modelName) {
+            // Claude: set toolConfig.functionCallingConfig.mode = "VALIDATED"
             requestBody["toolConfig"] = [
                 "functionCallingConfig": [
                     "mode": "VALIDATED"
                 ]
             ]
+        } else {
+            // Non-Claude: remove maxOutputTokens
+            if var genConfig = requestBody["generationConfig"] as? [String: Any] {
+                genConfig.removeValue(forKey: "maxOutputTokens")
+                if genConfig.isEmpty {
+                    requestBody.removeValue(forKey: "generationConfig")
+                } else {
+                    requestBody["generationConfig"] = genConfig
+                }
+            }
         }
 
         // 4. Wrap with Antigravity envelope
@@ -54,16 +77,18 @@ enum AntigravityRequestBuilder {
     // MARK: - Inner Request Building
 
     private static func buildInnerRequest(
+        modelName: String,
         messages: [LLMMessage],
         thinking: ThinkingConfig?,
         temperature: Double?,
         topP: Double?,
         topK: Int?,
         maxOutputTokens: Int?,
-        tools: [[String: Any]]?
+        tools: [[String: Any]]?,
+        useAntigravitySchema: Bool
     ) -> [String: Any] {
         var request: [String: Any] = [:]
-        var systemParts: [[String: Any]] = []
+        var userSystemParts: [[String: Any]] = []
         var contents: [[String: Any]] = []
 
         for message in messages {
@@ -71,7 +96,7 @@ enum AntigravityRequestBuilder {
             case .system:
                 for content in message.content {
                     if case .text(let str) = content, !str.isEmpty {
-                        systemParts.append(["text": str])
+                        userSystemParts.append(["text": str])
                     }
                 }
 
@@ -84,8 +109,17 @@ enum AntigravityRequestBuilder {
             }
         }
 
-        if !systemParts.isEmpty {
-            request["systemInstruction"] = ["role": "user", "parts": systemParts]
+        // System instruction injection (matches Go lines 1300-1311)
+        if useAntigravitySchema {
+            // Inject Antigravity preamble at positions 0 and 1, then append user system parts
+            var allParts: [[String: Any]] = [
+                ["text": antigravitySystemInstruction],
+                ["text": "Please ignore following [ignore]\(antigravitySystemInstruction)[/ignore]"],
+            ]
+            allParts.append(contentsOf: userSystemParts)
+            request["systemInstruction"] = ["role": "user", "parts": allParts]
+        } else if !userSystemParts.isEmpty {
+            request["systemInstruction"] = ["role": "user", "parts": userSystemParts]
         }
 
         if !contents.isEmpty {
@@ -120,9 +154,12 @@ enum AntigravityRequestBuilder {
             request["generationConfig"] = genConfig
         }
 
-        // Tools
+        // Tools — clean schemas for API compatibility (matches Go lines 1294-1298)
         if let tools = tools, !tools.isEmpty {
-            request["tools"] = [["functionDeclarations": tools]]
+            let cleaned = useAntigravitySchema
+                ? AntigravitySchemaCleaner.cleanFunctionDeclarations(tools)
+                : AntigravitySchemaCleaner.cleanFunctionDeclarationsForGemini(tools)
+            request["tools"] = [["functionDeclarations": cleaned]]
         }
 
         // NOTE: No safetySettings — Antigravity does not support them
@@ -134,6 +171,7 @@ enum AntigravityRequestBuilder {
 
     /// Generate session ID: SHA-256 of first user message text, interpreted as Int64, prefixed with "-"
     private static func generateSessionId(messages: [LLMMessage]) -> String {
+        // Match Go: only use the first text part of the first user message
         let firstUserText = messages
             .first(where: { $0.role == .user })?
             .content
@@ -141,10 +179,11 @@ enum AntigravityRequestBuilder {
                 if case .text(let text) = content { return text }
                 return nil
             }
-            .joined() ?? ""
+            .first ?? ""
 
         guard !firstUserText.isEmpty else {
-            return "-\(Int64.random(in: 1_000_000_000_000_000_000...9_000_000_000_000_000_000))"
+            // Match Go: rand.Int63n(9_000_000_000_000_000_000) → range [0, 9e18)
+            return "-\(Int64.random(in: 0..<9_000_000_000_000_000_000))"
         }
 
         let hash = SHA256.hash(data: Data(firstUserText.utf8))
@@ -162,8 +201,15 @@ enum AntigravityRequestBuilder {
 
     // MARK: - Helpers
 
+    /// Whether this model requires Antigravity schema injection (system prompt + schema cleaning).
+    /// Matches Go reference: `strings.Contains(modelName, "claude") || strings.Contains(modelName, "gemini-3-pro-high")`
+    private static func needsAntigravitySchema(_ modelId: String) -> Bool {
+        modelId.contains("claude") || modelId.contains("gemini-3-pro-high")
+    }
+
+    /// Case-sensitive check matching Go reference: `strings.Contains(modelName, "claude")`
     private static func isClaudeModel(_ modelId: String) -> Bool {
-        modelId.lowercased().contains("claude")
+        modelId.contains("claude")
     }
 
     private static func mapRole(_ role: LLMMessage.LLMChatRole) -> String {
