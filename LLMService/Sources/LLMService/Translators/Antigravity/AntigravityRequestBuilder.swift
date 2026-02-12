@@ -5,7 +5,7 @@ enum AntigravityRequestBuilder {
 
     // MARK: - Constants
 
-    /// System instruction preamble injected for Claude and gemini-3-pro-high models.
+    /// System instruction preamble injected for Claude and gemini-3-pro-high, gemini-3-pro-low, gemini-3-pro-image models.
     /// Matches Go reference: antigravity_executor.go line 51.
     private static let antigravitySystemInstruction = "You are Antigravity, a powerful agentic AI coding assistant designed by the Google Deepmind team working on Advanced Agentic Coding.You are pair programming with a USER to solve their coding task. The task may require creating a new codebase, modifying or debugging an existing codebase, or simply answering a question.**Absolute paths only****Proactiveness**"
 
@@ -113,8 +113,8 @@ enum AntigravityRequestBuilder {
         if useAntigravitySchema {
             // Inject Antigravity preamble at positions 0 and 1, then append user system parts
             var allParts: [[String: Any]] = [
-                ["text": antigravitySystemInstruction],
-                ["text": "Please ignore following [ignore]\(antigravitySystemInstruction)[/ignore]"],
+                ["text": "NOT \(antigravitySystemInstruction)"],
+//                ["text": "Please ignore following [ignore]\(antigravitySystemInstruction)[/ignore]"],
             ]
             allParts.append(contentsOf: userSystemParts)
             request["systemInstruction"] = ["role": "user", "parts": allParts]
@@ -202,9 +202,8 @@ enum AntigravityRequestBuilder {
     // MARK: - Helpers
 
     /// Whether this model requires Antigravity schema injection (system prompt + schema cleaning).
-    /// Matches Go reference: `strings.Contains(modelName, "claude") || strings.Contains(modelName, "gemini-3-pro-high")`
     private static func needsAntigravitySchema(_ modelId: String) -> Bool {
-        modelId.contains("claude") || modelId.contains("gemini-3-pro-high")
+        modelId.contains("claude") || modelId.contains("gemini-3-pro-high") || modelId.contains("gemini-3-pro-low") || modelId.contains("gemini-3-pro-image")
     }
 
     /// Case-sensitive check matching Go reference: `strings.Contains(modelName, "claude")`
