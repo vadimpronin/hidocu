@@ -13,9 +13,6 @@ public final class LLMService: @unchecked Sendable {
     internal let traceManager: LLMTraceManager
     internal var lastResponseHeaders: [String: String] = [:]
 
-    // Body cap removed — full request/response bodies are preserved in traces
-    // to support complete debugging in LLMTestStudio and HAR export.
-
     // MARK: - Initialization
 
     public convenience init(session: LLMAccountSession, loggingConfig: LLMLoggingConfig = LLMLoggingConfig()) {
