@@ -83,6 +83,7 @@ final class AuthFlowTests: XCTestCase {
         let body = try XCTUnwrap(JSONSerialization.jsonObject(with: bodyData) as? [String: Any])
         XCTAssertEqual(body["redirect_uri"] as? String, "http://localhost:54545/callback")
         XCTAssertEqual(body["grant_type"] as? String, "authorization_code")
+        XCTAssertEqual(body["state"] as? String, "test-state")
     }
 
     // MARK: - State validation (CSRF protection)

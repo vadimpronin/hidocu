@@ -47,6 +47,7 @@ enum ClaudeCodeAuthProvider {
     ) async throws -> (credentials: LLMCredentials, email: String?) {
         let body: [String: String] = [
             "code": code,
+            "state": state,
             "grant_type": "authorization_code",
             "client_id": clientId,
             "redirect_uri": redirectURI,
