@@ -32,6 +32,20 @@ enum GoogleOAuthProvider {
         "https://www.googleapis.com/auth/experimentsandconfigs",
     ].joined(separator: " ")
 
+    // MARK: - Callback Configuration
+
+    static func callbackPort(for provider: LLMProvider) -> UInt16 {
+        provider == .antigravity ? 51121 : 8085
+    }
+
+    static func callbackPath(for provider: LLMProvider) -> String {
+        provider == .antigravity ? "/oauth-callback" : "/oauth2callback"
+    }
+
+    static func redirectURI(for provider: LLMProvider) -> String {
+        "http://localhost:\(callbackPort(for: provider))\(callbackPath(for: provider))"
+    }
+
     // MARK: - Helpers
 
     /// Character set for form URL encoding (RFC 3986 unreserved characters)
@@ -59,14 +73,14 @@ enum GoogleOAuthProvider {
     static func buildAuthURL(
         provider: LLMProvider,
         state: String,
-        callbackScheme: String
+        redirectURI: String
     ) -> URL {
         var components = URLComponents(url: authURL, resolvingAgainstBaseURL: false)!
         components.queryItems = [
             URLQueryItem(name: "access_type", value: "offline"),
             URLQueryItem(name: "client_id", value: clientId(for: provider)),
             URLQueryItem(name: "prompt", value: "consent"),
-            URLQueryItem(name: "redirect_uri", value: "\(callbackScheme)://auth/callback"),
+            URLQueryItem(name: "redirect_uri", value: redirectURI),
             URLQueryItem(name: "response_type", value: "code"),
             URLQueryItem(name: "scope", value: scopes(for: provider)),
             URLQueryItem(name: "state", value: state),
@@ -80,14 +94,14 @@ enum GoogleOAuthProvider {
     static func exchangeCodeForTokens(
         code: String,
         provider: LLMProvider,
-        callbackScheme: String,
+        redirectURI: String,
         httpClient: HTTPClient
     ) async throws -> (credentials: LLMCredentials, email: String?) {
         let params: [(String, String)] = [
             ("code", code),
             ("client_id", clientId(for: provider)),
             ("client_secret", clientSecret(for: provider)),
-            ("redirect_uri", "\(callbackScheme)://auth/callback"),
+            ("redirect_uri", redirectURI),
             ("grant_type", "authorization_code"),
         ]
 
