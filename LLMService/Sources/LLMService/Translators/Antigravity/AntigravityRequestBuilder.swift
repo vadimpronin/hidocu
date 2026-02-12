@@ -1,18 +1,66 @@
+import CryptoKit
 import Foundation
 
-enum GoogleCloudRequestBuilder {
+enum AntigravityRequestBuilder {
 
-    /// Build a Google Cloud Internal API request from LLMMessage array.
-    /// Returns a JSON dictionary with "model" and "request" keys.
+    /// Build an Antigravity API request from LLMMessage array.
+    /// Returns a fully wrapped Antigravity envelope with the inner Google Cloud request.
+    /// Does NOT include SafetySettings (Antigravity does not support them).
     static func buildRequest(
         modelName: String,
         messages: [LLMMessage],
         thinking: ThinkingConfig?,
+        projectId: String,
         temperature: Double? = nil,
         topP: Double? = nil,
         topK: Int? = nil,
         maxOutputTokens: Int? = nil,
         tools: [[String: Any]]? = nil
+    ) -> [String: Any] {
+        // 1. Build inner request body (Gemini format, no safety settings)
+        var requestBody = buildInnerRequest(
+            messages: messages,
+            thinking: thinking,
+            temperature: temperature,
+            topP: topP,
+            topK: topK,
+            maxOutputTokens: maxOutputTokens,
+            tools: tools
+        )
+
+        // 2. Add session ID derived from first user message
+        requestBody["sessionId"] = generateSessionId(messages: messages)
+
+        // 3. For Claude models, set toolConfig.functionCallingConfig.mode = "VALIDATED"
+        if isClaudeModel(modelName) {
+            requestBody["toolConfig"] = [
+                "functionCallingConfig": [
+                    "mode": "VALIDATED"
+                ]
+            ]
+        }
+
+        // 4. Wrap with Antigravity envelope
+        return [
+            "model": modelName,
+            "userAgent": "antigravity",
+            "requestType": "agent",
+            "project": projectId,
+            "requestId": "agent-\(UUID().uuidString)",
+            "request": requestBody,
+        ]
+    }
+
+    // MARK: - Inner Request Building
+
+    private static func buildInnerRequest(
+        messages: [LLMMessage],
+        thinking: ThinkingConfig?,
+        temperature: Double?,
+        topP: Double?,
+        topK: Int?,
+        maxOutputTokens: Int?,
+        tools: [[String: Any]]?
     ) -> [String: Any] {
         var request: [String: Any] = [:]
         var systemParts: [[String: Any]] = []
@@ -77,16 +125,46 @@ enum GoogleCloudRequestBuilder {
             request["tools"] = [["functionDeclarations": tools]]
         }
 
-        // Safety settings
-        request["safetySettings"] = SafetySettings.defaultSettings()
+        // NOTE: No safetySettings — Antigravity does not support them
 
-        return [
-            "model": modelName,
-            "request": request,
-        ]
+        return request
     }
 
-    // MARK: - Private
+    // MARK: - Session ID Generation
+
+    /// Generate session ID: SHA-256 of first user message text, interpreted as Int64, prefixed with "-"
+    private static func generateSessionId(messages: [LLMMessage]) -> String {
+        let firstUserText = messages
+            .first(where: { $0.role == .user })?
+            .content
+            .compactMap { content -> String? in
+                if case .text(let text) = content { return text }
+                return nil
+            }
+            .joined() ?? ""
+
+        guard !firstUserText.isEmpty else {
+            return "-\(Int64.random(in: 1_000_000_000_000_000_000...9_000_000_000_000_000_000))"
+        }
+
+        let hash = SHA256.hash(data: Data(firstUserText.utf8))
+        let hashBytes = Array(hash)
+
+        // Interpret first 8 bytes as big-endian Int64 (mask sign bit to keep positive)
+        var value: UInt64 = 0
+        for i in 0..<8 {
+            value = (value << 8) | UInt64(hashBytes[i])
+        }
+        let signedValue = Int64(bitPattern: value & 0x7FFFFFFFFFFFFFFF)
+
+        return "-\(signedValue)"
+    }
+
+    // MARK: - Helpers
+
+    private static func isClaudeModel(_ modelId: String) -> Bool {
+        modelId.lowercased().contains("claude")
+    }
 
     private static func mapRole(_ role: LLMMessage.LLMChatRole) -> String {
         switch role {

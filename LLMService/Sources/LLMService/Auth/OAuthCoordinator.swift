@@ -34,17 +34,15 @@ enum OAuthCoordinator {
             )
 
         case .geminiCLI:
-            try await loginGoogle(
+            try await loginGemini(
                 session: session,
-                provider: provider,
                 state: state,
                 httpClient: httpClient
             )
 
         case .antigravity:
-            try await loginGoogle(
+            try await loginAntigravity(
                 session: session,
-                provider: provider,
                 state: state,
                 httpClient: httpClient
             )
@@ -84,61 +82,108 @@ enum OAuthCoordinator {
         try await session.save(info: info, credentials: credentials)
     }
 
-    private static func loginGoogle(
+    private static func loginGemini(
         session: LLMAccountSession,
-        provider: LLMProvider,
         state: String,
         httpClient: HTTPClient
     ) async throws {
-        let redirectURI = GoogleOAuthProvider.redirectURI(for: provider)
-        logger.info("loginGoogle: redirectURI=\(redirectURI)")
+        let redirectURI = GeminiAuthProvider.redirectURI
+        logger.info("loginGemini: redirectURI=\(redirectURI)")
 
-        let authURL = GoogleOAuthProvider.buildAuthURL(
-            provider: provider,
+        let authURL = GeminiAuthProvider.buildAuthURL(
             state: state,
             redirectURI: redirectURI
         )
-        logger.info("loginGoogle: authURL built, creating LocalOAuthServer on port \(GoogleOAuthProvider.callbackPort(for: provider))")
+        logger.info("loginGemini: authURL built, creating LocalOAuthServer on port \(GeminiAuthProvider.callbackPort)")
 
         let server = LocalOAuthServer(
-            port: GoogleOAuthProvider.callbackPort(for: provider),
-            callbackPath: GoogleOAuthProvider.callbackPath(for: provider)
+            port: GeminiAuthProvider.callbackPort,
+            callbackPath: GeminiAuthProvider.callbackPath
         )
 
-        logger.info("loginGoogle: calling server.awaitCallback() with onListenerReady browser open")
+        logger.info("loginGemini: calling server.awaitCallback() with onListenerReady browser open")
         let callbackURL = try await server.awaitCallback {
-            logger.info("loginGoogle: onListenerReady fired — opening browser now")
+            logger.info("loginGemini: onListenerReady fired — opening browser now")
             Self.openInBrowser(url: authURL)
         }
-        logger.info("loginGoogle: got callbackURL: \(callbackURL.absoluteString)")
+        logger.info("loginGemini: got callbackURL: \(callbackURL.absoluteString)")
 
         let code = try extractCode(from: callbackURL, expectedState: state)
-        logger.info("loginGoogle: extracted code, exchanging for tokens")
+        logger.info("loginGemini: extracted code, exchanging for tokens")
 
-        let (credentials, email) = try await GoogleOAuthProvider.exchangeCodeForTokens(
+        let (credentials, email) = try await GeminiAuthProvider.exchangeCodeForTokens(
             code: code,
-            provider: provider,
             redirectURI: redirectURI,
             httpClient: httpClient
         )
-        logger.info("loginGoogle: token exchange complete, email=\(email ?? "nil")")
+        logger.info("loginGemini: token exchange complete, email=\(email ?? "nil")")
 
         var info = session.info
         info.identifier = email
         info.displayName = email
 
-        // Both GeminiCLI and Antigravity require a project ID from loadCodeAssist
-        logger.info("loginGoogle: fetching project ID via loadCodeAssist")
-        let projectId = try await GoogleOAuthProvider.fetchProjectID(
+        logger.info("loginGemini: fetching project ID via loadCodeAssist")
+        let projectId = try await GeminiAuthProvider.fetchProjectID(
             accessToken: credentials.accessToken ?? "",
-            provider: provider,
             httpClient: httpClient
         )
         info.metadata["project_id"] = projectId
-        logger.info("loginGoogle: project_id=\(projectId)")
+        logger.info("loginGemini: project_id=\(projectId)")
 
         try await session.save(info: info, credentials: credentials)
-        logger.info("loginGoogle: saved credentials successfully")
+        logger.info("loginGemini: saved credentials successfully")
+    }
+
+    private static func loginAntigravity(
+        session: LLMAccountSession,
+        state: String,
+        httpClient: HTTPClient
+    ) async throws {
+        let redirectURI = AntigravityAuthProvider.redirectURI
+        logger.info("loginAntigravity: redirectURI=\(redirectURI)")
+
+        let authURL = AntigravityAuthProvider.buildAuthURL(
+            state: state,
+            redirectURI: redirectURI
+        )
+        logger.info("loginAntigravity: authURL built, creating LocalOAuthServer on port \(AntigravityAuthProvider.callbackPort)")
+
+        let server = LocalOAuthServer(
+            port: AntigravityAuthProvider.callbackPort,
+            callbackPath: AntigravityAuthProvider.callbackPath
+        )
+
+        logger.info("loginAntigravity: calling server.awaitCallback() with onListenerReady browser open")
+        let callbackURL = try await server.awaitCallback {
+            logger.info("loginAntigravity: onListenerReady fired — opening browser now")
+            Self.openInBrowser(url: authURL)
+        }
+        logger.info("loginAntigravity: got callbackURL: \(callbackURL.absoluteString)")
+
+        let code = try extractCode(from: callbackURL, expectedState: state)
+        logger.info("loginAntigravity: extracted code, exchanging for tokens")
+
+        let (credentials, email) = try await AntigravityAuthProvider.exchangeCodeForTokens(
+            code: code,
+            redirectURI: redirectURI,
+            httpClient: httpClient
+        )
+        logger.info("loginAntigravity: token exchange complete, email=\(email ?? "nil")")
+
+        var info = session.info
+        info.identifier = email
+        info.displayName = email
+
+        logger.info("loginAntigravity: fetching project ID via loadCodeAssist")
+        let projectId = try await AntigravityAuthProvider.fetchProjectID(
+            accessToken: credentials.accessToken ?? "",
+            httpClient: httpClient
+        )
+        info.metadata["project_id"] = projectId
+        logger.info("loginAntigravity: project_id=\(projectId)")
+
+        try await session.save(info: info, credentials: credentials)
+        logger.info("loginAntigravity: saved credentials successfully")
     }
 
     // MARK: - Helpers

@@ -15,10 +15,14 @@ enum TokenRefresher {
                 refreshToken: refreshToken,
                 httpClient: httpClient
             )
-        case .geminiCLI, .antigravity:
-            return try await GoogleOAuthProvider.refreshToken(
+        case .geminiCLI:
+            return try await GeminiAuthProvider.refreshToken(
                 refreshToken: refreshToken,
-                provider: provider,
+                httpClient: httpClient
+            )
+        case .antigravity:
+            return try await AntigravityAuthProvider.refreshToken(
+                refreshToken: refreshToken,
                 httpClient: httpClient
             )
         }

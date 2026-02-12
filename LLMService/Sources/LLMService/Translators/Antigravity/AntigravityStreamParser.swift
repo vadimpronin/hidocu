@@ -1,11 +1,11 @@
 import Foundation
 
-/// State machine for parsing Google Cloud SSE stream into LLMChatChunk sequence.
+/// State machine for parsing Antigravity SSE stream into LLMChatChunk sequence.
 ///
 /// Each SSE event contains a JSON object with incremental response data.
 /// The parser tracks the current content block type (text/thinking/function)
 /// and emits properly typed LLMChatChunk values on each state transition.
-final class GoogleCloudStreamParser: @unchecked Sendable {
+final class AntigravityStreamParser: @unchecked Sendable {
 
     // MARK: - State
 

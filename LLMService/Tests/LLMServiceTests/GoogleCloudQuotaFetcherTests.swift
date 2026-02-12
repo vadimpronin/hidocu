@@ -1,7 +1,7 @@
 import XCTest
 @testable import LLMService
 
-final class GoogleCloudQuotaFetcherTests: XCTestCase {
+final class GeminiQuotaFetcherTests: XCTestCase {
 
     func testFetchAvailableModelIds() async throws {
         let mockClient = MockHTTPClient()
@@ -17,12 +17,10 @@ final class GoogleCloudQuotaFetcherTests: XCTestCase {
         mockClient.enqueue(.json(quotaResponse))
 
         let credentials = LLMCredentials(accessToken: "test-token")
-        let modelIds = try await GoogleCloudQuotaFetcher.fetchAvailableModelIds(
+        let modelIds = try await GeminiQuotaFetcher.fetchAvailableModelIds(
             projectId: "test-project",
             credentials: credentials,
-            httpClient: mockClient,
-            userAgent: "test-agent",
-            apiClient: "test-client"
+            httpClient: mockClient
         )
 
         // Should have 3 unique models (_vertex variants filtered)
@@ -38,8 +36,8 @@ final class GoogleCloudQuotaFetcherTests: XCTestCase {
         XCTAssertEqual(captured?.url?.absoluteString, "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota")
         XCTAssertEqual(captured?.httpMethod, "POST")
         XCTAssertEqual(captured?.value(forHTTPHeaderField: "Authorization"), "Bearer test-token")
-        XCTAssertEqual(captured?.value(forHTTPHeaderField: "User-Agent"), "test-agent")
-        XCTAssertEqual(captured?.value(forHTTPHeaderField: "X-Goog-Api-Client"), "test-client")
+        XCTAssertEqual(captured?.value(forHTTPHeaderField: "User-Agent"), "google-api-nodejs-client/9.15.1")
+        XCTAssertEqual(captured?.value(forHTTPHeaderField: "X-Goog-Api-Client"), "gl-node/22.17.0")
 
         // Verify request body contains project
         if let body = captured?.httpBody,
@@ -62,12 +60,10 @@ final class GoogleCloudQuotaFetcherTests: XCTestCase {
         mockClient.enqueue(.json(quotaResponse))
 
         let credentials = LLMCredentials(accessToken: "test")
-        let modelIds = try await GoogleCloudQuotaFetcher.fetchAvailableModelIds(
+        let modelIds = try await GeminiQuotaFetcher.fetchAvailableModelIds(
             projectId: "proj",
             credentials: credentials,
-            httpClient: mockClient,
-            userAgent: "test",
-            apiClient: "test"
+            httpClient: mockClient
         )
 
         XCTAssertEqual(modelIds, ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-2.5-pro"])
@@ -79,12 +75,10 @@ final class GoogleCloudQuotaFetcherTests: XCTestCase {
 
         let credentials = LLMCredentials(accessToken: "bad-token")
         do {
-            _ = try await GoogleCloudQuotaFetcher.fetchAvailableModelIds(
+            _ = try await GeminiQuotaFetcher.fetchAvailableModelIds(
                 projectId: "test",
                 credentials: credentials,
-                httpClient: mockClient,
-                userAgent: "test",
-                apiClient: "test"
+                httpClient: mockClient
             )
             XCTFail("Expected error to be thrown")
         } catch let error as LLMServiceError {
@@ -98,12 +92,10 @@ final class GoogleCloudQuotaFetcherTests: XCTestCase {
 
         let credentials = LLMCredentials(accessToken: "test")
         do {
-            _ = try await GoogleCloudQuotaFetcher.fetchAvailableModelIds(
+            _ = try await GeminiQuotaFetcher.fetchAvailableModelIds(
                 projectId: "test",
                 credentials: credentials,
-                httpClient: mockClient,
-                userAgent: "test",
-                apiClient: "test"
+                httpClient: mockClient
             )
             XCTFail("Expected error to be thrown")
         } catch let error as LLMServiceError {
@@ -123,14 +115,40 @@ final class GoogleCloudQuotaFetcherTests: XCTestCase {
         mockClient.enqueue(.json(quotaResponse))
 
         let credentials = LLMCredentials(accessToken: "test")
-        let modelIds = try await GoogleCloudQuotaFetcher.fetchAvailableModelIds(
+        let modelIds = try await GeminiQuotaFetcher.fetchAvailableModelIds(
             projectId: "proj",
             credentials: credentials,
-            httpClient: mockClient,
-            userAgent: "test",
-            apiClient: "test"
+            httpClient: mockClient
         )
 
         XCTAssertEqual(modelIds, ["gemini-2.5-pro"])
+    }
+}
+
+final class AntigravityQuotaFetcherTests: XCTestCase {
+
+    func testFetchAvailableModelIds() async throws {
+        let mockClient = MockHTTPClient()
+        let quotaResponse: [String: Any] = [
+            "buckets": [
+                ["modelId": "gemini-2.5-pro", "tokenType": "REQUESTS"],
+                ["modelId": "claude-sonnet-4-5-20250929", "tokenType": "REQUESTS"],
+            ]
+        ]
+        mockClient.enqueue(.json(quotaResponse))
+
+        let credentials = LLMCredentials(accessToken: "test-token")
+        let modelIds = try await AntigravityQuotaFetcher.fetchAvailableModelIds(
+            projectId: "test-project",
+            credentials: credentials,
+            httpClient: mockClient
+        )
+
+        XCTAssertEqual(modelIds.count, 2)
+
+        // Verify Antigravity-specific headers
+        let captured = mockClient.capturedRequests.first
+        XCTAssertEqual(captured?.value(forHTTPHeaderField: "User-Agent"), "antigravity/1.104.0 darwin/arm64")
+        XCTAssertEqual(captured?.value(forHTTPHeaderField: "X-Goog-Api-Client"), "google-cloud-sdk vscode_cloudshelleditor/0.1")
     }
 }

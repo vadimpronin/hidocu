@@ -1,4 +1,3 @@
-import CryptoKit
 import Foundation
 import OSLog
 
@@ -23,42 +22,14 @@ struct AntigravityProvider: InternalProvider {
         credentials: LLMCredentials,
         traceId: String
     ) throws -> URLRequest {
-        // 1. Build base Google Cloud (Gemini format) request
-        let fullBody = GoogleCloudRequestBuilder.buildRequest(
+        // Build fully wrapped Antigravity request (includes envelope, session ID, no safety settings)
+        let body = AntigravityRequestBuilder.buildRequest(
             modelName: modelId,
             messages: messages,
-            thinking: thinking
+            thinking: thinking,
+            projectId: projectId
         )
 
-        // 2. Extract the inner "request" dict and modify it
-        var requestBody = fullBody["request"] as? [String: Any] ?? [:]
-
-        // 3. Remove safetySettings (Antigravity doesn't use them)
-        requestBody.removeValue(forKey: "safetySettings")
-
-        // 4. Add session ID derived from first user message
-        requestBody["sessionId"] = generateSessionId(messages: messages)
-
-        // 5. For Claude models, set toolConfig.functionCallingConfig.mode = "VALIDATED"
-        if isClaudeModel(modelId) {
-            requestBody["toolConfig"] = [
-                "functionCallingConfig": [
-                    "mode": "VALIDATED"
-                ]
-            ]
-        }
-
-        // 6. Wrap with Antigravity envelope
-        let body: [String: Any] = [
-            "model": modelId,
-            "userAgent": "antigravity",
-            "requestType": "agent",
-            "project": projectId,
-            "requestId": "agent-\(UUID().uuidString)",
-            "request": requestBody,
-        ]
-
-        // 7. Create the URL request
         var request = URLRequest(url: Self.streamURL)
         request.httpMethod = "POST"
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -90,12 +61,12 @@ struct AntigravityProvider: InternalProvider {
     }
 
     func createStreamParser() -> Any {
-        GoogleCloudStreamParser()
+        AntigravityStreamParser()
     }
 
     func parseStreamLine(_ line: String, parser: inout Any) -> [LLMChatChunk] {
-        guard let gcParser = parser as? GoogleCloudStreamParser else { return [] }
-        let chunks = gcParser.parseSSELine(line)
+        guard let agParser = parser as? AntigravityStreamParser else { return [] }
+        let chunks = agParser.parseSSELine(line)
         return chunks
     }
 
@@ -105,12 +76,10 @@ struct AntigravityProvider: InternalProvider {
         // 1. Fetch available model IDs from user quota
         let modelIds: [String]
         do {
-            modelIds = try await GoogleCloudQuotaFetcher.fetchAvailableModelIds(
+            modelIds = try await AntigravityQuotaFetcher.fetchAvailableModelIds(
                 projectId: projectId,
                 credentials: credentials,
-                httpClient: httpClient,
-                userAgent: "antigravity/1.104.0 darwin/arm64",
-                apiClient: "google-cloud-sdk vscode_cloudshelleditor/0.1"
+                httpClient: httpClient
             )
         } catch {
             logger.warning("Failed to fetch model IDs from quota, using fallback: \(error.localizedDescription)")
@@ -163,41 +132,7 @@ struct AntigravityProvider: InternalProvider {
         )
     }
 
-    // MARK: - Session ID Generation
-
-    /// Generate session ID: SHA-256 of first user message text, interpreted as Int64, prefixed with "-"
-    private func generateSessionId(messages: [LLMMessage]) -> String {
-        let firstUserText = messages
-            .first(where: { $0.role == .user })?
-            .content
-            .compactMap { content -> String? in
-                if case .text(let text) = content { return text }
-                return nil
-            }
-            .joined() ?? ""
-
-        guard !firstUserText.isEmpty else {
-            return "-\(Int64.random(in: 1_000_000_000_000_000_000...9_000_000_000_000_000_000))"
-        }
-
-        let hash = SHA256.hash(data: Data(firstUserText.utf8))
-        let hashBytes = Array(hash)
-
-        // Interpret first 8 bytes as big-endian Int64 (mask sign bit to keep positive)
-        var value: UInt64 = 0
-        for i in 0..<8 {
-            value = (value << 8) | UInt64(hashBytes[i])
-        }
-        let signedValue = Int64(bitPattern: value & 0x7FFFFFFFFFFFFFFF)
-
-        return "-\(signedValue)"
-    }
-
-    // MARK: - Helpers
-
-    private func isClaudeModel(_ modelId: String) -> Bool {
-        modelId.lowercased().contains("claude")
-    }
+    // MARK: - Headers
 
     private func applyHeaders(to request: inout URLRequest, credentials: LLMCredentials) {
         let token = credentials.accessToken ?? ""

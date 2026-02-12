@@ -1,10 +1,10 @@
 import XCTest
 @testable import LLMService
 
-final class GoogleCloudRequestBuilderTests: XCTestCase {
+final class GeminiRequestBuilderTests: XCTestCase {
     func testSimpleUserMessage() {
         let messages = [LLMMessage(role: .user, content: [.text("hello")])]
-        let result = GoogleCloudRequestBuilder.buildRequest(modelName: "gemini-pro", messages: messages, thinking: nil)
+        let result = GeminiRequestBuilder.buildRequest(modelName: "gemini-pro", messages: messages, thinking: nil)
 
         // Check structure
         XCTAssertEqual(result["model"] as? String, "gemini-pro")
@@ -25,7 +25,7 @@ final class GoogleCloudRequestBuilderTests: XCTestCase {
             LLMMessage(role: .system, content: [.text("You are helpful")]),
             LLMMessage(role: .user, content: [.text("hi")])
         ]
-        let result = GoogleCloudRequestBuilder.buildRequest(modelName: "gemini-pro", messages: messages, thinking: nil)
+        let result = GeminiRequestBuilder.buildRequest(modelName: "gemini-pro", messages: messages, thinking: nil)
         let request = result["request"] as? [String: Any]
 
         let sysInstruction = request?["systemInstruction"] as? [String: Any]
@@ -41,7 +41,7 @@ final class GoogleCloudRequestBuilderTests: XCTestCase {
             LLMMessage(role: .user, content: [.text("hi")]),
             LLMMessage(role: .assistant, content: [.text("hello")])
         ]
-        let result = GoogleCloudRequestBuilder.buildRequest(modelName: "gemini-pro", messages: messages, thinking: nil)
+        let result = GeminiRequestBuilder.buildRequest(modelName: "gemini-pro", messages: messages, thinking: nil)
         let request = result["request"] as? [String: Any]
         let contents = request?["contents"] as? [[String: Any]]
         XCTAssertEqual(contents?[1]["role"] as? String, "model")
@@ -49,7 +49,7 @@ final class GoogleCloudRequestBuilderTests: XCTestCase {
 
     func testThinkingConfigEnabled() {
         let messages = [LLMMessage(role: .user, content: [.text("think")])]
-        let result = GoogleCloudRequestBuilder.buildRequest(
+        let result = GeminiRequestBuilder.buildRequest(
             modelName: "gemini-pro",
             messages: messages,
             thinking: .enabled(budgetTokens: 1024)
@@ -63,7 +63,7 @@ final class GoogleCloudRequestBuilderTests: XCTestCase {
 
     func testSafetySettingsAttached() {
         let messages = [LLMMessage(role: .user, content: [.text("test")])]
-        let result = GoogleCloudRequestBuilder.buildRequest(modelName: "gemini-pro", messages: messages, thinking: nil)
+        let result = GeminiRequestBuilder.buildRequest(modelName: "gemini-pro", messages: messages, thinking: nil)
         let request = result["request"] as? [String: Any]
         let safety = request?["safetySettings"] as? [[String: String]]
         XCTAssertEqual(safety?.count, 5)
@@ -78,7 +78,7 @@ final class GoogleCloudRequestBuilderTests: XCTestCase {
             ]),
             LLMMessage(role: .user, content: [.text("follow up")]),
         ]
-        let result = GoogleCloudRequestBuilder.buildRequest(
+        let result = GeminiRequestBuilder.buildRequest(
             modelName: "gemini-2.5-pro", messages: messages, thinking: nil
         )
         let request = result["request"] as? [String: Any]
@@ -109,7 +109,7 @@ final class GoogleCloudRequestBuilderTests: XCTestCase {
                 .thinking("thinking...", signature: nil),
             ]),
         ]
-        let result = GoogleCloudRequestBuilder.buildRequest(
+        let result = GeminiRequestBuilder.buildRequest(
             modelName: "gemini-2.5-pro", messages: messages, thinking: nil
         )
         let request = result["request"] as? [String: Any]
@@ -117,5 +117,67 @@ final class GoogleCloudRequestBuilderTests: XCTestCase {
         let parts = contents?[0]["parts"] as? [[String: Any]]
         XCTAssertEqual(parts?[0]["thought"] as? Bool, true)
         XCTAssertNil(parts?[0]["thoughtSignature"])
+    }
+}
+
+final class AntigravityRequestBuilderTests: XCTestCase {
+    func testSimpleUserMessage() {
+        let messages = [LLMMessage(role: .user, content: [.text("hello")])]
+        let result = AntigravityRequestBuilder.buildRequest(
+            modelName: "gemini-pro", messages: messages, thinking: nil, projectId: "test-proj"
+        )
+
+        // Check envelope
+        XCTAssertEqual(result["model"] as? String, "gemini-pro")
+        XCTAssertEqual(result["userAgent"] as? String, "antigravity")
+        XCTAssertEqual(result["requestType"] as? String, "agent")
+        XCTAssertEqual(result["project"] as? String, "test-proj")
+        XCTAssertNotNil(result["requestId"])
+
+        // Check inner request
+        let request = result["request"] as? [String: Any]
+        XCTAssertNotNil(request)
+        let contents = request?["contents"] as? [[String: Any]]
+        XCTAssertNotNil(contents)
+    }
+
+    func testNoSafetySettings() {
+        let messages = [LLMMessage(role: .user, content: [.text("test")])]
+        let result = AntigravityRequestBuilder.buildRequest(
+            modelName: "gemini-pro", messages: messages, thinking: nil, projectId: "proj"
+        )
+        let request = result["request"] as? [String: Any]
+        XCTAssertNil(request?["safetySettings"], "Antigravity must NOT include safetySettings")
+    }
+
+    func testSessionIdPresent() {
+        let messages = [LLMMessage(role: .user, content: [.text("hello world")])]
+        let result = AntigravityRequestBuilder.buildRequest(
+            modelName: "gemini-pro", messages: messages, thinking: nil, projectId: "proj"
+        )
+        let request = result["request"] as? [String: Any]
+        let sessionId = request?["sessionId"] as? String
+        XCTAssertNotNil(sessionId)
+        XCTAssertTrue(sessionId?.hasPrefix("-") == true)
+    }
+
+    func testClaudeModelGetsToolConfig() {
+        let messages = [LLMMessage(role: .user, content: [.text("hi")])]
+        let result = AntigravityRequestBuilder.buildRequest(
+            modelName: "claude-sonnet-4-5-20250929", messages: messages, thinking: nil, projectId: "proj"
+        )
+        let request = result["request"] as? [String: Any]
+        let toolConfig = request?["toolConfig"] as? [String: Any]
+        let funcConfig = toolConfig?["functionCallingConfig"] as? [String: Any]
+        XCTAssertEqual(funcConfig?["mode"] as? String, "VALIDATED")
+    }
+
+    func testNonClaudeModelNoToolConfig() {
+        let messages = [LLMMessage(role: .user, content: [.text("hi")])]
+        let result = AntigravityRequestBuilder.buildRequest(
+            modelName: "gemini-2.5-pro", messages: messages, thinking: nil, projectId: "proj"
+        )
+        let request = result["request"] as? [String: Any]
+        XCTAssertNil(request?["toolConfig"])
     }
 }

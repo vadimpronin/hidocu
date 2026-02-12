@@ -55,7 +55,7 @@ struct GeminiCLIProvider: InternalProvider {
         messages: [LLMMessage],
         thinking: ThinkingConfig?
     ) -> [String: Any] {
-        var fullBody = GoogleCloudRequestBuilder.buildRequest(
+        var fullBody = GeminiRequestBuilder.buildRequest(
             modelName: modelId,
             messages: messages,
             thinking: thinking
@@ -68,15 +68,15 @@ struct GeminiCLIProvider: InternalProvider {
     // MARK: - Response Parsing
 
     func parseResponse(data: Data, traceId: String) throws -> LLMResponse {
-        try GoogleCloudResponseParser.parseResponse(data: data, traceId: traceId)
+        try GeminiResponseParser.parseResponse(data: data, traceId: traceId)
     }
 
     func createStreamParser() -> Any {
-        GoogleCloudStreamParser()
+        GeminiStreamParser()
     }
 
     func parseStreamLine(_ line: String, parser: inout Any) -> [LLMChatChunk] {
-        guard let gcParser = parser as? GoogleCloudStreamParser else { return [] }
+        guard let gcParser = parser as? GeminiStreamParser else { return [] }
         let chunks = gcParser.parseSSELine(line)
         return chunks
     }
@@ -87,12 +87,10 @@ struct GeminiCLIProvider: InternalProvider {
         // 1. Fetch available model IDs from user quota
         let modelIds: [String]
         do {
-            modelIds = try await GoogleCloudQuotaFetcher.fetchAvailableModelIds(
+            modelIds = try await GeminiQuotaFetcher.fetchAvailableModelIds(
                 projectId: projectId,
                 credentials: credentials,
-                httpClient: httpClient,
-                userAgent: "google-api-nodejs-client/9.15.1",
-                apiClient: "gl-node/22.17.0"
+                httpClient: httpClient
             )
         } catch {
             logger.warning("Failed to fetch model IDs from quota, using catalog fallback: \(error.localizedDescription)")

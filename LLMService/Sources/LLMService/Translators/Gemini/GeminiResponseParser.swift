@@ -1,8 +1,8 @@
 import Foundation
 
-enum GoogleCloudResponseParser {
+enum GeminiResponseParser {
 
-    /// Parse a non-streaming Google Cloud API response into LLMResponse.
+    /// Parse a non-streaming Gemini API response into LLMResponse.
     /// The response JSON is expected to have a top-level "response" key containing
     /// candidates, usageMetadata, responseId, and modelVersion.
     static func parseResponse(data: Data, traceId: String) throws -> LLMResponse {

@@ -37,12 +37,12 @@ final class AuthFlowTests: XCTestCase {
     }
 
     func testGeminiRedirectURI() {
-        let redirectURI = GoogleOAuthProvider.redirectURI(for: .geminiCLI)
+        let redirectURI = GeminiAuthProvider.redirectURI
         XCTAssertEqual(redirectURI, "http://localhost:8085/oauth2callback")
     }
 
     func testAntigravityRedirectURI() {
-        let redirectURI = GoogleOAuthProvider.redirectURI(for: .antigravity)
+        let redirectURI = AntigravityAuthProvider.redirectURI
         XCTAssertEqual(redirectURI, "http://localhost:51121/oauth-callback")
     }
 
@@ -77,9 +77,8 @@ final class AuthFlowTests: XCTestCase {
             "cloudaicompanionProject": "gemini-proj-123"
         ]))
 
-        let projectId = try await GoogleOAuthProvider.fetchProjectID(
+        let projectId = try await GeminiAuthProvider.fetchProjectID(
             accessToken: "test-token",
-            provider: .geminiCLI,
             httpClient: mockClient
         )
 
@@ -101,9 +100,8 @@ final class AuthFlowTests: XCTestCase {
             "cloudaicompanionProject": "ag-proj-456"
         ]))
 
-        let projectId = try await GoogleOAuthProvider.fetchProjectID(
+        let projectId = try await AntigravityAuthProvider.fetchProjectID(
             accessToken: "test-token",
-            provider: .antigravity,
             httpClient: mockClient
         )
 
@@ -121,9 +119,8 @@ final class AuthFlowTests: XCTestCase {
         let mockClient = MockHTTPClient()
         mockClient.enqueue(.json(["cloudaicompanionProject": "proj"]))
 
-        _ = try await GoogleOAuthProvider.fetchProjectID(
+        _ = try await GeminiAuthProvider.fetchProjectID(
             accessToken: "my-token",
-            provider: .geminiCLI,
             httpClient: mockClient
         )
 
@@ -170,9 +167,8 @@ final class AuthFlowTests: XCTestCase {
     }
 
     func testBuildAuthURLContainsCorrectRedirectURI() {
-        let redirectURI = GoogleOAuthProvider.redirectURI(for: .geminiCLI)
-        let authURL = GoogleOAuthProvider.buildAuthURL(
-            provider: .geminiCLI,
+        let redirectURI = GeminiAuthProvider.redirectURI
+        let authURL = GeminiAuthProvider.buildAuthURL(
             state: "test-state",
             redirectURI: redirectURI
         )

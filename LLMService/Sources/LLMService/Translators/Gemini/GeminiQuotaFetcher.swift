@@ -1,13 +1,11 @@
 import Foundation
 import OSLog
 
-private let logger = Logger(subsystem: "com.llmservice", category: "GoogleCloudQuotaFetcher")
+private let logger = Logger(subsystem: "com.llmservice", category: "GeminiQuotaFetcher")
 
-/// Fetches available model IDs from the Google Cloud Code retrieveUserQuota endpoint.
-///
-/// Used by both GeminiCLIProvider and AntigravityProvider to discover
-/// which models the user has access to.
-enum GoogleCloudQuotaFetcher {
+/// Fetches available model IDs from the Google Cloud Code retrieveUserQuota endpoint
+/// for the GeminiCLI provider.
+enum GeminiQuotaFetcher {
 
     private static let quotaURL = URL(
         string: "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota"
@@ -21,15 +19,11 @@ enum GoogleCloudQuotaFetcher {
     ///   - projectId: Google Cloud project ID
     ///   - credentials: Valid credentials with access token
     ///   - httpClient: HTTP client for making the request
-    ///   - userAgent: User-Agent header value (differs between GeminiCLI and Antigravity)
-    ///   - apiClient: X-Goog-Api-Client header value
     /// - Returns: Sorted array of unique model ID strings
     static func fetchAvailableModelIds(
         projectId: String,
         credentials: LLMCredentials,
-        httpClient: HTTPClient,
-        userAgent: String,
-        apiClient: String
+        httpClient: HTTPClient
     ) async throws -> [String] {
         let token = credentials.accessToken ?? ""
 
@@ -38,8 +32,8 @@ enum GoogleCloudQuotaFetcher {
         request.timeoutInterval = 15
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
-        request.setValue(apiClient, forHTTPHeaderField: "X-Goog-Api-Client")
+        request.setValue("google-api-nodejs-client/9.15.1", forHTTPHeaderField: "User-Agent")
+        request.setValue("gl-node/22.17.0", forHTTPHeaderField: "X-Goog-Api-Client")
 
         let body: [String: Any] = ["project": projectId]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -50,7 +44,7 @@ enum GoogleCloudQuotaFetcher {
             let errorMsg = String(data: data, encoding: .utf8) ?? "Unknown error"
             logger.error("retrieveUserQuota failed with status \(response.statusCode): \(errorMsg)")
             throw LLMServiceError(
-                traceId: "quota",
+                traceId: "gemini-quota",
                 message: "retrieveUserQuota failed: \(errorMsg)",
                 statusCode: response.statusCode
             )
@@ -59,7 +53,7 @@ enum GoogleCloudQuotaFetcher {
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let buckets = json["buckets"] as? [[String: Any]] else {
             throw LLMServiceError(
-                traceId: "quota",
+                traceId: "gemini-quota",
                 message: "Missing buckets in retrieveUserQuota response"
             )
         }
