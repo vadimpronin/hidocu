@@ -1,3 +1,5 @@
+import Foundation
+
 public struct LLMResponse: Sendable {
     public let id: String
     public let model: String
@@ -31,4 +33,5 @@ public enum LLMResponsePart: Sendable {
     case thinking(String)
     case text(String)
     case toolCall(id: String, function: String, arguments: String)
+    case inlineData(Data, mimeType: String)
 }

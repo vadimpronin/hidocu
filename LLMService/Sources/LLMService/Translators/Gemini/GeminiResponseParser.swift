@@ -57,6 +57,15 @@ enum GeminiResponseParser {
                     argsJSON = "{}"
                 }
                 result.append(.toolCall(id: callId, function: name, arguments: argsJSON))
+            } else if let inlineData = (part["inlineData"] as? [String: Any]) ?? (part["inline_data"] as? [String: Any]) {
+                let base64String = inlineData["data"] as? String ?? ""
+                guard !base64String.isEmpty,
+                      let decoded = Data(base64Encoded: base64String, options: .ignoreUnknownCharacters)
+                else { continue }
+                let mimeType = (inlineData["mimeType"] as? String)
+                    ?? (inlineData["mime_type"] as? String)
+                    ?? "image/png"
+                result.append(.inlineData(decoded, mimeType: mimeType))
             } else if let text = part["text"] as? String {
                 let isThought = part["thought"] as? Bool ?? false
                 if isThought {

@@ -36,6 +36,9 @@ struct ChatView: View {
             .onChange(of: viewModel.currentStreamingMessage?.text) {
                 proxy.scrollTo("streaming", anchor: .bottom)
             }
+            .onChange(of: viewModel.currentStreamingMessage?.attachments.count) {
+                proxy.scrollTo("streaming", anchor: .bottom)
+            }
         }
     }
 
@@ -47,7 +50,7 @@ struct ChatView: View {
                 }
             }
             .pickerStyle(.segmented)
-            .frame(width: 160)
+            .fixedSize()
             .labelsHidden()
 
             Toggle("Thinking", isOn: $viewModel.thinkingEnabled)

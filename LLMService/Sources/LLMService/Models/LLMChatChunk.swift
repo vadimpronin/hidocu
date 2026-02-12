@@ -21,4 +21,5 @@ public enum LLMPartTypeDelta: Sendable {
     case thinking
     case text
     case toolCall(id: String, function: String)
+    case inlineData(mimeType: String)
 }

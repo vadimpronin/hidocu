@@ -150,6 +150,11 @@ final class GeminiStreamParser: @unchecked Sendable {
             return handleFunctionCall(name: name, args: functionCall["args"], id: functionCall["id"] as? String)
         }
 
+        // Inline data (e.g., images) — emitted atomically as a single chunk
+        if let inlineData = (part["inlineData"] as? [String: Any]) ?? (part["inline_data"] as? [String: Any]) {
+            return handleInlineData(inlineData)
+        }
+
         // Text (possibly thinking)
         if let text = part["text"] as? String {
             let isThought = part["thought"] as? Bool ?? false
@@ -207,6 +212,24 @@ final class GeminiStreamParser: @unchecked Sendable {
             blockIndex += 1
             return [LLMChatChunk(id: responseId, partType: .text, delta: text)]
         }
+    }
+
+    private func handleInlineData(_ inlineData: [String: Any]) -> [LLMChatChunk] {
+        let base64String = inlineData["data"] as? String ?? ""
+        guard !base64String.isEmpty else { return [] }
+
+        // Support both camelCase and snake_case keys
+        let mimeType = (inlineData["mimeType"] as? String)
+            ?? (inlineData["mime_type"] as? String)
+            ?? "image/png"
+
+        state = .none
+        blockIndex += 1
+        return [LLMChatChunk(
+            id: responseId,
+            partType: .inlineData(mimeType: mimeType),
+            delta: base64String
+        )]
     }
 
     private func handleFunctionCall(name: String, args: Any?, id: String?) -> [LLMChatChunk] {

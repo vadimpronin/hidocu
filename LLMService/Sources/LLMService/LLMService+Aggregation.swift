@@ -58,6 +58,16 @@ extension LLMService {
                     currentToolName = function
                 }
                 currentText += chunk.delta
+
+            case .inlineData(let mimeType):
+                // inlineData arrives atomically in a single SSE event (per CLIProxyAPI reference),
+                // decode immediately without accumulation
+                flushPart(&parts, type: &currentPartType, text: &currentText, toolId: &currentToolId, toolName: &currentToolName)
+                if let decoded = Data(base64Encoded: chunk.delta, options: .ignoreUnknownCharacters) {
+                    parts.append(.inlineData(decoded, mimeType: mimeType))
+                } else {
+                    llmServiceLogger.warning("[\(traceId)] aggregateStreamResponse: failed to decode base64 inlineData (\(chunk.delta.count) chars, mimeType=\(mimeType))")
+                }
             }
         }
 

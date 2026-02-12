@@ -564,6 +564,253 @@ final class SmartChatTests: XCTestCase {
         XCTAssertFalse(allText.contains("\u{FFFD}"), "Stream should not contain replacement characters")
     }
 
+    // MARK: - InlineData tests
+
+    func testStreamAggregationWithInlineData() async throws {
+        let mockClient = MockHTTPClient()
+        let session = MockAccountSession(
+            provider: .antigravity,
+            credentials: LLMCredentials(accessToken: "test-token")
+        )
+        session.info = LLMAccountInfo(provider: .antigravity, metadata: ["project_id": "test-project"])
+
+        // Real minimal PNG header as base64
+        let base64PNG = "iVBORw0KGgo="
+        let sseResponse = [
+            "data: {\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"Here is an image:\"}],\"role\":\"model\"}}],\"modelVersion\":\"gemini-2.0-flash\"}",
+            "",
+            "data: {\"candidates\":[{\"content\":{\"parts\":[{\"inlineData\":{\"mimeType\":\"image/png\",\"data\":\"\(base64PNG)\"}}],\"role\":\"model\"}}],\"modelVersion\":\"gemini-2.0-flash\"}",
+            "",
+            "data: [DONE]",
+            "",
+        ].joined(separator: "\n")
+
+        mockClient.enqueue(.sse(sseResponse))
+
+        let service = LLMService(
+            session: session,
+            loggingConfig: LLMLoggingConfig(),
+            httpClient: mockClient,
+            oauthLauncher: MockOAuthLauncher()
+        )
+
+        let response = try await service.chat(
+            modelId: "gemini-2.0-flash",
+            messages: [LLMMessage(role: .user, content: [.text("generate image")])]
+        )
+
+        XCTAssertEqual(response.fullText, "Here is an image:")
+        XCTAssertEqual(response.content.count, 2, "Should have text + inlineData parts")
+
+        if case .text(let text) = response.content[0] {
+            XCTAssertEqual(text, "Here is an image:")
+        } else {
+            XCTFail("First part should be text")
+        }
+
+        if case .inlineData(let data, let mimeType) = response.content[1] {
+            XCTAssertEqual(mimeType, "image/png")
+            XCTAssertFalse(data.isEmpty, "Decoded data should not be empty")
+        } else {
+            XCTFail("Second part should be inlineData")
+        }
+    }
+
+    func testNonStreamingResponseWithInlineData() async throws {
+        let mockClient = MockHTTPClient()
+        let session = MockAccountSession(
+            provider: .geminiCLI,
+            credentials: LLMCredentials(accessToken: "test-token")
+        )
+        session.info = LLMAccountInfo(provider: .geminiCLI, metadata: ["project_id": "test-project"])
+
+        let base64PNG = "iVBORw0KGgo="
+        let responseJSON: [String: Any] = [
+            "candidates": [
+                [
+                    "content": [
+                        "parts": [
+                            ["text": "Generated:"],
+                            ["inlineData": ["mimeType": "image/png", "data": base64PNG]]
+                        ],
+                        "role": "model"
+                    ],
+                    "finishReason": "STOP"
+                ]
+            ],
+            "usageMetadata": [
+                "promptTokenCount": 10,
+                "candidatesTokenCount": 5
+            ],
+            "responseId": "resp-img",
+            "modelVersion": "gemini-2.0-flash"
+        ]
+
+        mockClient.enqueue(.json(responseJSON))
+
+        let service = LLMService(
+            session: session,
+            loggingConfig: LLMLoggingConfig(),
+            httpClient: mockClient,
+            oauthLauncher: MockOAuthLauncher()
+        )
+
+        let response = try await service.chat(
+            modelId: "gemini-2.0-flash",
+            messages: [LLMMessage(role: .user, content: [.text("generate image")])]
+        )
+
+        XCTAssertEqual(response.fullText, "Generated:")
+        XCTAssertEqual(response.content.count, 2, "Should have text + inlineData parts")
+
+        if case .inlineData(let data, let mimeType) = response.content[1] {
+            XCTAssertEqual(mimeType, "image/png")
+            XCTAssertFalse(data.isEmpty)
+        } else {
+            XCTFail("Second part should be inlineData")
+        }
+    }
+
+    func testStreamInlineDataChunkEmittedCorrectly() async throws {
+        let mockClient = MockHTTPClient()
+        let session = MockAccountSession(
+            provider: .antigravity,
+            credentials: LLMCredentials(accessToken: "test-token")
+        )
+        session.info = LLMAccountInfo(provider: .antigravity, metadata: ["project_id": "test-project"])
+
+        let base64PNG = "iVBORw0KGgo="
+        let sseResponse = [
+            "data: {\"candidates\":[{\"content\":{\"parts\":[{\"inlineData\":{\"mimeType\":\"image/jpeg\",\"data\":\"\(base64PNG)\"}}],\"role\":\"model\"}}],\"modelVersion\":\"gemini-2.0-flash\"}",
+            "",
+            "data: [DONE]",
+            "",
+        ].joined(separator: "\n")
+
+        mockClient.enqueue(.sse(sseResponse))
+
+        let service = LLMService(
+            session: session,
+            loggingConfig: LLMLoggingConfig(),
+            httpClient: mockClient,
+            oauthLauncher: MockOAuthLauncher()
+        )
+
+        var chunks: [LLMChatChunk] = []
+        let stream = service.chatStream(
+            modelId: "gemini-2.0-flash",
+            messages: [LLMMessage(role: .user, content: [.text("image please")])]
+        )
+        for try await chunk in stream {
+            chunks.append(chunk)
+        }
+
+        let inlineChunks = chunks.filter {
+            if case .inlineData = $0.partType { return true }
+            return false
+        }
+        XCTAssertEqual(inlineChunks.count, 1, "Should emit exactly one inlineData chunk")
+
+        if case .inlineData(let mimeType) = inlineChunks.first?.partType {
+            XCTAssertEqual(mimeType, "image/jpeg")
+        }
+        XCTAssertEqual(inlineChunks.first?.delta, base64PNG)
+    }
+
+    func testNonStreamingInlineDataWithSnakeCaseKeys() async throws {
+        let mockClient = MockHTTPClient()
+        let session = MockAccountSession(
+            provider: .geminiCLI,
+            credentials: LLMCredentials(accessToken: "test-token")
+        )
+        session.info = LLMAccountInfo(provider: .geminiCLI, metadata: ["project_id": "test-project"])
+
+        let base64PNG = "iVBORw0KGgo="
+        let responseJSON: [String: Any] = [
+            "candidates": [
+                [
+                    "content": [
+                        "parts": [
+                            ["inline_data": ["mime_type": "image/webp", "data": base64PNG]]
+                        ],
+                        "role": "model"
+                    ],
+                    "finishReason": "STOP"
+                ]
+            ],
+            "responseId": "resp-snake",
+            "modelVersion": "gemini-2.0-flash"
+        ]
+
+        mockClient.enqueue(.json(responseJSON))
+
+        let service = LLMService(
+            session: session,
+            loggingConfig: LLMLoggingConfig(),
+            httpClient: mockClient,
+            oauthLauncher: MockOAuthLauncher()
+        )
+
+        let response = try await service.chat(
+            modelId: "gemini-2.0-flash",
+            messages: [LLMMessage(role: .user, content: [.text("image")])]
+        )
+
+        XCTAssertEqual(response.content.count, 1)
+        if case .inlineData(_, let mimeType) = response.content[0] {
+            XCTAssertEqual(mimeType, "image/webp", "Should parse snake_case mime_type")
+        } else {
+            XCTFail("Expected inlineData part")
+        }
+    }
+
+    func testNonStreamingInlineDataEmptyDataSkipped() async throws {
+        let mockClient = MockHTTPClient()
+        let session = MockAccountSession(
+            provider: .geminiCLI,
+            credentials: LLMCredentials(accessToken: "test-token")
+        )
+        session.info = LLMAccountInfo(provider: .geminiCLI, metadata: ["project_id": "test-project"])
+
+        let responseJSON: [String: Any] = [
+            "candidates": [
+                [
+                    "content": [
+                        "parts": [
+                            ["text": "No image"],
+                            ["inlineData": ["mimeType": "image/png", "data": ""]]
+                        ],
+                        "role": "model"
+                    ],
+                    "finishReason": "STOP"
+                ]
+            ],
+            "responseId": "resp-empty",
+            "modelVersion": "gemini-2.0-flash"
+        ]
+
+        mockClient.enqueue(.json(responseJSON))
+
+        let service = LLMService(
+            session: session,
+            loggingConfig: LLMLoggingConfig(),
+            httpClient: mockClient,
+            oauthLauncher: MockOAuthLauncher()
+        )
+
+        let response = try await service.chat(
+            modelId: "gemini-2.0-flash",
+            messages: [LLMMessage(role: .user, content: [.text("image")])]
+        )
+
+        XCTAssertEqual(response.content.count, 1, "Empty inlineData should be skipped")
+        if case .text(let text) = response.content[0] {
+            XCTAssertEqual(text, "No image")
+        } else {
+            XCTFail("Only text part should remain")
+        }
+    }
+
     // MARK: - Trace method consistency
 
     /// Helper: extract the trace method string from the first HAR entry's comment.

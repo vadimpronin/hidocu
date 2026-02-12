@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 
 enum ChatMode: String, CaseIterable {
     case streaming = "Streaming"
+    case nonStreaming = "Non-Streaming"
     case automatic = "Automatic"
 }
 
@@ -25,7 +26,7 @@ final class TestStudioViewModel {
     var inputText = ""
     var thinkingEnabled = false
     var thinkingBudget: Int = 10000
-    var chatMode: ChatMode = .streaming
+    var chatMode: ChatMode = .automatic
 
     // Network Console
     var networkEntries: [NetworkRequestEntry] = []
@@ -220,8 +221,22 @@ final class TestStudioViewModel {
                             currentStreamingMessage?.thinkingText += chunk.delta
                         case .toolCall(let id, let function):
                             currentStreamingMessage?.text += "\n[Tool call: \(function) (id: \(id))]\n\(chunk.delta)"
+                        case .inlineData(let mimeType):
+                            if let attachment = ChatAttachment.decodeBase64(chunk.delta, mimeType: mimeType) {
+                                currentStreamingMessage?.attachments.append(attachment)
+                            }
                         }
                     }
+
+                case .nonStreaming:
+                    let response = try await svc.chatNonStream(
+                        modelId: modelId,
+                        messages: messages,
+                        thinking: thinking
+                    )
+
+                    guard generation == self.streamGeneration else { return }
+                    self.applyResponseParts(response.content)
 
                 case .automatic:
                     let response = try await svc.chat(
@@ -231,16 +246,7 @@ final class TestStudioViewModel {
                     )
 
                     guard generation == self.streamGeneration else { return }
-                    for part in response.content {
-                        switch part {
-                        case .text(let text):
-                            currentStreamingMessage?.text += text
-                        case .thinking(let text):
-                            currentStreamingMessage?.thinkingText += text
-                        case .toolCall(let id, let function, let arguments):
-                            currentStreamingMessage?.text += "\n[Tool call: \(function) (id: \(id))]\n\(arguments)"
-                        }
-                    }
+                    self.applyResponseParts(response.content)
                 }
 
                 guard generation == self.streamGeneration else { return }
@@ -278,6 +284,23 @@ final class TestStudioViewModel {
     func cancelStream() {
         streamTask?.cancel()
         streamTask = nil
+    }
+
+    private func applyResponseParts(_ parts: [LLMResponsePart]) {
+        for part in parts {
+            switch part {
+            case .text(let text):
+                currentStreamingMessage?.text += text
+            case .thinking(let text):
+                currentStreamingMessage?.thinkingText += text
+            case .toolCall(let id, let function, let arguments):
+                currentStreamingMessage?.text += "\n[Tool call: \(function) (id: \(id))]\n\(arguments)"
+            case .inlineData(let data, let mimeType):
+                currentStreamingMessage?.attachments.append(
+                    ChatAttachment(data: data, mimeType: mimeType)
+                )
+            }
+        }
     }
 
     private func buildLLMMessages() -> [LLMMessage] {
