@@ -38,6 +38,8 @@ protocol InternalProvider: Sendable {
     /// Whether this provider supports non-streaming requests
     var supportsNonStreaming: Bool { get }
 
-    /// Return static model info for this provider
-    func listModels() -> [LLMModelInfo]
+    /// Return available models for this provider.
+    /// Providers that support dynamic fetching use credentials and httpClient
+    /// to query available models. Providers with static model lists may ignore these parameters.
+    func listModels(credentials: LLMCredentials, httpClient: HTTPClient) async throws -> [LLMModelInfo]
 }

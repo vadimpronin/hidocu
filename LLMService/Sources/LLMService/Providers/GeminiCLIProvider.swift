@@ -1,4 +1,7 @@
 import Foundation
+import OSLog
+
+private let logger = Logger(subsystem: "com.llmservice", category: "GeminiCLIProvider")
 
 /// Provider implementation for GeminiCLI (Google Cloud Gemini API)
 struct GeminiCLIProvider: InternalProvider {
@@ -78,27 +81,41 @@ struct GeminiCLIProvider: InternalProvider {
 
     // MARK: - Models
 
-    func listModels() -> [LLMModelInfo] {
-        [
-            LLMModelInfo(
-                id: "gemini-2.5-pro", displayName: "Gemini 2.5 Pro",
-                supportsText: true, supportsImage: true, supportsAudio: true, supportsVideo: true,
-                supportsThinking: true, supportsTools: true,
-                maxInputTokens: 1_048_576, maxOutputTokens: 65_536
-            ),
-            LLMModelInfo(
-                id: "gemini-2.5-flash", displayName: "Gemini 2.5 Flash",
-                supportsText: true, supportsImage: true, supportsAudio: true, supportsVideo: true,
-                supportsThinking: true, supportsTools: true,
-                maxInputTokens: 1_048_576, maxOutputTokens: 65_536
-            ),
-            LLMModelInfo(
-                id: "gemini-2.0-flash", displayName: "Gemini 2.0 Flash",
-                supportsText: true, supportsImage: true, supportsAudio: true, supportsVideo: true,
-                supportsTools: true,
-                maxInputTokens: 1_048_576, maxOutputTokens: 8_192
-            ),
-        ]
+    func listModels(credentials: LLMCredentials, httpClient: HTTPClient) async throws -> [LLMModelInfo] {
+        // 1. Fetch available model IDs from user quota
+        let modelIds: [String]
+        do {
+            modelIds = try await GoogleCloudQuotaFetcher.fetchAvailableModelIds(
+                projectId: projectId,
+                credentials: credentials,
+                httpClient: httpClient,
+                userAgent: "google-api-nodejs-client/9.15.1",
+                apiClient: "gl-node/22.17.0"
+            )
+        } catch {
+            logger.warning("Failed to fetch model IDs from quota, using catalog fallback: \(error.localizedDescription)")
+            let catalog = await GeminiModelCatalog.shared.getCatalog(httpClient: httpClient)
+            return catalog.values.sorted { $0.id < $1.id }
+        }
+
+        // 2. Enrich with catalog data (display names, capabilities, token limits)
+        let catalog = await GeminiModelCatalog.shared.getCatalog(httpClient: httpClient)
+
+        return modelIds.map { modelId in
+            if let entry = catalog[modelId] {
+                return entry
+            }
+            // Model exists in quota but not in catalog — create a basic entry
+            return LLMModelInfo(
+                id: modelId,
+                displayName: LLMModelInfo.formatDisplayName(from: modelId),
+                supportsText: true,
+                supportsImage: true,
+                supportsAudio: true,
+                supportsVideo: true,
+                supportsTools: true
+            )
+        }
     }
 
     // MARK: - Headers

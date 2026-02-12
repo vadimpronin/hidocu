@@ -42,4 +42,28 @@ public struct LLMModelInfo: Sendable {
         self.maxOutputTokens = maxOutputTokens
         self.contextLength = contextLength
     }
+
+    /// Returns a copy with `supportsNonStreaming` set to `false`.
+    func withNonStreamingDisabled() -> LLMModelInfo {
+        LLMModelInfo(
+            id: id, displayName: displayName,
+            supportsText: supportsText, supportsImage: supportsImage,
+            supportsAudio: supportsAudio, supportsVideo: supportsVideo,
+            supportsThinking: supportsThinking, supportsTools: supportsTools,
+            supportsStreaming: supportsStreaming, supportsNonStreaming: false,
+            maxInputTokens: maxInputTokens, maxOutputTokens: maxOutputTokens,
+            contextLength: contextLength
+        )
+    }
+
+    /// Formats a model ID like "gemini-2.5-pro" into "Gemini 2.5 Pro".
+    static func formatDisplayName(from modelId: String) -> String {
+        modelId.split(separator: "-")
+            .map { segment in
+                let s = String(segment)
+                if s.first?.isNumber == true { return s }
+                return s.prefix(1).uppercased() + s.dropFirst()
+            }
+            .joined(separator: " ")
+    }
 }

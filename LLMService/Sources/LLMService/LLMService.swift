@@ -254,7 +254,8 @@ public final class LLMService: @unchecked Sendable {
 
     public func listModels() async throws -> [LLMModelInfo] {
         let provider = try resolveProvider()
-        return provider.listModels()
+        let credentials = try await getCredentialsWithRefresh(traceId: "listModels")
+        return try await provider.listModels(credentials: credentials, httpClient: httpClient)
     }
 
     public func getQuotaStatus(for modelId: String) async throws -> LLMQuotaStatus {

@@ -1,5 +1,8 @@
 import CryptoKit
 import Foundation
+import OSLog
+
+private let logger = Logger(subsystem: "com.llmservice", category: "AntigravityProvider")
 
 /// Provider implementation for Antigravity (Google Cloud with project wrapping)
 struct AntigravityProvider: InternalProvider {
@@ -97,30 +100,66 @@ struct AntigravityProvider: InternalProvider {
 
     // MARK: - Models
 
-    func listModels() -> [LLMModelInfo] {
-        [
-            LLMModelInfo(
-                id: "gemini-2.5-pro", displayName: "Gemini 2.5 Pro",
-                supportsText: true, supportsImage: true, supportsAudio: true, supportsVideo: true,
-                supportsThinking: true, supportsTools: true,
-                supportsNonStreaming: false,
-                maxInputTokens: 1_048_576, maxOutputTokens: 65_536
-            ),
-            LLMModelInfo(
-                id: "gemini-2.5-flash", displayName: "Gemini 2.5 Flash",
-                supportsText: true, supportsImage: true, supportsAudio: true, supportsVideo: true,
-                supportsThinking: true, supportsTools: true,
-                supportsNonStreaming: false,
-                maxInputTokens: 1_048_576, maxOutputTokens: 65_536
-            ),
-            LLMModelInfo(
-                id: "claude-sonnet-4-5-20250929", displayName: "Claude Sonnet 4.5 (via Antigravity)",
+    func listModels(credentials: LLMCredentials, httpClient: HTTPClient) async throws -> [LLMModelInfo] {
+        // 1. Fetch available model IDs from user quota
+        let modelIds: [String]
+        do {
+            modelIds = try await GoogleCloudQuotaFetcher.fetchAvailableModelIds(
+                projectId: projectId,
+                credentials: credentials,
+                httpClient: httpClient,
+                userAgent: "antigravity/1.104.0 darwin/arm64",
+                apiClient: "google-cloud-sdk vscode_cloudshelleditor/0.1"
+            )
+        } catch {
+            logger.warning("Failed to fetch model IDs from quota, using fallback: \(error.localizedDescription)")
+            let catalog = await GeminiModelCatalog.shared.getCatalog(httpClient: httpClient)
+            var models = catalog.values.map { $0.withNonStreamingDisabled() }
+            models.append(Self.claudeSonnetFallback)
+            return models.sorted { $0.id < $1.id }
+        }
+
+        // 2. Enrich with catalog data
+        let catalog = await GeminiModelCatalog.shared.getCatalog(httpClient: httpClient)
+
+        return modelIds.map { modelId in
+            // Claude models proxied by Antigravity
+            if modelId.lowercased().contains("claude") {
+                return Self.claudeModelInfo(for: modelId)
+            }
+
+            if let entry = catalog[modelId] {
+                return entry.withNonStreamingDisabled()
+            }
+
+            return LLMModelInfo(
+                id: modelId,
+                displayName: LLMModelInfo.formatDisplayName(from: modelId),
                 supportsText: true, supportsImage: true,
-                supportsThinking: true, supportsTools: true,
-                supportsNonStreaming: false,
-                maxInputTokens: 200_000, maxOutputTokens: 16_384
-            ),
-        ]
+                supportsNonStreaming: false
+            )
+        }
+    }
+
+    // MARK: - Claude Model Helpers
+
+    private static let claudeSonnetFallback = LLMModelInfo(
+        id: "claude-sonnet-4-5-20250929", displayName: "Claude Sonnet 4.5 (via Antigravity)",
+        supportsText: true, supportsImage: true,
+        supportsThinking: true, supportsTools: true,
+        supportsNonStreaming: false,
+        maxInputTokens: 200_000, maxOutputTokens: 16_384
+    )
+
+    private static func claudeModelInfo(for modelId: String) -> LLMModelInfo {
+        LLMModelInfo(
+            id: modelId,
+            displayName: LLMModelInfo.formatDisplayName(from: modelId) + " (via Antigravity)",
+            supportsText: true, supportsImage: true,
+            supportsThinking: true, supportsTools: true,
+            supportsNonStreaming: false,
+            maxInputTokens: 200_000, maxOutputTokens: 16_384
+        )
     }
 
     // MARK: - Session ID Generation

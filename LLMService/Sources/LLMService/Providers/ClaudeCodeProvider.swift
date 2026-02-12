@@ -76,7 +76,7 @@ struct ClaudeCodeProvider: InternalProvider {
 
     // MARK: - Models
 
-    func listModels() -> [LLMModelInfo] {
+    func listModels(credentials: LLMCredentials, httpClient: HTTPClient) async throws -> [LLMModelInfo] {
         [
             LLMModelInfo(
                 id: "claude-sonnet-4-5-20250929", displayName: "Claude Sonnet 4.5",
