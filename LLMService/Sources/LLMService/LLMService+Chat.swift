@@ -192,6 +192,9 @@ extension LLMService {
                     )
                     await self.notifyTraceSent(context)
 
+                    // Tracks whether trace was already recorded (non-200 error or success)
+                    // so the catch block only records for genuinely new errors (network/mid-stream).
+                    var isTraceRecorded = false
                     do {
                         let (byteStream, response) = try await self.withRetry(
                             request: request,
@@ -210,6 +213,7 @@ extension LLMService {
                             llmServiceLogger.error("[\(traceId)] \(method): API error \(response.statusCode): \(errorMsg)")
 
                             await self.recordTrace(context, error: errorMsg, response: LLMTraceEntry.HTTPDetails(from: response, body: errorMsg))
+                            isTraceRecorded = true
 
                             throw LLMServiceError(traceId: traceId, message: errorMsg, statusCode: response.statusCode)
                         }
@@ -245,15 +249,16 @@ extension LLMService {
                         }
 
                         await self.recordTrace(context, response: LLMTraceEntry.HTTPDetails(from: response, body: rawLineSegments.joined()))
+                        isTraceRecorded = true
 
                         llmServiceLogger.info("[\(traceId)] \(method): stream completed successfully")
                         continuation.finish()
                     } catch {
-                        // Network failure or mid-stream error — record trace.
-                        // The throw here is caught by the outer catch, which calls
-                        // continuation.finish(throwing:). wrapError is idempotent
-                        // for LLMServiceError, so double-wrapping is safe.
-                        await self.recordTrace(context, error: error.localizedDescription)
+                        // Network failure or mid-stream error — record trace only if
+                        // not already recorded (e.g., by the non-200 guard block).
+                        if !isTraceRecorded {
+                            await self.recordTrace(context, error: error.localizedDescription)
+                        }
                         throw Self.wrapError(error, traceId: traceId)
                     }
                 } catch {

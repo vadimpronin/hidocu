@@ -468,6 +468,67 @@ final class TraceRecordingTests: XCTestCase {
         XCTAssertEqual(entries.count, 1, "HAR should contain 1 trace entry for stream network failure")
     }
 
+    // MARK: - Streaming error trace preserves HTTP details (not overwritten)
+
+    func testStreamingErrorTracePreservesHTTPDetails() async throws {
+        let mockClient = MockHTTPClient()
+        let session = MockAccountSession(
+            provider: .antigravity,
+            credentials: LLMCredentials(accessToken: "test-token")
+        )
+        session.info = LLMAccountInfo(provider: .antigravity, metadata: ["project_id": "test-project"])
+
+        let storageDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LLMServiceTests_\(UUID().uuidString)")
+        addTeardownBlock { try? FileManager.default.removeItem(at: storageDir) }
+
+        let config = LLMLoggingConfig(subsystem: "test", storageDirectory: storageDir)
+
+        mockClient.enqueue(.error(429, message: "Rate limit exceeded"))
+
+        let service = LLMService(
+            session: session,
+            loggingConfig: config,
+            httpClient: mockClient,
+            oauthLauncher: MockOAuthLauncher()
+        )
+
+        let stream = service.chatStream(
+            modelId: "gemini-2.0-flash",
+            messages: [LLMMessage(role: .user, content: [.text("hello")])]
+        )
+
+        do {
+            for try await _ in stream {
+                XCTFail("Should not yield any chunks for non-200 response")
+            }
+            XCTFail("Expected error")
+        } catch let error as LLMServiceError {
+            XCTAssertEqual(error.statusCode, 429)
+        } catch {
+            XCTFail("Expected LLMServiceError, got \(type(of: error))")
+        }
+
+        // Verify HAR contains exactly 1 trace with full HTTP error details preserved
+        let harData = try await service.exportHAR(lastMinutes: 5)
+        let har = try XCTUnwrap(JSONSerialization.jsonObject(with: harData) as? [String: Any])
+        let log = try XCTUnwrap(har["log"] as? [String: Any])
+        let entries = try XCTUnwrap(log["entries"] as? [[String: Any]])
+        XCTAssertEqual(entries.count, 1, "HAR should contain exactly 1 trace entry (not 2)")
+
+        let entry = try XCTUnwrap(entries.first)
+
+        // Verify response status code was preserved (not overwritten to 0 by catch block)
+        let harResponse = try XCTUnwrap(entry["response"] as? [String: Any])
+        let status = try XCTUnwrap(harResponse["status"] as? Int)
+        XCTAssertEqual(status, 429, "Trace should preserve actual HTTP status code")
+
+        // Verify response body was preserved
+        let content = try XCTUnwrap(harResponse["content"] as? [String: Any])
+        let body = try XCTUnwrap(content["text"] as? String)
+        XCTAssertTrue(body.contains("Rate limit exceeded"), "Trace should preserve error body from response")
+    }
+
     // MARK: - Non-streaming chat records trace on success
 
     func testNonStreamingChatRecordsTraceOnSuccess() async throws {
