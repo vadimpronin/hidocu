@@ -199,15 +199,21 @@ public final class LLMService: @unchecked Sendable {
 
                     var parser = provider.createStreamParser()
                     var lineBuffer = ""
-                    var responseText = ""
+                    var rawLineSegments: [String] = []
+                    var rawLinesSize = 0
+                    let rawLinesCap = 512 * 1024
 
                     for try await byte in byteStream {
                         let char = Character(UnicodeScalar(byte))
                         if char == "\n" {
+                            let segment = lineBuffer + "\n"
+                            if rawLinesSize < rawLinesCap {
+                                rawLineSegments.append(segment)
+                                rawLinesSize += segment.utf8.count
+                            }
                             if !lineBuffer.isEmpty {
                                 let chunks = provider.parseStreamLine(lineBuffer, parser: &parser)
                                 for chunk in chunks {
-                                    responseText += chunk.delta
                                     continuation.yield(chunk)
                                 }
                             }
@@ -218,9 +224,12 @@ public final class LLMService: @unchecked Sendable {
                     }
 
                     if !lineBuffer.isEmpty {
+                        let segment = lineBuffer + "\n"
+                        if rawLinesSize < rawLinesCap {
+                            rawLineSegments.append(segment)
+                        }
                         let chunks = provider.parseStreamLine(lineBuffer, parser: &parser)
                         for chunk in chunks {
-                            responseText += chunk.delta
                             continuation.yield(chunk)
                         }
                     }
@@ -234,7 +243,7 @@ public final class LLMService: @unchecked Sendable {
                         isStreaming: true,
                         request: reqDetails,
                         response: LLMTraceEntry.HTTPDetails(
-                            body: String(responseText.prefix(4096)),
+                            body: rawLineSegments.joined(),
                             statusCode: response.statusCode
                         ),
                         duration: Date().timeIntervalSince(startTime)

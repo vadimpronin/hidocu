@@ -2,6 +2,11 @@ import Foundation
 import LLMService
 import OSLog
 
+enum ChatMode: String, CaseIterable {
+    case streaming = "Streaming"
+    case automatic = "Automatic"
+}
+
 @Observable
 @MainActor
 final class TestStudioViewModel {
@@ -13,11 +18,12 @@ final class TestStudioViewModel {
     var chatHistories: [LLMProvider: [ChatMessage]] = [:]
     var isStreaming = false
     var currentStreamingMessage: ChatMessage?
-    var debugEnabled = false
+    var debugEnabled = true
     var logEntries: [LogEntry] = []
     var inputText = ""
     var thinkingEnabled = false
     var thinkingBudget: Int = 10000
+    var chatMode: ChatMode = .streaming
 
     // MARK: - Private
 
@@ -82,7 +88,8 @@ final class TestStudioViewModel {
             : nil
         return LLMLoggingConfig(
             subsystem: "com.llmteststudio",
-            storageDirectory: dir
+            storageDirectory: dir,
+            shouldMaskTokens: false
         )
     }
 
@@ -152,23 +159,46 @@ final class TestStudioViewModel {
             ? .enabled(budgetTokens: thinkingBudget)
             : nil
 
+        let mode = chatMode
         streamTask = Task {
             do {
-                let stream = svc.chatStream(
-                    modelId: modelId,
-                    messages: messages,
-                    thinking: thinking
-                )
+                switch mode {
+                case .streaming:
+                    let stream = svc.chatStream(
+                        modelId: modelId,
+                        messages: messages,
+                        thinking: thinking
+                    )
 
-                for try await chunk in stream {
+                    for try await chunk in stream {
+                        guard generation == self.streamGeneration else { return }
+                        switch chunk.partType {
+                        case .text:
+                            currentStreamingMessage?.text += chunk.delta
+                        case .thinking:
+                            currentStreamingMessage?.thinkingText += chunk.delta
+                        case .toolCall(let id, let function):
+                            currentStreamingMessage?.text += "\n[Tool call: \(function) (id: \(id))]\n\(chunk.delta)"
+                        }
+                    }
+
+                case .automatic:
+                    let response = try await svc.chat(
+                        modelId: modelId,
+                        messages: messages,
+                        thinking: thinking
+                    )
+
                     guard generation == self.streamGeneration else { return }
-                    switch chunk.partType {
-                    case .text:
-                        currentStreamingMessage?.text += chunk.delta
-                    case .thinking:
-                        currentStreamingMessage?.thinkingText += chunk.delta
-                    case .toolCall(let id, let function):
-                        currentStreamingMessage?.text += "\n[Tool call: \(function) (id: \(id))]\n\(chunk.delta)"
+                    for part in response.content {
+                        switch part {
+                        case .text(let text):
+                            currentStreamingMessage?.text += text
+                        case .thinking(let text):
+                            currentStreamingMessage?.thinkingText += text
+                        case .toolCall(let id, let function, let arguments):
+                            currentStreamingMessage?.text += "\n[Tool call: \(function) (id: \(id))]\n\(arguments)"
+                        }
                     }
                 }
 

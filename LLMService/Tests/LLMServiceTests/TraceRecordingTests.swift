@@ -119,6 +119,213 @@ final class TraceRecordingTests: XCTestCase {
         XCTAssertTrue(comment.contains("chatStream"), "Trace should record method as chatStream")
     }
 
+    // MARK: - HAR response body contains raw SSE lines
+
+    func testHARResponseBodyContainsRawSSELines() async throws {
+        let mockClient = MockHTTPClient()
+        let session = MockAccountSession(
+            provider: .claudeCode,
+            credentials: LLMCredentials(accessToken: "test-token")
+        )
+
+        let storageDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LLMServiceTests_\(UUID().uuidString)")
+        addTeardownBlock { try? FileManager.default.removeItem(at: storageDir) }
+
+        let config = LLMLoggingConfig(
+            subsystem: "test",
+            storageDirectory: storageDir
+        )
+
+        let sseLines = [
+            "event: message_start",
+            "data: {\"type\":\"message_start\",\"message\":{\"id\":\"msg-1\",\"model\":\"claude-3\",\"role\":\"assistant\",\"content\":[],\"usage\":{\"input_tokens\":5,\"output_tokens\":0}}}",
+            "",
+            "event: content_block_start",
+            "data: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}",
+            "",
+            "event: content_block_delta",
+            "data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"Hello world\"}}",
+            "",
+            "event: content_block_stop",
+            "data: {\"type\":\"content_block_stop\",\"index\":0}",
+            "",
+            "event: message_stop",
+            "data: {\"type\":\"message_stop\"}",
+            "",
+        ]
+        let sseResponse = sseLines.joined(separator: "\n")
+        mockClient.enqueue(.sse(sseResponse))
+
+        let service = LLMService(
+            session: session,
+            loggingConfig: config,
+            httpClient: mockClient,
+            oauthLauncher: MockOAuthLauncher()
+        )
+
+        let response = try await service.chat(
+            modelId: "claude-3",
+            messages: [LLMMessage(role: .user, content: [.text("hello")])]
+        )
+        XCTAssertEqual(response.fullText, "Hello world")
+
+        let harData = try await service.exportHAR(lastMinutes: 5)
+        let har = try XCTUnwrap(JSONSerialization.jsonObject(with: harData) as? [String: Any])
+        let log = try XCTUnwrap(har["log"] as? [String: Any])
+        let entries = try XCTUnwrap(log["entries"] as? [[String: Any]])
+        let entry = try XCTUnwrap(entries.first)
+        let harResponse = try XCTUnwrap(entry["response"] as? [String: Any])
+        let content = try XCTUnwrap(harResponse["content"] as? [String: Any])
+        let body = try XCTUnwrap(content["text"] as? String)
+
+        // Body must contain raw SSE lines, not just extracted text
+        XCTAssertTrue(body.contains("event: message_start"), "HAR body should contain raw SSE event lines")
+        XCTAssertTrue(body.contains("event: content_block_delta"), "HAR body should contain raw SSE event lines")
+        XCTAssertTrue(body.contains("\"type\":\"text_delta\""), "HAR body should contain raw SSE data JSON")
+        XCTAssertFalse(body == "Hello world", "HAR body must not be just the extracted text")
+    }
+
+    // MARK: - HAR response mimeType is text/event-stream for streaming
+
+    func testHARResponseMimeTypeIsEventStreamForStreaming() async throws {
+        let mockClient = MockHTTPClient()
+        let session = MockAccountSession(
+            provider: .claudeCode,
+            credentials: LLMCredentials(accessToken: "test-token")
+        )
+
+        let storageDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LLMServiceTests_\(UUID().uuidString)")
+        addTeardownBlock { try? FileManager.default.removeItem(at: storageDir) }
+
+        let config = LLMLoggingConfig(
+            subsystem: "test",
+            storageDirectory: storageDir
+        )
+
+        let sseResponse = [
+            "event: message_start",
+            "data: {\"type\":\"message_start\",\"message\":{\"id\":\"msg-1\",\"model\":\"claude-3\",\"role\":\"assistant\",\"content\":[],\"usage\":{\"input_tokens\":5,\"output_tokens\":0}}}",
+            "",
+            "event: content_block_start",
+            "data: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}",
+            "",
+            "event: content_block_delta",
+            "data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"Hi\"}}",
+            "",
+            "event: content_block_stop",
+            "data: {\"type\":\"content_block_stop\",\"index\":0}",
+            "",
+            "event: message_stop",
+            "data: {\"type\":\"message_stop\"}",
+            "",
+        ].joined(separator: "\n")
+
+        mockClient.enqueue(.sse(sseResponse))
+
+        let service = LLMService(
+            session: session,
+            loggingConfig: config,
+            httpClient: mockClient,
+            oauthLauncher: MockOAuthLauncher()
+        )
+
+        _ = try await service.chat(
+            modelId: "claude-3",
+            messages: [LLMMessage(role: .user, content: [.text("hello")])]
+        )
+
+        let harData = try await service.exportHAR(lastMinutes: 5)
+        let har = try XCTUnwrap(JSONSerialization.jsonObject(with: harData) as? [String: Any])
+        let log = try XCTUnwrap(har["log"] as? [String: Any])
+        let entries = try XCTUnwrap(log["entries"] as? [[String: Any]])
+        let entry = try XCTUnwrap(entries.first)
+        let harResponse = try XCTUnwrap(entry["response"] as? [String: Any])
+        let content = try XCTUnwrap(harResponse["content"] as? [String: Any])
+        let mimeType = try XCTUnwrap(content["mimeType"] as? String)
+
+        XCTAssertEqual(mimeType, "text/event-stream", "Streaming response should have text/event-stream mimeType")
+    }
+
+    // MARK: - HAR response body respects size cap
+
+    func testHARResponseBodyRespectsSizeCap() async throws {
+        let mockClient = MockHTTPClient()
+        let session = MockAccountSession(
+            provider: .claudeCode,
+            credentials: LLMCredentials(accessToken: "test-token")
+        )
+
+        let storageDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LLMServiceTests_\(UUID().uuidString)")
+        addTeardownBlock { try? FileManager.default.removeItem(at: storageDir) }
+
+        let config = LLMLoggingConfig(
+            subsystem: "test",
+            storageDirectory: storageDir
+        )
+
+        // Build an SSE response that exceeds 512KB of raw lines
+        var sseLines = [
+            "event: message_start",
+            "data: {\"type\":\"message_start\",\"message\":{\"id\":\"msg-1\",\"model\":\"claude-3\",\"role\":\"assistant\",\"content\":[],\"usage\":{\"input_tokens\":5,\"output_tokens\":0}}}",
+            "",
+            "event: content_block_start",
+            "data: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}",
+            "",
+        ]
+
+        // Add many delta events to exceed 512KB
+        let longText = String(repeating: "x", count: 1000)
+        for _ in 0..<600 {
+            sseLines.append("event: content_block_delta")
+            sseLines.append("data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"\(longText)\"}}")
+            sseLines.append("")
+        }
+
+        sseLines.append(contentsOf: [
+            "event: content_block_stop",
+            "data: {\"type\":\"content_block_stop\",\"index\":0}",
+            "",
+            "event: message_stop",
+            "data: {\"type\":\"message_stop\"}",
+            "",
+        ])
+
+        let sseResponse = sseLines.joined(separator: "\n")
+        mockClient.enqueue(.sse(sseResponse))
+
+        let service = LLMService(
+            session: session,
+            loggingConfig: config,
+            httpClient: mockClient,
+            oauthLauncher: MockOAuthLauncher()
+        )
+
+        _ = try await service.chat(
+            modelId: "claude-3",
+            messages: [LLMMessage(role: .user, content: [.text("hello")])]
+        )
+
+        let harData = try await service.exportHAR(lastMinutes: 5)
+        let har = try XCTUnwrap(JSONSerialization.jsonObject(with: harData) as? [String: Any])
+        let log = try XCTUnwrap(har["log"] as? [String: Any])
+        let entries = try XCTUnwrap(log["entries"] as? [[String: Any]])
+        let entry = try XCTUnwrap(entries.first)
+        let harResponse = try XCTUnwrap(entry["response"] as? [String: Any])
+        let content = try XCTUnwrap(harResponse["content"] as? [String: Any])
+        let body = try XCTUnwrap(content["text"] as? String)
+
+        let capBytes = 512 * 1024
+        XCTAssertLessThanOrEqual(body.utf8.count, capBytes + 2048,
+            "HAR response body should be approximately bounded by the 512KB cap (with tolerance for the last segment)")
+        XCTAssertGreaterThan(body.utf8.count, 0, "HAR response body should not be empty")
+
+        // Verify the body starts with the SSE header events (early lines captured)
+        XCTAssertTrue(body.contains("event: message_start"), "Captured body should start with early SSE lines")
+    }
+
     // MARK: - HAR export with no storage directory returns empty
 
     func testExportHARWithNoStorageReturnsEmptyEntries() async throws {

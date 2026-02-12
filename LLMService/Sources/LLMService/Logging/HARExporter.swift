@@ -45,6 +45,7 @@ enum HARExporter {
                         respHeaders.append(["name": key, "value": value])
                     }
                 }
+                let responseMimeType = entry.isStreaming ? "text/event-stream" : "application/json"
                 harEntry["response"] = [
                     "status": resp.statusCode ?? 0,
                     "statusText": HTTPURLResponse.localizedString(forStatusCode: resp.statusCode ?? 0),
@@ -53,7 +54,7 @@ enum HARExporter {
                     "cookies": [],
                     "content": [
                         "size": resp.body?.count ?? 0,
-                        "mimeType": "application/json",
+                        "mimeType": responseMimeType,
                         "text": resp.body ?? ""
                     ],
                     "redirectURL": "",

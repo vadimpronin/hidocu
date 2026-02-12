@@ -41,6 +41,15 @@ struct ChatView: View {
 
     private var inputBar: some View {
         HStack(spacing: 8) {
+            Picker("Chat mode", selection: $viewModel.chatMode) {
+                ForEach(ChatMode.allCases, id: \.self) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 160)
+            .labelsHidden()
+
             Toggle("Thinking", isOn: $viewModel.thinkingEnabled)
                 .toggleStyle(.checkbox)
                 .font(.caption)
