@@ -16,8 +16,10 @@ struct ChatView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 12) {
                     ForEach(viewModel.currentMessages) { message in
-                        MessageBubble(message: message)
-                            .id(message.id)
+                        MessageBubble(message: message) {
+                            viewModel.deleteMessage(id: message.id)
+                        }
+                        .id(message.id)
                     }
                     if let streaming = viewModel.currentStreamingMessage {
                         MessageBubble(message: streaming)
@@ -52,6 +54,15 @@ struct ChatView: View {
             .pickerStyle(.segmented)
             .fixedSize()
             .labelsHidden()
+
+            Button {
+                viewModel.clearChat()
+            } label: {
+                Image(systemName: "trash")
+            }
+            .buttonStyle(.plain)
+            .disabled(viewModel.currentMessages.isEmpty && !viewModel.isStreaming)
+            .help("Clear chat history")
 
             Toggle("Thinking", isOn: $viewModel.thinkingEnabled)
                 .toggleStyle(.checkbox)

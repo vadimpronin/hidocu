@@ -286,6 +286,18 @@ final class TestStudioViewModel {
         streamTask = nil
     }
 
+    func clearChat() {
+        cancelStream()
+        currentStreamingMessage = nil
+        isStreaming = false
+        currentMessages.removeAll()
+        log("Chat history cleared", level: .info)
+    }
+
+    func deleteMessage(id: UUID) {
+        currentMessages.removeAll { $0.id == id }
+    }
+
     private func applyResponseParts(_ parts: [LLMResponsePart]) {
         for part in parts {
             switch part {

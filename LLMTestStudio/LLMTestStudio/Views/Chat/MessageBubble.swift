@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 
 struct MessageBubble: View {
     let message: ChatMessage
+    var onDelete: (() -> Void)?
 
     var body: some View {
         HStack {
@@ -24,6 +25,13 @@ struct MessageBubble: View {
             .padding(10)
             .background(backgroundColor)
             .clipShape(RoundedRectangle(cornerRadius: 10))
+            .contextMenu {
+                if let onDelete {
+                    Button("Delete Message", role: .destructive) {
+                        onDelete()
+                    }
+                }
+            }
 
             if message.role == .assistant { Spacer(minLength: 60) }
         }
