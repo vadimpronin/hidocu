@@ -177,22 +177,16 @@ enum SSEParser {
                         )
                     }
 
-                    var buffer = ""
+                    var byteBuffer: [UInt8] = []
                     var currentEvent: String?
                     var currentData: [String] = []
                     var currentId: String?
 
                     for try await byte in bytes {
-                        guard let char = String(bytes: [byte], encoding: .utf8) else {
-                            continue
-                        }
-
-                        buffer.append(char)
-
-                        // Check for newline
-                        if char == "\n" {
-                            let line = buffer.trimmingCharacters(in: .newlines)
-                            buffer = ""
+                        if byte == 0x0A { // '\n'
+                            if byteBuffer.last == 0x0D { byteBuffer.removeLast() } // strip \r from \r\n
+                            let line = String(decoding: byteBuffer, as: UTF8.self)
+                            byteBuffer.removeAll(keepingCapacity: true)
 
                             // Empty line signals end of event
                             if line.isEmpty {
@@ -239,6 +233,32 @@ enum SSEParser {
                                     currentId = value
                                 default:
                                     break
+                                }
+                            }
+                        } else {
+                            byteBuffer.append(byte)
+                        }
+                    }
+
+                    // Handle residual bytes if stream ends without trailing newline
+                    if !byteBuffer.isEmpty {
+                        let line = String(decoding: byteBuffer, as: UTF8.self)
+                            .trimmingCharacters(in: .newlines)
+                        if !line.isEmpty, !line.hasPrefix(":") {
+                            if let colonIndex = line.firstIndex(of: ":") {
+                                let field = String(line[..<colonIndex])
+                                var value = String(line[line.index(after: colonIndex)...])
+                                if value.hasPrefix(" ") {
+                                    value = String(value.dropFirst())
+                                }
+                                if field == "data" {
+                                    currentData.append(value)
+                                }
+                            }
+                            if !currentData.isEmpty {
+                                let data = currentData.joined(separator: "\n")
+                                if data != "[DONE]" {
+                                    continuation.yield(SSEEvent(event: currentEvent, data: data, id: currentId))
                                 }
                             }
                         }

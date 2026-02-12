@@ -145,8 +145,7 @@ actor APIDebugLogger {
         for (key, value) in response.allHeaderFields {
             responseHeaders[String(describing: key)] = String(describing: value)
         }
-        let responseBodyString = String(data: responseBody, encoding: .utf8)
-            ?? "<binary data: \(responseBody.count) bytes>"
+        let responseBodyString = String(decoding: responseBody, as: UTF8.self)
 
         let entry = APIDebugLogEntry(
             id: entryId,

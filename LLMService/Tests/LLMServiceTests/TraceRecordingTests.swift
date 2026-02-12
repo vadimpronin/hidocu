@@ -326,6 +326,79 @@ final class TraceRecordingTests: XCTestCase {
         XCTAssertTrue(body.contains("event: message_start"), "Captured body should start with early SSE lines")
     }
 
+    // MARK: - Unicode preservation in streaming and HAR
+
+    func testUnicodePreservedInStreamingAndHAR() async throws {
+        let mockClient = MockHTTPClient()
+        let session = MockAccountSession(
+            provider: .claudeCode,
+            credentials: LLMCredentials(accessToken: "test-token")
+        )
+
+        let storageDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LLMServiceTests_\(UUID().uuidString)")
+        addTeardownBlock { try? FileManager.default.removeItem(at: storageDir) }
+
+        let config = LLMLoggingConfig(subsystem: "test", storageDirectory: storageDir)
+
+        let sseResponse = [
+            "event: message_start",
+            "data: {\"type\":\"message_start\",\"message\":{\"id\":\"msg-1\",\"model\":\"claude-3\",\"role\":\"assistant\",\"content\":[],\"usage\":{\"input_tokens\":5,\"output_tokens\":0}}}",
+            "",
+            "event: content_block_start",
+            "data: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}",
+            "",
+            "event: content_block_delta",
+            "data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"Привет мир \"}}",
+            "",
+            "event: content_block_delta",
+            "data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"你好世界 \"}}",
+            "",
+            "event: content_block_delta",
+            "data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"Hello 🌍🇺🇸\"}}",
+            "",
+            "event: content_block_stop",
+            "data: {\"type\":\"content_block_stop\",\"index\":0}",
+            "",
+            "event: message_stop",
+            "data: {\"type\":\"message_stop\"}",
+            "",
+        ].joined(separator: "\n")
+
+        mockClient.enqueue(.sse(sseResponse))
+
+        let service = LLMService(
+            session: session,
+            loggingConfig: config,
+            httpClient: mockClient,
+            oauthLauncher: MockOAuthLauncher()
+        )
+
+        let response = try await service.chat(
+            modelId: "claude-3",
+            messages: [LLMMessage(role: .user, content: [.text("hello")])]
+        )
+
+        // Verify unicode preserved in response text (2-byte Cyrillic, 3-byte CJK, 4-byte emoji)
+        XCTAssertEqual(response.fullText, "Привет мир 你好世界 Hello 🌍🇺🇸")
+        XCTAssertFalse(response.fullText.contains("\u{FFFD}"), "Response should not contain replacement characters")
+
+        // Verify HAR body preserves unicode in raw SSE data
+        let harData = try await service.exportHAR(lastMinutes: 5)
+        let har = try XCTUnwrap(JSONSerialization.jsonObject(with: harData) as? [String: Any])
+        let log = try XCTUnwrap(har["log"] as? [String: Any])
+        let entries = try XCTUnwrap(log["entries"] as? [[String: Any]])
+        let entry = try XCTUnwrap(entries.first)
+        let harResponse = try XCTUnwrap(entry["response"] as? [String: Any])
+        let content = try XCTUnwrap(harResponse["content"] as? [String: Any])
+        let body = try XCTUnwrap(content["text"] as? String)
+
+        XCTAssertTrue(body.contains("Привет мир"), "HAR body must preserve Russian text")
+        XCTAssertTrue(body.contains("你好世界"), "HAR body must preserve Chinese text")
+        XCTAssertTrue(body.contains("🌍"), "HAR body must preserve emoji")
+        XCTAssertFalse(body.contains("\u{FFFD}"), "HAR body should not contain replacement characters")
+    }
+
     // MARK: - HAR export with no storage directory returns empty
 
     func testExportHARWithNoStorageReturnsEmptyEntries() async throws {

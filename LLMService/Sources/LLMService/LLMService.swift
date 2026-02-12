@@ -198,37 +198,39 @@ public final class LLMService: @unchecked Sendable {
                     }
 
                     var parser = provider.createStreamParser()
-                    var lineBuffer = ""
+                    var lineBytes: [UInt8] = []
                     var rawLineSegments: [String] = []
                     var rawLinesSize = 0
                     let rawLinesCap = 512 * 1024
 
                     for try await byte in byteStream {
-                        let char = Character(UnicodeScalar(byte))
-                        if char == "\n" {
-                            let segment = lineBuffer + "\n"
+                        if byte == 0x0A { // '\n'
+                            if lineBytes.last == 0x0D { lineBytes.removeLast() } // strip \r from \r\n
+                            let lineString = String(decoding: lineBytes, as: UTF8.self)
+                            let segment = lineString + "\n"
                             if rawLinesSize < rawLinesCap {
                                 rawLineSegments.append(segment)
                                 rawLinesSize += segment.utf8.count
                             }
-                            if !lineBuffer.isEmpty {
-                                let chunks = provider.parseStreamLine(lineBuffer, parser: &parser)
+                            if !lineBytes.isEmpty {
+                                let chunks = provider.parseStreamLine(lineString, parser: &parser)
                                 for chunk in chunks {
                                     continuation.yield(chunk)
                                 }
                             }
-                            lineBuffer = ""
+                            lineBytes.removeAll(keepingCapacity: true)
                         } else {
-                            lineBuffer.append(char)
+                            lineBytes.append(byte)
                         }
                     }
 
-                    if !lineBuffer.isEmpty {
-                        let segment = lineBuffer + "\n"
+                    if !lineBytes.isEmpty {
+                        let lineString = String(decoding: lineBytes, as: UTF8.self)
+                        let segment = lineString + "\n"
                         if rawLinesSize < rawLinesCap {
                             rawLineSegments.append(segment)
                         }
-                        let chunks = provider.parseStreamLine(lineBuffer, parser: &parser)
+                        let chunks = provider.parseStreamLine(lineString, parser: &parser)
                         for chunk in chunks {
                             continuation.yield(chunk)
                         }
