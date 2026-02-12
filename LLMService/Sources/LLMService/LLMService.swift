@@ -46,7 +46,7 @@ public final class LLMService: @unchecked Sendable {
         )
     }
 
-    // MARK: - Chat (smart routing: non-streaming or aggregated stream)
+    // MARK: - Chat (Smart Router)
 
     public func chat(
         modelId: String,
@@ -56,15 +56,15 @@ public final class LLMService: @unchecked Sendable {
     ) async throws -> LLMResponse {
         let traceId = UUID().uuidString
         let provider = try resolveProvider()
-
         if provider.supportsNonStreaming {
-            return try await performNonStreamingChat(
+            return try await chatNonStreamInternal(
                 provider: provider,
                 modelId: modelId,
                 messages: messages,
                 thinking: thinking,
                 idempotencyKey: idempotencyKey,
-                traceId: traceId
+                traceId: traceId,
+                method: "chat"
             )
         } else {
             return try await aggregateStreamResponse(
@@ -79,15 +79,43 @@ public final class LLMService: @unchecked Sendable {
 
     // MARK: - Non-Streaming Chat
 
-    private func performNonStreamingChat(
+    public func chatNonStream(
+        modelId: String,
+        messages: [LLMMessage],
+        thinking: ThinkingConfig? = nil,
+        idempotencyKey: String? = nil
+    ) async throws -> LLMResponse {
+        let traceId = UUID().uuidString
+        let provider = try resolveProvider()
+
+        guard provider.supportsNonStreaming else {
+            throw LLMServiceError(
+                traceId: traceId,
+                message: "Provider \(provider.provider.rawValue) does not support non-streaming requests"
+            )
+        }
+
+        return try await chatNonStreamInternal(
+            provider: provider,
+            modelId: modelId,
+            messages: messages,
+            thinking: thinking,
+            idempotencyKey: idempotencyKey,
+            traceId: traceId,
+            method: "chatNonStream"
+        )
+    }
+
+    private func chatNonStreamInternal(
         provider: InternalProvider,
         modelId: String,
         messages: [LLMMessage],
         thinking: ThinkingConfig?,
         idempotencyKey: String?,
-        traceId: String
+        traceId: String,
+        method: String
     ) async throws -> LLMResponse {
-        logger.info("[\(traceId)] chat: non-streaming, provider=\(provider.provider.rawValue), model=\(modelId)")
+        logger.info("[\(traceId)] \(method): provider=\(provider.provider.rawValue), model=\(modelId)")
 
         let credentials = try await getCredentialsWithRefresh(traceId: traceId)
         let request = try provider.buildNonStreamRequest(
@@ -99,7 +127,15 @@ public final class LLMService: @unchecked Sendable {
         )
 
         let startTime = Date()
-        let reqDetails = LLMTraceEntry.HTTPDetails(from: request)
+        let context = makeTraceContext(
+            traceId: traceId,
+            idempotencyKey: idempotencyKey,
+            provider: provider,
+            method: method,
+            isStreaming: false,
+            request: request,
+            startTime: startTime
+        )
 
         let data: Data
         let response: HTTPURLResponse
@@ -108,62 +144,185 @@ public final class LLMService: @unchecked Sendable {
                 try await self.httpClient.data(for: $0)
             }
         } catch {
-            await traceManager.record(LLMTraceEntry(
-                traceId: traceId,
-                requestId: idempotencyKey ?? traceId,
-                provider: provider.provider.rawValue,
-                accountIdentifier: session.info.identifier,
-                method: "chat",
-                isStreaming: false,
-                request: reqDetails,
-                error: error.localizedDescription,
-                duration: Date().timeIntervalSince(startTime)
-            ))
-            if let serviceError = error as? LLMServiceError {
-                throw serviceError
-            }
-            throw LLMServiceError(traceId: traceId, message: error.localizedDescription, underlyingError: error)
+            await recordTrace(context, error: error.localizedDescription)
+            throw Self.wrapError(error, traceId: traceId)
         }
 
         guard (200..<300).contains(response.statusCode) else {
             let errorBody = cappedBodyString(from: data) ?? "Unknown error"
-            logger.error("[\(traceId)] chat: API error \(response.statusCode): \(errorBody)")
+            logger.error("[\(traceId)] \(method): API error \(response.statusCode): \(errorBody)")
 
-            await traceManager.record(LLMTraceEntry(
-                traceId: traceId,
-                requestId: idempotencyKey ?? traceId,
-                provider: provider.provider.rawValue,
-                accountIdentifier: session.info.identifier,
-                method: "chat",
-                isStreaming: false,
-                request: reqDetails,
-                response: LLMTraceEntry.HTTPDetails(body: errorBody, statusCode: response.statusCode),
+            await recordTrace(
+                context,
                 error: errorBody,
-                duration: Date().timeIntervalSince(startTime)
-            ))
+                response: LLMTraceEntry.HTTPDetails(body: errorBody, statusCode: response.statusCode)
+            )
 
             throw LLMServiceError(traceId: traceId, message: errorBody, statusCode: response.statusCode)
         }
 
-        let llmResponse = try provider.parseResponse(data: data, traceId: traceId)
+        let responseDetails = LLMTraceEntry.HTTPDetails(
+            body: cappedBodyString(from: data),
+            statusCode: response.statusCode
+        )
 
-        await traceManager.record(LLMTraceEntry(
-            traceId: traceId,
-            requestId: idempotencyKey ?? traceId,
-            provider: provider.provider.rawValue,
-            accountIdentifier: session.info.identifier,
-            method: "chat",
-            isStreaming: false,
-            request: reqDetails,
-            response: LLMTraceEntry.HTTPDetails(body: cappedBodyString(from: data), statusCode: response.statusCode),
-            duration: Date().timeIntervalSince(startTime)
-        ))
+        let llmResponse: LLMResponse
+        do {
+            llmResponse = try provider.parseResponse(data: data, traceId: traceId)
+        } catch {
+            await recordTrace(context, error: error.localizedDescription, response: responseDetails)
+            throw Self.wrapError(error, traceId: traceId)
+        }
 
-        logger.info("[\(traceId)] chat: non-streaming completed successfully")
+        await recordTrace(context, response: responseDetails)
+
+        logger.info("[\(traceId)] \(method): completed successfully")
         return llmResponse
     }
 
-    // MARK: - Stream Aggregation (fallback for providers without non-streaming support)
+    // MARK: - Chat Stream
+
+    public func chatStream(
+        modelId: String,
+        messages: [LLMMessage],
+        thinking: ThinkingConfig? = nil,
+        idempotencyKey: String? = nil
+    ) -> AsyncThrowingStream<LLMChatChunk, Error> {
+        chatStreamInternal(
+            modelId: modelId,
+            messages: messages,
+            thinking: thinking,
+            idempotencyKey: idempotencyKey,
+            traceId: UUID().uuidString,
+            method: "chatStream"
+        )
+    }
+
+    private func chatStreamInternal(
+        modelId: String,
+        messages: [LLMMessage],
+        thinking: ThinkingConfig?,
+        idempotencyKey: String?,
+        traceId: String,
+        method: String
+    ) -> AsyncThrowingStream<LLMChatChunk, Error> {
+        return AsyncThrowingStream { continuation in
+            Task {
+                do {
+                    let provider = try self.resolveProvider()
+                    logger.info("[\(traceId)] \(method): provider=\(provider.provider.rawValue), model=\(modelId)")
+
+                    let credentials = try await self.getCredentialsWithRefresh(traceId: traceId)
+                    logger.info("[\(traceId)] \(method): got credentials, hasAccessToken=\(credentials.accessToken != nil)")
+
+                    let request = try provider.buildStreamRequest(
+                        modelId: modelId,
+                        messages: messages,
+                        thinking: thinking,
+                        credentials: credentials,
+                        traceId: traceId
+                    )
+                    logger.info("[\(traceId)] \(method): request URL=\(request.url?.absoluteString ?? "nil"), bodySize=\(request.httpBody?.count ?? 0)")
+
+                    // Capture BEFORE network call so catch block can record trace
+                    let startTime = Date()
+                    let context = self.makeTraceContext(
+                        traceId: traceId,
+                        idempotencyKey: idempotencyKey,
+                        provider: provider,
+                        method: method,
+                        isStreaming: true,
+                        request: request,
+                        startTime: startTime
+                    )
+
+                    do {
+                        let (byteStream, response) = try await self.withRetry(
+                            request: request,
+                            traceId: traceId
+                        ) { req in
+                            try await self.httpClient.bytes(for: req)
+                        }
+                        logger.info("[\(traceId)] \(method): response statusCode=\(response.statusCode)")
+
+                        guard (200..<300).contains(response.statusCode) else {
+                            var errorData = Data()
+                            for try await byte in byteStream {
+                                errorData.append(byte)
+                            }
+                            let errorMsg = String(data: errorData, encoding: .utf8) ?? "Unknown error"
+                            logger.error("[\(traceId)] \(method): API error \(response.statusCode): \(errorMsg)")
+
+                            await self.recordTrace(context, error: errorMsg, response: LLMTraceEntry.HTTPDetails(body: errorMsg, statusCode: response.statusCode))
+
+                            throw LLMServiceError(traceId: traceId, message: errorMsg, statusCode: response.statusCode)
+                        }
+
+                        var parser = provider.createStreamParser()
+                        var lineBytes: [UInt8] = []
+                        var rawLineSegments: [String] = []
+                        var rawLinesSize = 0
+                        let rawLinesCap = Self.traceBodyCapBytes
+
+                        for try await byte in byteStream {
+                            if byte == 0x0A { // '\n'
+                                if lineBytes.last == 0x0D { lineBytes.removeLast() } // strip \r from \r\n
+                                let lineString = String(decoding: lineBytes, as: UTF8.self)
+                                let segment = lineString + "\n"
+                                if rawLinesSize < rawLinesCap {
+                                    rawLineSegments.append(segment)
+                                    rawLinesSize += segment.utf8.count
+                                }
+                                if !lineBytes.isEmpty {
+                                    let chunks = provider.parseStreamLine(lineString, parser: &parser)
+                                    for chunk in chunks {
+                                        continuation.yield(chunk)
+                                    }
+                                }
+                                lineBytes.removeAll(keepingCapacity: true)
+                            } else {
+                                lineBytes.append(byte)
+                            }
+                        }
+
+                        if !lineBytes.isEmpty {
+                            let lineString = String(decoding: lineBytes, as: UTF8.self)
+                            let segment = lineString + "\n"
+                            if rawLinesSize < rawLinesCap {
+                                rawLineSegments.append(segment)
+                            }
+                            let chunks = provider.parseStreamLine(lineString, parser: &parser)
+                            for chunk in chunks {
+                                continuation.yield(chunk)
+                            }
+                        }
+
+                        await self.recordTrace(context, response: LLMTraceEntry.HTTPDetails(
+                            body: rawLineSegments.joined(),
+                            statusCode: response.statusCode
+                        ))
+
+                        logger.info("[\(traceId)] \(method): stream completed successfully")
+                        continuation.finish()
+                    } catch {
+                        // Network failure or mid-stream error — record trace.
+                        // The throw here is caught by the outer catch, which calls
+                        // continuation.finish(throwing:). wrapError is idempotent
+                        // for LLMServiceError, so double-wrapping is safe.
+                        await self.recordTrace(context, error: error.localizedDescription)
+                        throw Self.wrapError(error, traceId: traceId)
+                    }
+                } catch {
+                    // Early failures (resolveProvider, getCredentials, buildStreamRequest)
+                    // land here, as well as re-thrown errors from the inner catch.
+                    logger.error("[\(traceId)] \(method): error — \(error)")
+                    continuation.finish(throwing: error)
+                }
+            }
+        }
+    }
+
+    // MARK: - Stream Aggregation
 
     private func aggregateStreamResponse(
         modelId: String,
@@ -172,7 +331,14 @@ public final class LLMService: @unchecked Sendable {
         idempotencyKey: String?,
         traceId: String
     ) async throws -> LLMResponse {
-        let stream = chatStream(modelId: modelId, messages: messages, thinking: thinking, idempotencyKey: idempotencyKey)
+        let stream = chatStreamInternal(
+            modelId: modelId,
+            messages: messages,
+            thinking: thinking,
+            idempotencyKey: idempotencyKey,
+            traceId: traceId,
+            method: "chat"
+        )
 
         var responseId = ""
         var parts: [LLMResponsePart] = []
@@ -248,158 +414,6 @@ public final class LLMService: @unchecked Sendable {
         type = ""
         toolId = ""
         toolName = ""
-    }
-
-    // MARK: - Chat Stream
-
-    public func chatStream(
-        modelId: String,
-        messages: [LLMMessage],
-        thinking: ThinkingConfig? = nil,
-        idempotencyKey: String? = nil
-    ) -> AsyncThrowingStream<LLMChatChunk, Error> {
-        let traceId = UUID().uuidString
-
-        return AsyncThrowingStream { continuation in
-            Task {
-                do {
-                    let provider = try self.resolveProvider()
-                    logger.info("[\(traceId)] chatStream: provider=\(provider.provider.rawValue), model=\(modelId)")
-
-                    let credentials = try await self.getCredentialsWithRefresh(traceId: traceId)
-                    logger.info("[\(traceId)] chatStream: got credentials, hasAccessToken=\(credentials.accessToken != nil)")
-
-                    let request = try provider.buildStreamRequest(
-                        modelId: modelId,
-                        messages: messages,
-                        thinking: thinking,
-                        credentials: credentials,
-                        traceId: traceId
-                    )
-                    logger.info("[\(traceId)] chatStream: request URL=\(request.url?.absoluteString ?? "nil"), bodySize=\(request.httpBody?.count ?? 0)")
-
-                    // Capture BEFORE network call so catch block can record trace
-                    let startTime = Date()
-                    let reqDetails = LLMTraceEntry.HTTPDetails(from: request)
-
-                    do {
-                        let (byteStream, response) = try await self.withRetry(
-                            request: request,
-                            traceId: traceId
-                        ) { req in
-                            try await self.httpClient.bytes(for: req)
-                        }
-                        logger.info("[\(traceId)] chatStream: response statusCode=\(response.statusCode)")
-
-                        guard (200..<300).contains(response.statusCode) else {
-                            var errorData = Data()
-                            for try await byte in byteStream {
-                                errorData.append(byte)
-                            }
-                            let errorMsg = String(data: errorData, encoding: .utf8) ?? "Unknown error"
-                            logger.error("[\(traceId)] chatStream: API error \(response.statusCode): \(errorMsg)")
-
-                            await self.traceManager.record(LLMTraceEntry(
-                                traceId: traceId,
-                                requestId: idempotencyKey ?? traceId,
-                                provider: provider.provider.rawValue,
-                                accountIdentifier: self.session.info.identifier,
-                                method: "chatStream",
-                                isStreaming: true,
-                                request: reqDetails,
-                                response: LLMTraceEntry.HTTPDetails(body: errorMsg, statusCode: response.statusCode),
-                                error: errorMsg,
-                                duration: Date().timeIntervalSince(startTime)
-                            ))
-
-                            throw LLMServiceError(traceId: traceId, message: errorMsg, statusCode: response.statusCode)
-                        }
-
-                        var parser = provider.createStreamParser()
-                        var lineBytes: [UInt8] = []
-                        var rawLineSegments: [String] = []
-                        var rawLinesSize = 0
-                        let rawLinesCap = Self.traceBodyCapBytes
-
-                        for try await byte in byteStream {
-                            if byte == 0x0A { // '\n'
-                                if lineBytes.last == 0x0D { lineBytes.removeLast() } // strip \r from \r\n
-                                let lineString = String(decoding: lineBytes, as: UTF8.self)
-                                let segment = lineString + "\n"
-                                if rawLinesSize < rawLinesCap {
-                                    rawLineSegments.append(segment)
-                                    rawLinesSize += segment.utf8.count
-                                }
-                                if !lineBytes.isEmpty {
-                                    let chunks = provider.parseStreamLine(lineString, parser: &parser)
-                                    for chunk in chunks {
-                                        continuation.yield(chunk)
-                                    }
-                                }
-                                lineBytes.removeAll(keepingCapacity: true)
-                            } else {
-                                lineBytes.append(byte)
-                            }
-                        }
-
-                        if !lineBytes.isEmpty {
-                            let lineString = String(decoding: lineBytes, as: UTF8.self)
-                            let segment = lineString + "\n"
-                            if rawLinesSize < rawLinesCap {
-                                rawLineSegments.append(segment)
-                            }
-                            let chunks = provider.parseStreamLine(lineString, parser: &parser)
-                            for chunk in chunks {
-                                continuation.yield(chunk)
-                            }
-                        }
-
-                        await self.traceManager.record(LLMTraceEntry(
-                            traceId: traceId,
-                            requestId: idempotencyKey ?? traceId,
-                            provider: provider.provider.rawValue,
-                            accountIdentifier: self.session.info.identifier,
-                            method: "chatStream",
-                            isStreaming: true,
-                            request: reqDetails,
-                            response: LLMTraceEntry.HTTPDetails(
-                                body: rawLineSegments.joined(),
-                                statusCode: response.statusCode
-                            ),
-                            duration: Date().timeIntervalSince(startTime)
-                        ))
-
-                        logger.info("[\(traceId)] chatStream: stream completed successfully")
-                        continuation.finish()
-                    } catch {
-                        // Network failure or mid-stream error — record trace
-                        await self.traceManager.record(LLMTraceEntry(
-                            traceId: traceId,
-                            requestId: idempotencyKey ?? traceId,
-                            provider: provider.provider.rawValue,
-                            accountIdentifier: self.session.info.identifier,
-                            method: "chatStream",
-                            isStreaming: true,
-                            request: reqDetails,
-                            error: error.localizedDescription,
-                            duration: Date().timeIntervalSince(startTime)
-                        ))
-
-                        if let serviceError = error as? LLMServiceError {
-                            throw serviceError
-                        }
-                        throw LLMServiceError(
-                            traceId: traceId,
-                            message: error.localizedDescription,
-                            underlyingError: error
-                        )
-                    }
-                } catch {
-                    logger.error("[\(traceId)] chatStream: error — \(error)")
-                    continuation.finish(throwing: error)
-                }
-            }
-        }
     }
 
     // MARK: - Inspection
@@ -572,4 +586,76 @@ public final class LLMService: @unchecked Sendable {
 
         return matched ? total : nil
     }
+
+    // MARK: - Tracing Helpers
+
+    private func makeTraceContext(
+        traceId: String,
+        idempotencyKey: String?,
+        provider: InternalProvider,
+        method: String,
+        isStreaming: Bool,
+        request: URLRequest,
+        startTime: Date
+    ) -> TraceContext {
+        TraceContext(
+            traceId: traceId,
+            requestId: idempotencyKey ?? traceId,
+            provider: provider.provider.rawValue,
+            accountIdentifier: session.info.identifier,
+            method: method,
+            isStreaming: isStreaming,
+            request: LLMTraceEntry.HTTPDetails(from: request),
+            startTime: startTime
+        )
+    }
+
+    private func recordTrace(_ context: TraceContext, response: LLMTraceEntry.HTTPDetails) async {
+        await traceManager.record(LLMTraceEntry(
+            traceId: context.traceId,
+            requestId: context.requestId,
+            provider: context.provider,
+            accountIdentifier: context.accountIdentifier,
+            method: context.method,
+            isStreaming: context.isStreaming,
+            request: context.request,
+            response: response,
+            duration: Date().timeIntervalSince(context.startTime)
+        ))
+    }
+
+    private func recordTrace(_ context: TraceContext, error: String, response: LLMTraceEntry.HTTPDetails? = nil) async {
+        await traceManager.record(LLMTraceEntry(
+            traceId: context.traceId,
+            requestId: context.requestId,
+            provider: context.provider,
+            accountIdentifier: context.accountIdentifier,
+            method: context.method,
+            isStreaming: context.isStreaming,
+            request: context.request,
+            response: response,
+            error: error,
+            duration: Date().timeIntervalSince(context.startTime)
+        ))
+    }
+
+    private static func wrapError(_ error: Error, traceId: String) -> Error {
+        if let serviceError = error as? LLMServiceError {
+            return serviceError
+        }
+        return LLMServiceError(traceId: traceId, message: error.localizedDescription, underlyingError: error)
+    }
+}
+
+// MARK: - TraceContext
+
+private struct TraceContext: Sendable {
+    let traceId: String
+    let requestId: String
+    let provider: String
+    let accountIdentifier: String?
+    let method: String
+    let isStreaming: Bool
+    let request: LLMTraceEntry.HTTPDetails
+    let startTime: Date
 }
