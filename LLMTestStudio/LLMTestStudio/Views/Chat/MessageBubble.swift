@@ -18,7 +18,6 @@ struct MessageBubble: View {
                     textContent
                 }
                 if !message.attachments.isEmpty {
-                    Divider()
                     attachmentsView
                 }
             }
