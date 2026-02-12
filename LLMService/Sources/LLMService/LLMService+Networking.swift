@@ -33,7 +33,7 @@ extension LLMService {
         let newCredentials = try await TokenRefresher.refresh(
             provider: session.info.provider,
             refreshToken: refreshToken,
-            httpClient: httpClient
+            httpClient: makeTracingClient(traceId: traceId, method: "tokenRefresh")
         )
         try await session.save(info: session.info, credentials: newCredentials)
         return newCredentials
@@ -56,7 +56,7 @@ extension LLMService {
             let newCredentials = try await TokenRefresher.refresh(
                 provider: session.info.provider,
                 refreshToken: refreshToken,
-                httpClient: httpClient
+                httpClient: makeTracingClient(traceId: traceId, method: "tokenRefresh")
             )
             try await session.save(info: session.info, credentials: newCredentials)
 

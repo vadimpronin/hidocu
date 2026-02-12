@@ -1,7 +1,9 @@
 import Foundation
 
 public struct LLMTraceEntry: Codable, Sendable, Identifiable {
-    public var id: String { traceId }
+    /// Uses `requestId` as identity so the "sent" and "recorded" phases of the same request
+    /// resolve to the same entry in the UI.
+    public var id: String { requestId }
     public let traceId: String
     public let requestId: String
     public let timestamp: Date
@@ -67,6 +69,18 @@ public struct LLMTraceEntry: Codable, Sendable, Identifiable {
                 method: request.httpMethod,
                 headers: request.allHTTPHeaderFields,
                 body: request.httpBody.flatMap { String(data: $0, encoding: .utf8) }
+            )
+        }
+
+        public init(from response: HTTPURLResponse, body: String? = nil) {
+            var headerDict: [String: String] = [:]
+            for (key, value) in response.allHeaderFields {
+                headerDict["\(key)"] = "\(value)"
+            }
+            self.init(
+                headers: headerDict.isEmpty ? nil : headerDict,
+                body: body,
+                statusCode: response.statusCode
             )
         }
     }

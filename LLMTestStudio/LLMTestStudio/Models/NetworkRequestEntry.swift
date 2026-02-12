@@ -6,7 +6,7 @@ import SwiftUI
 struct NetworkRequestEntry: Identifiable {
     let trace: LLMTraceEntry
 
-    var id: String { trace.traceId }
+    var id: String { trace.id }
 
     // MARK: - Display Properties
 
@@ -79,10 +79,7 @@ struct NetworkRequestEntry: Identifiable {
     }
 
     var formattedResponseBody: String {
-        if let error = trace.error {
-            return "Error: \(error)\n\n\(formatBody(trace.response?.body))"
-        }
-        return formatBody(trace.response?.body)
+        formatBody(trace.response?.body)
     }
 
     var requestHeaders: [(key: String, value: String)] {

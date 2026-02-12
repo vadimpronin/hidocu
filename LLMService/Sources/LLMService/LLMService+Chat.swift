@@ -93,6 +93,7 @@ extension LLMService {
             request: request,
             startTime: startTime
         )
+        await notifyTraceSent(context)
 
         let data: Data
         let response: HTTPURLResponse
@@ -106,22 +107,19 @@ extension LLMService {
         }
 
         guard (200..<300).contains(response.statusCode) else {
-            let errorBody = cappedBodyString(from: data) ?? "Unknown error"
+            let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
             llmServiceLogger.error("[\(traceId)] \(method): API error \(response.statusCode): \(errorBody)")
 
             await recordTrace(
                 context,
                 error: errorBody,
-                response: LLMTraceEntry.HTTPDetails(body: errorBody, statusCode: response.statusCode)
+                response: LLMTraceEntry.HTTPDetails(from: response, body: errorBody)
             )
 
             throw LLMServiceError(traceId: traceId, message: errorBody, statusCode: response.statusCode)
         }
 
-        let responseDetails = LLMTraceEntry.HTTPDetails(
-            body: cappedBodyString(from: data),
-            statusCode: response.statusCode
-        )
+        let responseDetails = LLMTraceEntry.HTTPDetails(from: response, body: String(data: data, encoding: .utf8))
 
         let llmResponse: LLMResponse
         do {
@@ -192,6 +190,7 @@ extension LLMService {
                         request: request,
                         startTime: startTime
                     )
+                    await self.notifyTraceSent(context)
 
                     do {
                         let (byteStream, response) = try await self.withRetry(
@@ -210,7 +209,7 @@ extension LLMService {
                             let errorMsg = String(data: errorData, encoding: .utf8) ?? "Unknown error"
                             llmServiceLogger.error("[\(traceId)] \(method): API error \(response.statusCode): \(errorMsg)")
 
-                            await self.recordTrace(context, error: errorMsg, response: LLMTraceEntry.HTTPDetails(body: errorMsg, statusCode: response.statusCode))
+                            await self.recordTrace(context, error: errorMsg, response: LLMTraceEntry.HTTPDetails(from: response, body: errorMsg))
 
                             throw LLMServiceError(traceId: traceId, message: errorMsg, statusCode: response.statusCode)
                         }
@@ -218,18 +217,12 @@ extension LLMService {
                         var parser = provider.createStreamParser()
                         var lineBytes: [UInt8] = []
                         var rawLineSegments: [String] = []
-                        var rawLinesSize = 0
-                        let rawLinesCap = Self.traceBodyCapBytes
 
                         for try await byte in byteStream {
                             if byte == 0x0A { // '\n'
                                 if lineBytes.last == 0x0D { lineBytes.removeLast() } // strip \r from \r\n
                                 let lineString = String(decoding: lineBytes, as: UTF8.self)
-                                let segment = lineString + "\n"
-                                if rawLinesSize < rawLinesCap {
-                                    rawLineSegments.append(segment)
-                                    rawLinesSize += segment.utf8.count
-                                }
+                                rawLineSegments.append(lineString + "\n")
                                 if !lineBytes.isEmpty {
                                     let chunks = provider.parseStreamLine(lineString, parser: &parser)
                                     for chunk in chunks {
@@ -244,20 +237,14 @@ extension LLMService {
 
                         if !lineBytes.isEmpty {
                             let lineString = String(decoding: lineBytes, as: UTF8.self)
-                            let segment = lineString + "\n"
-                            if rawLinesSize < rawLinesCap {
-                                rawLineSegments.append(segment)
-                            }
+                            rawLineSegments.append(lineString + "\n")
                             let chunks = provider.parseStreamLine(lineString, parser: &parser)
                             for chunk in chunks {
                                 continuation.yield(chunk)
                             }
                         }
 
-                        await self.recordTrace(context, response: LLMTraceEntry.HTTPDetails(
-                            body: rawLineSegments.joined(),
-                            statusCode: response.statusCode
-                        ))
+                        await self.recordTrace(context, response: LLMTraceEntry.HTTPDetails(from: response, body: rawLineSegments.joined()))
 
                         llmServiceLogger.info("[\(traceId)] \(method): stream completed successfully")
                         continuation.finish()

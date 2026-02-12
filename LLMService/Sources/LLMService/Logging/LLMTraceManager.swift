@@ -10,6 +10,11 @@ actor LLMTraceManager {
         self.redactor = config.shouldMaskTokens
     }
 
+    /// Notify that a request has been sent (appears immediately in console with pending state)
+    func notifySent(_ entry: LLMTraceEntry) {
+        config.onTraceSent?(entry)
+    }
+
     /// Record a trace entry and write to disk if storageDirectory is configured
     func record(_ entry: LLMTraceEntry) {
         let category = "\(entry.provider).\(entry.method).\(entry.isStreaming ? "stream" : "sync")"

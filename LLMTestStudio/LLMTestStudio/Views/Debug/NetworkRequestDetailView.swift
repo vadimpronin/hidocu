@@ -112,8 +112,7 @@ struct NetworkRequestDetailView: View {
 
     private func bodyView(_ text: String) -> some View {
         ScrollView {
-            Text(text)
-                .font(.system(size: 11, design: .monospaced))
+            Text(JSONSyntaxHighlighter.highlight(text))
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(8)
@@ -130,8 +129,7 @@ struct NetworkRequestDetailView: View {
                         .textSelection(.enabled)
                     Divider()
                 }
-                Text(entry.formattedResponseBody)
-                    .font(.system(size: 11, design: .monospaced))
+                Text(JSONSyntaxHighlighter.highlight(entry.formattedResponseBody))
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }

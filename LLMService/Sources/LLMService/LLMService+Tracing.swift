@@ -65,6 +65,31 @@ extension LLMService {
         ))
     }
 
+    internal func notifyTraceSent(_ context: TraceContext) async {
+        await traceManager.notifySent(LLMTraceEntry(
+            traceId: context.traceId,
+            requestId: context.requestId,
+            provider: context.provider,
+            accountIdentifier: context.accountIdentifier,
+            method: context.method,
+            isStreaming: context.isStreaming,
+            request: context.request
+        ))
+    }
+
+    internal func makeTracingClient(traceId: String, method: String) -> TracingHTTPClient {
+        TracingHTTPClient(
+            wrapped: httpClient,
+            traceManager: traceManager,
+            context: .init(
+                traceId: traceId,
+                provider: session.info.provider.rawValue,
+                method: method,
+                accountIdentifier: session.info.identifier
+            )
+        )
+    }
+
     internal static func wrapError(_ error: Error, traceId: String) -> Error {
         if let serviceError = error as? LLMServiceError {
             return serviceError
@@ -72,8 +97,4 @@ extension LLMService {
         return LLMServiceError(traceId: traceId, message: error.localizedDescription, underlyingError: error)
     }
 
-    internal func cappedBodyString(from data: Data) -> String? {
-        let slice = data.count <= Self.traceBodyCapBytes ? data : data.prefix(Self.traceBodyCapBytes)
-        return String(data: slice, encoding: .utf8)
-    }
 }

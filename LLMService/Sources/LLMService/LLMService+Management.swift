@@ -7,8 +7,10 @@ extension LLMService {
 
     public func listModels() async throws -> [LLMModelInfo] {
         let provider = try resolveProvider()
-        let credentials = try await getCredentialsWithRefresh(traceId: "listModels")
-        return try await provider.listModels(credentials: credentials, httpClient: httpClient)
+        let traceId = UUID().uuidString
+        let credentials = try await getCredentialsWithRefresh(traceId: traceId)
+        let tracingClient = makeTracingClient(traceId: traceId, method: "listModels")
+        return try await provider.listModels(credentials: credentials, httpClient: tracingClient)
     }
 
     public func getQuotaStatus(for modelId: String) async throws -> LLMQuotaStatus {

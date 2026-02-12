@@ -224,7 +224,7 @@ final class TraceRecordingTests: XCTestCase {
 
     // MARK: - HAR response body respects size cap
 
-    func testHARResponseBodyRespectsSizeCap() async throws {
+    func testHARResponseBodyPreservesFullContent() async throws {
         let mockClient = MockHTTPClient()
         let session = MockAccountSession(
             provider: .antigravity,
@@ -244,9 +244,9 @@ final class TraceRecordingTests: XCTestCase {
         // Build an SSE response that exceeds 512KB of raw lines
         var sseLines: [String] = []
 
-        // Add many data events to exceed 512KB
         let longText = String(repeating: "x", count: 1000)
-        for _ in 0..<600 {
+        let eventCount = 600
+        for _ in 0..<eventCount {
             sseLines.append("data: {\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"\(longText)\"}],\"role\":\"model\"}}],\"modelVersion\":\"gemini-2.0-flash\"}")
             sseLines.append("")
         }
@@ -280,10 +280,12 @@ final class TraceRecordingTests: XCTestCase {
         let content = try XCTUnwrap(harResponse["content"] as? [String: Any])
         let body = try XCTUnwrap(content["text"] as? String)
 
-        let capBytes = 512 * 1024
-        XCTAssertLessThanOrEqual(body.utf8.count, capBytes + 2048,
-            "HAR response body should be approximately bounded by the 512KB cap (with tolerance for the last segment)")
-        XCTAssertGreaterThan(body.utf8.count, 0, "HAR response body should not be empty")
+        // Full body must be preserved — no truncation
+        XCTAssertGreaterThan(body.utf8.count, 512 * 1024,
+            "Response body should exceed 512KB since no cap is applied")
+        // Verify the [DONE] sentinel at the end proves nothing was truncated
+        XCTAssertTrue(body.hasSuffix("[DONE]\n"),
+            "Full body preserved — last line should be the [DONE] sentinel")
     }
 
     // MARK: - Unicode preservation in streaming and HAR

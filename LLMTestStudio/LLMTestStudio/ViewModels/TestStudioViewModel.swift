@@ -119,6 +119,12 @@ final class TestStudioViewModel {
             subsystem: "com.llmteststudio",
             storageDirectory: dir,
             shouldMaskTokens: false,
+            onTraceSent: { [weak self] entry in
+                let viewModel = self
+                Task { @MainActor in
+                    viewModel?.handleTraceSent(entry)
+                }
+            },
             onTraceRecorded: { [weak self] entry in
                 let viewModel = self
                 Task { @MainActor in
@@ -333,9 +339,21 @@ final class TestStudioViewModel {
 
     // MARK: - Network Console
 
+    func handleTraceSent(_ entry: LLMTraceEntry) {
+        let networkEntry = NetworkRequestEntry(trace: entry)
+        // Only insert if not already present — guards against race where recorded arrives first
+        guard networkEntriesById[networkEntry.id] == nil else { return }
+        networkEntries.append(networkEntry)
+        networkEntriesById[networkEntry.id] = networkEntry
+    }
+
     func handleTraceRecorded(_ entry: LLMTraceEntry) {
         let networkEntry = NetworkRequestEntry(trace: entry)
-        networkEntries.append(networkEntry)
+        if let index = networkEntries.firstIndex(where: { $0.id == networkEntry.id }) {
+            networkEntries[index] = networkEntry
+        } else {
+            networkEntries.append(networkEntry)
+        }
         networkEntriesById[networkEntry.id] = networkEntry
     }
 

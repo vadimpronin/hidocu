@@ -13,7 +13,8 @@ public final class LLMService: @unchecked Sendable {
     internal let traceManager: LLMTraceManager
     internal var lastResponseHeaders: [String: String] = [:]
 
-    internal static let traceBodyCapBytes = 512 * 1024
+    // Body cap removed — full request/response bodies are preserved in traces
+    // to support complete debugging in LLMTestStudio and HAR export.
 
     // MARK: - Initialization
 
@@ -39,9 +40,10 @@ public final class LLMService: @unchecked Sendable {
     // MARK: - Auth
 
     public func login() async throws {
+        let tracingClient = makeTracingClient(traceId: UUID().uuidString, method: "login")
         try await OAuthCoordinator.login(
             session: session,
-            httpClient: httpClient,
+            httpClient: tracingClient,
             oauthLauncher: oauthLauncher
         )
     }
