@@ -59,5 +59,14 @@ public struct LLMTraceEntry: Codable, Sendable {
             self.body = body
             self.statusCode = statusCode
         }
+
+        public init(from request: URLRequest) {
+            self.init(
+                url: request.url?.absoluteString,
+                method: request.httpMethod,
+                headers: request.allHTTPHeaderFields,
+                body: request.httpBody.flatMap { String(data: $0, encoding: .utf8) }
+            )
+        }
     }
 }

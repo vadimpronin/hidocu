@@ -28,6 +28,7 @@ struct GeminiCLIProvider: InternalProvider {
         var request = URLRequest(url: Self.streamURL)
         request.httpMethod = "POST"
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        request.timeoutInterval = 600
         applyHeaders(to: &request, credentials: credentials)
         return request
     }
@@ -44,6 +45,7 @@ struct GeminiCLIProvider: InternalProvider {
         var request = URLRequest(url: Self.nonStreamURL)
         request.httpMethod = "POST"
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        request.timeoutInterval = 600
         applyHeaders(to: &request, credentials: credentials)
         return request
     }

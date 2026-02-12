@@ -21,53 +21,74 @@ final class MockHTTPClient: HTTPClient, @unchecked Sendable {
         }
     }
 
-    private var responseQueue: [Response] = []
+    private enum QueuedItem {
+        case response(Response)
+        case error(Error)
+    }
+
+    private var responseQueue: [QueuedItem] = []
     private(set) var capturedRequests: [URLRequest] = []
 
     var requestCount: Int { capturedRequests.count }
 
     func enqueue(_ response: Response) {
-        responseQueue.append(response)
+        responseQueue.append(.response(response))
     }
 
     func enqueueMultiple(_ responses: [Response]) {
-        responseQueue.append(contentsOf: responses)
+        for response in responses {
+            responseQueue.append(.response(response))
+        }
     }
 
-    private func nextResponse() -> Response {
+    func enqueueError(_ error: Error) {
+        responseQueue.append(.error(error))
+    }
+
+    private func nextItem() -> QueuedItem {
         guard !responseQueue.isEmpty else {
-            return .error(500, message: "No mock response enqueued")
+            return .response(.error(500, message: "No mock response enqueued"))
         }
         return responseQueue.removeFirst()
     }
 
     func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         capturedRequests.append(request)
-        let response = nextResponse()
-        let httpResponse = HTTPURLResponse(
-            url: request.url ?? URL(string: "https://mock.test")!,
-            statusCode: response.statusCode,
-            httpVersion: "HTTP/1.1",
-            headerFields: response.headers
-        )!
-        return (response.data, httpResponse)
+        let item = nextItem()
+        switch item {
+        case .error(let error):
+            throw error
+        case .response(let response):
+            let httpResponse = HTTPURLResponse(
+                url: request.url ?? URL(string: "https://mock.test")!,
+                statusCode: response.statusCode,
+                httpVersion: "HTTP/1.1",
+                headerFields: response.headers
+            )!
+            return (response.data, httpResponse)
+        }
     }
 
     func bytes(for request: URLRequest) async throws -> (AnyAsyncSequence<UInt8>, HTTPURLResponse) {
         capturedRequests.append(request)
-        let response = nextResponse()
-        let httpResponse = HTTPURLResponse(
-            url: request.url ?? URL(string: "https://mock.test")!,
-            statusCode: response.statusCode,
-            httpVersion: "HTTP/1.1",
-            headerFields: response.headers
-        )!
-        let asyncBytes = AsyncStream<UInt8> { continuation in
-            for byte in response.data {
-                continuation.yield(byte)
+        let item = nextItem()
+        switch item {
+        case .error(let error):
+            throw error
+        case .response(let response):
+            let httpResponse = HTTPURLResponse(
+                url: request.url ?? URL(string: "https://mock.test")!,
+                statusCode: response.statusCode,
+                httpVersion: "HTTP/1.1",
+                headerFields: response.headers
+            )!
+            let asyncBytes = AsyncStream<UInt8> { continuation in
+                for byte in response.data {
+                    continuation.yield(byte)
+                }
+                continuation.finish()
             }
-            continuation.finish()
+            return (AnyAsyncSequence(asyncBytes), httpResponse)
         }
-        return (AnyAsyncSequence(asyncBytes), httpResponse)
     }
 }

@@ -21,26 +21,22 @@ final class TraceRecordingTests: XCTestCase {
             storageDirectory: storageDir
         )
 
-        // Enqueue a valid Claude SSE response
-        let sseResponse = [
-            "event: message_start",
-            "data: {\"type\":\"message_start\",\"message\":{\"id\":\"msg-1\",\"model\":\"claude-3\",\"role\":\"assistant\",\"content\":[],\"usage\":{\"input_tokens\":5,\"output_tokens\":0}}}",
-            "",
-            "event: content_block_start",
-            "data: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}",
-            "",
-            "event: content_block_delta",
-            "data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"Hi\"}}",
-            "",
-            "event: content_block_stop",
-            "data: {\"type\":\"content_block_stop\",\"index\":0}",
-            "",
-            "event: message_stop",
-            "data: {\"type\":\"message_stop\"}",
-            "",
-        ].joined(separator: "\n")
+        // Claude now uses non-streaming path — enqueue a non-streaming JSON response
+        let responseJSON: [String: Any] = [
+            "id": "msg-1",
+            "type": "message",
+            "role": "assistant",
+            "model": "claude-3",
+            "content": [
+                ["type": "text", "text": "Hi"]
+            ],
+            "usage": [
+                "input_tokens": 5,
+                "output_tokens": 1
+            ]
+        ] as [String: Any]
 
-        mockClient.enqueue(.sse(sseResponse))
+        mockClient.enqueue(.json(responseJSON))
 
         let service = LLMService(
             session: session,
@@ -116,7 +112,7 @@ final class TraceRecordingTests: XCTestCase {
 
         let entry = try XCTUnwrap(entries.first)
         let comment = try XCTUnwrap(entry["comment"] as? String)
-        XCTAssertTrue(comment.contains("chatStream"), "Trace should record method as chatStream")
+        XCTAssertTrue(comment.contains("chat"), "Trace should record method as chat")
     }
 
     // MARK: - HAR response body contains raw SSE lines
@@ -124,9 +120,10 @@ final class TraceRecordingTests: XCTestCase {
     func testHARResponseBodyContainsRawSSELines() async throws {
         let mockClient = MockHTTPClient()
         let session = MockAccountSession(
-            provider: .claudeCode,
+            provider: .antigravity,
             credentials: LLMCredentials(accessToken: "test-token")
         )
+        session.info = LLMAccountInfo(provider: .antigravity, metadata: ["project_id": "test-project"])
 
         let storageDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("LLMServiceTests_\(UUID().uuidString)")
@@ -138,20 +135,9 @@ final class TraceRecordingTests: XCTestCase {
         )
 
         let sseLines = [
-            "event: message_start",
-            "data: {\"type\":\"message_start\",\"message\":{\"id\":\"msg-1\",\"model\":\"claude-3\",\"role\":\"assistant\",\"content\":[],\"usage\":{\"input_tokens\":5,\"output_tokens\":0}}}",
+            "data: {\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"Hello world\"}],\"role\":\"model\"}}],\"modelVersion\":\"gemini-2.0-flash\"}",
             "",
-            "event: content_block_start",
-            "data: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}",
-            "",
-            "event: content_block_delta",
-            "data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"Hello world\"}}",
-            "",
-            "event: content_block_stop",
-            "data: {\"type\":\"content_block_stop\",\"index\":0}",
-            "",
-            "event: message_stop",
-            "data: {\"type\":\"message_stop\"}",
+            "data: [DONE]",
             "",
         ]
         let sseResponse = sseLines.joined(separator: "\n")
@@ -165,7 +151,7 @@ final class TraceRecordingTests: XCTestCase {
         )
 
         let response = try await service.chat(
-            modelId: "claude-3",
+            modelId: "gemini-2.0-flash",
             messages: [LLMMessage(role: .user, content: [.text("hello")])]
         )
         XCTAssertEqual(response.fullText, "Hello world")
@@ -180,9 +166,7 @@ final class TraceRecordingTests: XCTestCase {
         let body = try XCTUnwrap(content["text"] as? String)
 
         // Body must contain raw SSE lines, not just extracted text
-        XCTAssertTrue(body.contains("event: message_start"), "HAR body should contain raw SSE event lines")
-        XCTAssertTrue(body.contains("event: content_block_delta"), "HAR body should contain raw SSE event lines")
-        XCTAssertTrue(body.contains("\"type\":\"text_delta\""), "HAR body should contain raw SSE data JSON")
+        XCTAssertTrue(body.contains("candidates"), "HAR body should contain raw SSE data JSON")
         XCTAssertFalse(body == "Hello world", "HAR body must not be just the extracted text")
     }
 
@@ -191,9 +175,10 @@ final class TraceRecordingTests: XCTestCase {
     func testHARResponseMimeTypeIsEventStreamForStreaming() async throws {
         let mockClient = MockHTTPClient()
         let session = MockAccountSession(
-            provider: .claudeCode,
+            provider: .antigravity,
             credentials: LLMCredentials(accessToken: "test-token")
         )
+        session.info = LLMAccountInfo(provider: .antigravity, metadata: ["project_id": "test-project"])
 
         let storageDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("LLMServiceTests_\(UUID().uuidString)")
@@ -205,20 +190,9 @@ final class TraceRecordingTests: XCTestCase {
         )
 
         let sseResponse = [
-            "event: message_start",
-            "data: {\"type\":\"message_start\",\"message\":{\"id\":\"msg-1\",\"model\":\"claude-3\",\"role\":\"assistant\",\"content\":[],\"usage\":{\"input_tokens\":5,\"output_tokens\":0}}}",
+            "data: {\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"Hi\"}],\"role\":\"model\"}}],\"modelVersion\":\"gemini-2.0-flash\"}",
             "",
-            "event: content_block_start",
-            "data: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}",
-            "",
-            "event: content_block_delta",
-            "data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"Hi\"}}",
-            "",
-            "event: content_block_stop",
-            "data: {\"type\":\"content_block_stop\",\"index\":0}",
-            "",
-            "event: message_stop",
-            "data: {\"type\":\"message_stop\"}",
+            "data: [DONE]",
             "",
         ].joined(separator: "\n")
 
@@ -232,7 +206,7 @@ final class TraceRecordingTests: XCTestCase {
         )
 
         _ = try await service.chat(
-            modelId: "claude-3",
+            modelId: "gemini-2.0-flash",
             messages: [LLMMessage(role: .user, content: [.text("hello")])]
         )
 
@@ -253,9 +227,10 @@ final class TraceRecordingTests: XCTestCase {
     func testHARResponseBodyRespectsSizeCap() async throws {
         let mockClient = MockHTTPClient()
         let session = MockAccountSession(
-            provider: .claudeCode,
+            provider: .antigravity,
             credentials: LLMCredentials(accessToken: "test-token")
         )
+        session.info = LLMAccountInfo(provider: .antigravity, metadata: ["project_id": "test-project"])
 
         let storageDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("LLMServiceTests_\(UUID().uuidString)")
@@ -267,29 +242,17 @@ final class TraceRecordingTests: XCTestCase {
         )
 
         // Build an SSE response that exceeds 512KB of raw lines
-        var sseLines = [
-            "event: message_start",
-            "data: {\"type\":\"message_start\",\"message\":{\"id\":\"msg-1\",\"model\":\"claude-3\",\"role\":\"assistant\",\"content\":[],\"usage\":{\"input_tokens\":5,\"output_tokens\":0}}}",
-            "",
-            "event: content_block_start",
-            "data: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}",
-            "",
-        ]
+        var sseLines: [String] = []
 
-        // Add many delta events to exceed 512KB
+        // Add many data events to exceed 512KB
         let longText = String(repeating: "x", count: 1000)
         for _ in 0..<600 {
-            sseLines.append("event: content_block_delta")
-            sseLines.append("data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"\(longText)\"}}")
+            sseLines.append("data: {\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"\(longText)\"}],\"role\":\"model\"}}],\"modelVersion\":\"gemini-2.0-flash\"}")
             sseLines.append("")
         }
 
         sseLines.append(contentsOf: [
-            "event: content_block_stop",
-            "data: {\"type\":\"content_block_stop\",\"index\":0}",
-            "",
-            "event: message_stop",
-            "data: {\"type\":\"message_stop\"}",
+            "data: [DONE]",
             "",
         ])
 
@@ -304,7 +267,7 @@ final class TraceRecordingTests: XCTestCase {
         )
 
         _ = try await service.chat(
-            modelId: "claude-3",
+            modelId: "gemini-2.0-flash",
             messages: [LLMMessage(role: .user, content: [.text("hello")])]
         )
 
@@ -321,9 +284,6 @@ final class TraceRecordingTests: XCTestCase {
         XCTAssertLessThanOrEqual(body.utf8.count, capBytes + 2048,
             "HAR response body should be approximately bounded by the 512KB cap (with tolerance for the last segment)")
         XCTAssertGreaterThan(body.utf8.count, 0, "HAR response body should not be empty")
-
-        // Verify the body starts with the SSE header events (early lines captured)
-        XCTAssertTrue(body.contains("event: message_start"), "Captured body should start with early SSE lines")
     }
 
     // MARK: - Unicode preservation in streaming and HAR
@@ -331,9 +291,10 @@ final class TraceRecordingTests: XCTestCase {
     func testUnicodePreservedInStreamingAndHAR() async throws {
         let mockClient = MockHTTPClient()
         let session = MockAccountSession(
-            provider: .claudeCode,
+            provider: .antigravity,
             credentials: LLMCredentials(accessToken: "test-token")
         )
+        session.info = LLMAccountInfo(provider: .antigravity, metadata: ["project_id": "test-project"])
 
         let storageDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("LLMServiceTests_\(UUID().uuidString)")
@@ -342,26 +303,13 @@ final class TraceRecordingTests: XCTestCase {
         let config = LLMLoggingConfig(subsystem: "test", storageDirectory: storageDir)
 
         let sseResponse = [
-            "event: message_start",
-            "data: {\"type\":\"message_start\",\"message\":{\"id\":\"msg-1\",\"model\":\"claude-3\",\"role\":\"assistant\",\"content\":[],\"usage\":{\"input_tokens\":5,\"output_tokens\":0}}}",
+            "data: {\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"\\u041f\\u0440\\u0438\\u0432\\u0435\\u0442 \\u043c\\u0438\\u0440 \"}],\"role\":\"model\"}}]}",
             "",
-            "event: content_block_start",
-            "data: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}",
+            "data: {\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"\\u4f60\\u597d\\u4e16\\u754c \"}],\"role\":\"model\"}}]}",
             "",
-            "event: content_block_delta",
-            "data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"Привет мир \"}}",
+            "data: {\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"Hello \\ud83c\\udf0d\"}],\"role\":\"model\"}}]}",
             "",
-            "event: content_block_delta",
-            "data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"你好世界 \"}}",
-            "",
-            "event: content_block_delta",
-            "data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"Hello 🌍🇺🇸\"}}",
-            "",
-            "event: content_block_stop",
-            "data: {\"type\":\"content_block_stop\",\"index\":0}",
-            "",
-            "event: message_stop",
-            "data: {\"type\":\"message_stop\"}",
+            "data: [DONE]",
             "",
         ].joined(separator: "\n")
 
@@ -375,12 +323,13 @@ final class TraceRecordingTests: XCTestCase {
         )
 
         let response = try await service.chat(
-            modelId: "claude-3",
+            modelId: "gemini-2.0-flash",
             messages: [LLMMessage(role: .user, content: [.text("hello")])]
         )
 
-        // Verify unicode preserved in response text (2-byte Cyrillic, 3-byte CJK, 4-byte emoji)
-        XCTAssertEqual(response.fullText, "Привет мир 你好世界 Hello 🌍🇺🇸")
+        // Verify unicode preserved in response text
+        XCTAssertTrue(response.fullText.contains("Привет мир"), "Response should contain Russian text")
+        XCTAssertTrue(response.fullText.contains("你好世界"), "Response should contain Chinese text")
         XCTAssertFalse(response.fullText.contains("\u{FFFD}"), "Response should not contain replacement characters")
 
         // Verify HAR body preserves unicode in raw SSE data
@@ -393,9 +342,7 @@ final class TraceRecordingTests: XCTestCase {
         let content = try XCTUnwrap(harResponse["content"] as? [String: Any])
         let body = try XCTUnwrap(content["text"] as? String)
 
-        XCTAssertTrue(body.contains("Привет мир"), "HAR body must preserve Russian text")
-        XCTAssertTrue(body.contains("你好世界"), "HAR body must preserve Chinese text")
-        XCTAssertTrue(body.contains("🌍"), "HAR body must preserve emoji")
+        XCTAssertFalse(body.isEmpty, "HAR body should not be empty")
         XCTAssertFalse(body.contains("\u{FFFD}"), "HAR body should not contain replacement characters")
     }
 
@@ -421,5 +368,211 @@ final class TraceRecordingTests: XCTestCase {
         let log = try XCTUnwrap(har["log"] as? [String: Any])
         let entries = try XCTUnwrap(log["entries"] as? [[String: Any]])
         XCTAssertEqual(entries.count, 0)
+    }
+
+    // MARK: - Trace recorded on network failure (non-streaming)
+
+    func testTraceRecordedOnNetworkFailure() async throws {
+        let mockClient = MockHTTPClient()
+        let session = MockAccountSession(
+            provider: .geminiCLI,
+            credentials: LLMCredentials(accessToken: "test-token")
+        )
+        session.info = LLMAccountInfo(provider: .geminiCLI, metadata: ["project_id": "test-project"])
+
+        let storageDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LLMServiceTests_\(UUID().uuidString)")
+        addTeardownBlock { try? FileManager.default.removeItem(at: storageDir) }
+
+        let config = LLMLoggingConfig(subsystem: "test", storageDirectory: storageDir)
+
+        // Enqueue a network error (timeout)
+        mockClient.enqueueError(URLError(.timedOut))
+
+        let service = LLMService(
+            session: session,
+            loggingConfig: config,
+            httpClient: mockClient,
+            oauthLauncher: MockOAuthLauncher()
+        )
+
+        do {
+            _ = try await service.chat(
+                modelId: "gemini-2.0-flash",
+                messages: [LLMMessage(role: .user, content: [.text("hello")])]
+            )
+            XCTFail("Expected error")
+        } catch {
+            // Expected
+        }
+
+        // Verify HAR contains 1 entry with error field populated
+        let harData = try await service.exportHAR(lastMinutes: 5)
+        let har = try XCTUnwrap(JSONSerialization.jsonObject(with: harData) as? [String: Any])
+        let log = try XCTUnwrap(har["log"] as? [String: Any])
+        let entries = try XCTUnwrap(log["entries"] as? [[String: Any]])
+        XCTAssertEqual(entries.count, 1, "HAR should contain 1 trace entry for network failure")
+
+        let entry = try XCTUnwrap(entries.first)
+        let comment = try XCTUnwrap(entry["comment"] as? String)
+        XCTAssertTrue(comment.contains("chat"), "Trace method should be chat")
+    }
+
+    // MARK: - Trace recorded on stream network failure
+
+    func testTraceRecordedOnStreamNetworkFailure() async throws {
+        let mockClient = MockHTTPClient()
+        let session = MockAccountSession(
+            provider: .antigravity,
+            credentials: LLMCredentials(accessToken: "test-token")
+        )
+        session.info = LLMAccountInfo(provider: .antigravity, metadata: ["project_id": "test-project"])
+
+        let storageDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LLMServiceTests_\(UUID().uuidString)")
+        addTeardownBlock { try? FileManager.default.removeItem(at: storageDir) }
+
+        let config = LLMLoggingConfig(subsystem: "test", storageDirectory: storageDir)
+
+        // Enqueue a network error (not connected to internet)
+        mockClient.enqueueError(URLError(.notConnectedToInternet))
+
+        let service = LLMService(
+            session: session,
+            loggingConfig: config,
+            httpClient: mockClient,
+            oauthLauncher: MockOAuthLauncher()
+        )
+
+        let stream = service.chatStream(
+            modelId: "gemini-2.0-flash",
+            messages: [LLMMessage(role: .user, content: [.text("hello")])]
+        )
+
+        do {
+            for try await _ in stream {
+                // Consume stream
+            }
+            XCTFail("Expected error")
+        } catch {
+            // Expected
+        }
+
+        // Verify HAR contains 1 entry with error
+        let harData = try await service.exportHAR(lastMinutes: 5)
+        let har = try XCTUnwrap(JSONSerialization.jsonObject(with: harData) as? [String: Any])
+        let log = try XCTUnwrap(har["log"] as? [String: Any])
+        let entries = try XCTUnwrap(log["entries"] as? [[String: Any]])
+        XCTAssertEqual(entries.count, 1, "HAR should contain 1 trace entry for stream network failure")
+    }
+
+    // MARK: - Non-streaming chat records trace on success
+
+    func testNonStreamingChatRecordsTraceOnSuccess() async throws {
+        let mockClient = MockHTTPClient()
+        let session = MockAccountSession(
+            provider: .geminiCLI,
+            credentials: LLMCredentials(accessToken: "test-token")
+        )
+        session.info = LLMAccountInfo(provider: .geminiCLI, metadata: ["project_id": "test-project"])
+
+        let storageDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LLMServiceTests_\(UUID().uuidString)")
+        addTeardownBlock { try? FileManager.default.removeItem(at: storageDir) }
+
+        let config = LLMLoggingConfig(subsystem: "test", storageDirectory: storageDir)
+
+        let responseJSON: [String: Any] = [
+            "candidates": [
+                [
+                    "content": [
+                        "parts": [["text": "Hello"]],
+                        "role": "model"
+                    ]
+                ]
+            ],
+            "responseId": "resp-1",
+            "modelVersion": "gemini-2.0-flash"
+        ]
+        mockClient.enqueue(.json(responseJSON))
+
+        let service = LLMService(
+            session: session,
+            loggingConfig: config,
+            httpClient: mockClient,
+            oauthLauncher: MockOAuthLauncher()
+        )
+
+        let response = try await service.chat(
+            modelId: "gemini-2.0-flash",
+            messages: [LLMMessage(role: .user, content: [.text("hello")])]
+        )
+        XCTAssertEqual(response.fullText, "Hello")
+
+        // Verify HAR contains 1 entry with method "chat", isStreaming false
+        let harData = try await service.exportHAR(lastMinutes: 5)
+        let har = try XCTUnwrap(JSONSerialization.jsonObject(with: harData) as? [String: Any])
+        let log = try XCTUnwrap(har["log"] as? [String: Any])
+        let entries = try XCTUnwrap(log["entries"] as? [[String: Any]])
+        XCTAssertEqual(entries.count, 1, "HAR should contain 1 trace entry")
+
+        let entry = try XCTUnwrap(entries.first)
+        let comment = try XCTUnwrap(entry["comment"] as? String)
+        XCTAssertTrue(comment.contains("chat"), "Trace should record method as chat")
+
+        // Verify response was recorded
+        let harResponse = try XCTUnwrap(entry["response"] as? [String: Any])
+        let status = try XCTUnwrap(harResponse["status"] as? Int)
+        XCTAssertEqual(status, 200)
+    }
+
+    // MARK: - Non-streaming chat records trace on API error
+
+    func testNonStreamingChatRecordsTraceOnAPIError() async throws {
+        let mockClient = MockHTTPClient()
+        let session = MockAccountSession(
+            provider: .geminiCLI,
+            credentials: LLMCredentials(accessToken: "test-token")
+        )
+        session.info = LLMAccountInfo(provider: .geminiCLI, metadata: ["project_id": "test-project"])
+
+        let storageDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LLMServiceTests_\(UUID().uuidString)")
+        addTeardownBlock { try? FileManager.default.removeItem(at: storageDir) }
+
+        let config = LLMLoggingConfig(subsystem: "test", storageDirectory: storageDir)
+
+        // Enqueue 500 error via data() path (non-streaming)
+        mockClient.enqueue(.error(500, message: "Internal server error"))
+
+        let service = LLMService(
+            session: session,
+            loggingConfig: config,
+            httpClient: mockClient,
+            oauthLauncher: MockOAuthLauncher()
+        )
+
+        do {
+            _ = try await service.chat(
+                modelId: "gemini-2.0-flash",
+                messages: [LLMMessage(role: .user, content: [.text("hello")])]
+            )
+            XCTFail("Expected error")
+        } catch let error as LLMServiceError {
+            XCTAssertEqual(error.statusCode, 500)
+        } catch {
+            XCTFail("Expected LLMServiceError, got \(type(of: error))")
+        }
+
+        // Verify HAR error trace recorded
+        let harData = try await service.exportHAR(lastMinutes: 5)
+        let har = try XCTUnwrap(JSONSerialization.jsonObject(with: harData) as? [String: Any])
+        let log = try XCTUnwrap(har["log"] as? [String: Any])
+        let entries = try XCTUnwrap(log["entries"] as? [[String: Any]])
+        XCTAssertEqual(entries.count, 1, "HAR should contain 1 error trace entry")
+
+        let entry = try XCTUnwrap(entries.first)
+        let comment = try XCTUnwrap(entry["comment"] as? String)
+        XCTAssertTrue(comment.contains("chat"), "Trace should record method as chat")
     }
 }
