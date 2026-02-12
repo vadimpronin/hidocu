@@ -5,6 +5,9 @@
       location = "group:HiDocu/HiDocu.xcodeproj">
    </FileRef>
    <FileRef
+      location = "group:LLMTestStudio/LLMTestStudio.xcodeproj">
+   </FileRef>
+   <FileRef
       location = "group:JensenUSB">
    </FileRef>
    <FileRef
@@ -12,8 +15,5 @@
    </FileRef>
    <FileRef
       location = "group:LLMService">
-   </FileRef>
-   <FileRef
-      location = "group:LLMTestStudio">
    </FileRef>
 </Workspace>

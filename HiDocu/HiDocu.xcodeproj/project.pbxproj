@@ -7,14 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		071CE0515FFA41CAAACBB874 /* RecordingSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A077FC9AD84D72A3E071BC /* RecordingSource.swift */; };
-		8AB8E6490C1A4367B6DA9453 /* RecordingSourceDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = D99C1960DB53454796885B23 /* RecordingSourceDTO.swift */; };
-		8AA672C1610D4B0CAF91D672 /* RecordingSourceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 485F8C4FF11D4F0F8983C76E /* RecordingSourceRepository.swift */; };
-		9DBFF30D1F374ABFB1C319F5 /* SQLiteRecordingSourceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAB94EA38DBD470B850CBA1F /* SQLiteRecordingSourceRepository.swift */; };
-		AE00002000000002 /* AppEventService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE00001000000001 /* AppEventService.swift */; };
 		0119A84E4F2840779DA2E2B3 /* TimeInterval+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86F8B131B8884602A9CF022F /* TimeInterval+Extensions.swift */; };
 		022D1B3252A0A87CE530C60B /* RecordingV2DTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9D040E8C768C4EB7680B474 /* RecordingV2DTO.swift */; };
 		04DE6A3CDE2453D7D214B2CF /* SQLiteRecordingRepositoryV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = A29A4A2521C6F0977A6C729F /* SQLiteRecordingRepositoryV2.swift */; };
+		071CE0515FFA41CAAACBB874 /* RecordingSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A077FC9AD84D72A3E071BC /* RecordingSource.swift */; };
 		099ED2A72F348EBA00905EA4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 099ED2A52F348BBA00905EA4 /* Assets.xcassets */; };
 		0AF8675E8C569156DCE9CD4B /* ContentViewV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A200194A4444435072733F /* ContentViewV2.swift */; };
 		0EC792C8A6BE261D6C07D17F /* TrashService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D69953C06FF92116AE18C2DE /* TrashService.swift */; };
@@ -27,7 +23,7 @@
 		3664B05D38E1AED300889576 /* Document.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4C310BB2F07F16244282199 /* Document.swift */; };
 		3D6B099B9A5D77F71AADE23C /* FolderDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BE26D22ECF04CC038346BDC /* FolderDTO.swift */; };
 		3DE8D43D5E41E48342A9B174 /* JobMonitorPopoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02EA9E22A4AFD964CEEF863C /* JobMonitorPopoverView.swift */; };
-		
+		4621EB24B602474480B72556 /* DeviceIconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6445531941E4C1AAAA93677 /* DeviceIconView.swift */; };
 		53438D90B497848BD250352E /* FolderTreeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEF1499B052B6ECD6B8CCF60 /* FolderTreeViewModel.swift */; };
 		5364D32C7080B14CCE496046 /* ContextService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C0838C39A86F5F4DC084A98 /* ContextService.swift */; };
 		5454FE8644F05C68769CE2B3 /* DeletionLogDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37BFD95EBB1B504ED68E3980 /* DeletionLogDTO.swift */; };
@@ -43,11 +39,19 @@
 		7E55DC0BB950CB6CC941F149 /* VariantTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C37075ADF55F93DD763F974 /* VariantTabBar.swift */; };
 		7FE08A5C64923C365769E369 /* Folder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA55DE2ACE96B64C6A54BE4E /* Folder.swift */; };
 		826884BB9C56944CC45A4128 /* DocumentRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12A960990416284D3F0FFA9C /* DocumentRepository.swift */; };
+		844B76E919A0453990DD9A7F /* ImportButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B2CD920910D4121B523536E /* ImportButton.swift */; };
 		87474A9B92E8EEC01F279E7F /* DeviceDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09134FD2A3C89DFB7EA7BB0F /* DeviceDashboardView.swift */; };
+		8AA672C1610D4B0CAF91D672 /* RecordingSourceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 485F8C4FF11D4F0F8983C76E /* RecordingSourceRepository.swift */; };
+		8AB8E6490C1A4367B6DA9453 /* RecordingSourceDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = D99C1960DB53454796885B23 /* RecordingSourceDTO.swift */; };
 		8C1F7AFE2BA73F51196C0CE6 /* RecordingRepositoryV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93F40903E763C5CAAA849A16 /* RecordingRepositoryV2.swift */; };
+		8D6F1D4C8176BC1DE48C7C59 /* RecordingSourceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A39E440C62C1A3D0620AACD4 /* RecordingSourceViewModel.swift */; };
 		8FC3622F4017BD0964C8FA82 /* FolderSettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114150E40F24A3004A2DF620 /* FolderSettingsSheet.swift */; };
 		90464C9049A11C09988A7C66 /* AddTranscriptSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 770B5B44BD9261D588D42502 /* AddTranscriptSheet.swift */; };
+		91A4E8F95A3D4E2AB0011001 /* StandardEmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91A4E8F95A3D4E2AB0012001 /* StandardEmptyStateView.swift */; };
+		91A4E8F95A3D4E2AB0011002 /* UnifiedRecordingListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91A4E8F95A3D4E2AB0012002 /* UnifiedRecordingListView.swift */; };
+		91A4E8F95A3D4E2AB0011003 /* DataStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91A4E8F95A3D4E2AB0012003 /* DataStateView.swift */; };
 		92AEDC85782DB00613E2A128 /* ToolbarJobMonitorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23ED289FB59AE3C4686E8DFC /* ToolbarJobMonitorView.swift */; };
+		9DBFF30D1F374ABFB1C319F5 /* SQLiteRecordingSourceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAB94EA38DBD470B850CBA1F /* SQLiteRecordingSourceRepository.swift */; };
 		9DDDA0CC7D5FA306672B6EE7 /* SettingsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1982272C3186149C008392DB /* SettingsService.swift */; };
 		A1B2C3D4E5F6G7H8I9J0K1L2 /* GenerateTranscriptSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = M3N4O5P6Q7R8S9T0U1V2W3X4 /* GenerateTranscriptSheet.swift */; };
 		A2626B02BDE9315C6B921544 /* DocumentListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CF5D0788A026355A829DC46 /* DocumentListViewModel.swift */; };
@@ -55,8 +59,17 @@
 		A5B176A9AEBF7C402C7342DA /* SQLiteSourceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 438E368ED96312AD4F772D25 /* SQLiteSourceRepository.swift */; };
 		A6B8973348B1B36D7C152E9F /* FolderRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDA413EE9305C427988A7439 /* FolderRepository.swift */; };
 		A7E80828A8F4FECF9047CDEE /* SQLiteDocumentRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58E73F682433820EF6C487A9 /* SQLiteDocumentRepository.swift */; };
-		
+		AB1234567890ABCD12340011 /* AllRecordingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340001 /* AllRecordingsViewModel.swift */; };
+		AB1234567890ABCD12340012 /* AvailabilityStatusIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340002 /* AvailabilityStatusIcon.swift */; };
+		AB1234567890ABCD12340013 /* DocumentStatusCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340003 /* DocumentStatusCell.swift */; };
+		AB1234567890ABCD12340014 /* RecordingContextMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340004 /* RecordingContextMenu.swift */; };
+		AB1234567890ABCD12340015 /* RecordingTableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340005 /* RecordingTableView.swift */; };
+		AB1234567890ABCD12340016 /* Shared/RecordingRowDisplayable.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340006 /* Shared/RecordingRowDisplayable.swift */; };
+		AB1234567890ABCD12340021 /* DocumentTableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340008 /* DocumentTableView.swift */; };
+		AB1234567890ABCD12340022 /* Shared/DocumentRowDisplayable.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340007 /* Shared/DocumentRowDisplayable.swift */; };
+		AB1234567890ABCD12340023 /* Trash/TrashViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340009 /* Trash/TrashViewModel.swift */; };
 		AC0B048F36B4BD35DAF3A6D5 /* TranscriptStatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25F73D445794CFE78B28411B /* TranscriptStatusBar.swift */; };
+		AE00002000000002 /* AppEventService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE00001000000001 /* AppEventService.swift */; };
 		AFA436901852E6303785837D /* NavigationViewModelV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = B89857DC3BCEF88B833F5CEF /* NavigationViewModelV2.swift */; };
 		B0FBD0073DA6FED0C951D973 /* Source.swift in Sources */ = {isa = PBXBuildFile; fileRef = 371F17CB8D6ADADD5D3AD590 /* Source.swift */; };
 		B748C5428CCF2AE46CDC0CDD /* SidebarViewV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A63BCA40C34F1107B6A60 /* SidebarViewV2.swift */; };
@@ -77,8 +90,8 @@
 		BB0000120000000C /* SSEParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000120000000C /* SSEParser.swift */; };
 		BB0000A00000000A /* AvailableModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000A00000000A /* AvailableModel.swift */; };
 		BB0000B00000000B /* JudgeResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000B00000000B /* JudgeResponse.swift */; };
+		BE6826ADC71A49FBBFAF5A6E /* ImportProgressViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 225966B851CE4A9A86ECCBBF /* ImportProgressViews.swift */; };
 		BE6ECC1B25F71F50417558E0 /* RecordingImportServiceV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368BA73F8C08D273FE2B21C8 /* RecordingImportServiceV2.swift */; };
-		RSSE00001A5B6C7D /* RecordingSourceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = RSSF00001A5B6C7D /* RecordingSourceService.swift */; };
 		BFC601E7D452D90CD990621E /* DocumentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6226CD68D273A20A4EBB9B65 /* DocumentService.swift */; };
 		BM00000000000001 /* LLMJob.swift in Sources */ = {isa = PBXBuildFile; fileRef = DM00000000000001 /* LLMJob.swift */; };
 		BM00000000000002 /* LLMJobPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = DM00000000000002 /* LLMJobPayload.swift */; };
@@ -89,6 +102,7 @@
 		BTO0000000000004 /* LLMModelDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DTO0000000000004 /* LLMModelDTO.swift */; };
 		BTO0000000000005 /* LLMAccountModelDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DTO0000000000005 /* LLMAccountModelDTO.swift */; };
 		C28F8D0E49B151F81D6633B4 /* TranscriptStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 905223C42AFE09B648A3121F /* TranscriptStudioView.swift */; };
+		C4D7FF49786E48F89353B64C /* DeviceHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAE7D44C08D44BD683B1959C /* DeviceHeaderView.swift */; };
 		C5C630A403A97F0B29ABD83C /* DocumentListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F5287EBB0531F111E6E01E6 /* DocumentListView.swift */; };
 		C614C88D8F7EA4968EB1C148 /* DocumentDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAADD95ECAC7FF3C0B18B887 /* DocumentDetailViewModel.swift */; };
 		C7458EEDB15A9101AE14A13A /* PromoteBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BFD426BB0B6D99B53CEE11E /* PromoteBanner.swift */; };
@@ -96,9 +110,14 @@
 		CC1000C00000000C /* MarkdownEditableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000C00000000C /* MarkdownEditableView.swift */; };
 		CE4EB2D09509DEC4A3A562E1 /* TranscriptDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = B930F1D2F342C5D58BD7B889 /* TranscriptDTO.swift */; };
 		D29B81C7FF9C622845D2E888 /* DeletionLogRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47BF7D3168C144CED0C36ED9 /* DeletionLogRepository.swift */; };
-		
+		D7FFE2A012B3C7DDB6FE64A9 /* AllRecordingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9157D5BF5831DA5A2CBCF95D /* AllRecordingsView.swift */; };
+		DB10000100000001 /* APIDebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB00000100000001 /* APIDebugLogger.swift */; };
+		DB10000200000002 /* PostmanExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB00000200000002 /* PostmanExporter.swift */; };
+		DB10000300000003 /* DebugSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB00000300000003 /* DebugSettingsSection.swift */; };
+		DB10000400000004 /* HARExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB00000400000004 /* HARExporter.swift */; };
 		DE3B51E4417F4918F5022E40 /* RecordingV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB033465FB3E12E0BB749B1 /* RecordingV2.swift */; };
 		DF3313BAB7828D8D8AB8304A /* DeletionLogEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1358CE1110F0A9D6089071F3 /* DeletionLogEntry.swift */; };
+		E056915D9F9F40CC9DD3D09F /* RecordingTableConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40494DDD4B60440EA94DFA54 /* RecordingTableConstants.swift */; };
 		E6BB1D6635FBEC8625C57A77 /* DocumentDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDC92D8AF4F6028806551C10 /* DocumentDetailView.swift */; };
 		E9628EC90C9811DAA5FDE221 /* ToolbarQuotaIndicatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48AB4784CE383DE158F98103 /* ToolbarQuotaIndicatorView.swift */; };
 		EE00000100000001 /* LLMAccountDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000100000001 /* LLMAccountDTO.swift */; };
@@ -127,8 +146,8 @@
 		F0A00002F0A00002 /* DatabaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A00012F0A00012 /* DatabaseTests.swift */; };
 		F0A00003F0A00003 /* ImportLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A00013F0A00013 /* ImportLogicTests.swift */; };
 		F0A00052F0A00052 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = F0A00053F0A00053 /* GRDB */; };
+		F0F2FF9D8D0B1BF5A52461FD /* RecordingSourceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2E77ED394B3F03BE48200F2 /* RecordingSourceDetailView.swift */; };
 		F21116180C58EFA51A7A7459 /* SQLiteFolderRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 366665D1CFE1F75AFAAD9DF4 /* SQLiteFolderRepository.swift */; };
-		
 		F5A00001F5A00001 /* TranscriptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A00011F5A00011 /* TranscriptionTests.swift */; };
 		F8000020F8000020 /* ErrorBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8000010F8000010 /* ErrorBannerView.swift */; };
 		FF10000100000001 /* ClaudeProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF00000100000001 /* ClaudeProvider.swift */; };
@@ -141,31 +160,8 @@
 		LQS1000000000001 /* LLMQueueState.swift in Sources */ = {isa = PBXBuildFile; fileRef = LQS0000000000001 /* LLMQueueState.swift */; };
 		LQV1000000000001 /* LLMQueueService.swift in Sources */ = {isa = PBXBuildFile; fileRef = LQV0000000000001 /* LLMQueueService.swift */; };
 		QB00000000000001 /* QuotaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = QS00000000000001 /* QuotaService.swift */; };
+		RSSE00001A5B6C7D /* RecordingSourceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = RSSF00001A5B6C7D /* RecordingSourceService.swift */; };
 		TM10000000000001 /* TokenManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = TM00000000000001 /* TokenManager.swift */; };
-		8D6F1D4C8176BC1DE48C7C59 /* RecordingSourceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A39E440C62C1A3D0620AACD4 /* RecordingSourceViewModel.swift */; };
-		F0F2FF9D8D0B1BF5A52461FD /* RecordingSourceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2E77ED394B3F03BE48200F2 /* RecordingSourceDetailView.swift */; };
-		D7FFE2A012B3C7DDB6FE64A9 /* AllRecordingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9157D5BF5831DA5A2CBCF95D /* AllRecordingsView.swift */; };
-		AB1234567890ABCD12340011 /* AllRecordingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340001 /* AllRecordingsViewModel.swift */; };
-		AB1234567890ABCD12340012 /* AvailabilityStatusIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340002 /* AvailabilityStatusIcon.swift */; };
-		AB1234567890ABCD12340013 /* DocumentStatusCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340003 /* DocumentStatusCell.swift */; };
-		AB1234567890ABCD12340014 /* RecordingContextMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340004 /* RecordingContextMenu.swift */; };
-		AB1234567890ABCD12340015 /* RecordingTableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340005 /* RecordingTableView.swift */; };
-		AB1234567890ABCD12340016 /* RecordingRowDisplayable.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340006 /* RecordingRowDisplayable.swift */; };
-		AB1234567890ABCD12340021 /* DocumentTableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340008 /* DocumentTableView.swift */; };
-		AB1234567890ABCD12340022 /* DocumentRowDisplayable.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340007 /* DocumentRowDisplayable.swift */; };
-		AB1234567890ABCD12340023 /* TrashViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234567890ABCD12340009 /* TrashViewModel.swift */; };
-		4621EB24B602474480B72556 /* DeviceIconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6445531941E4C1AAAA93677 /* DeviceIconView.swift */; };
-		844B76E919A0453990DD9A7F /* ImportButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B2CD920910D4121B523536E /* ImportButton.swift */; };
-		BE6826ADC71A49FBBFAF5A6E /* ImportProgressViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 225966B851CE4A9A86ECCBBF /* ImportProgressViews.swift */; };
-		C4D7FF49786E48F89353B64C /* DeviceHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAE7D44C08D44BD683B1959C /* DeviceHeaderView.swift */; };
-		E056915D9F9F40CC9DD3D09F /* RecordingTableConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40494DDD4B60440EA94DFA54 /* RecordingTableConstants.swift */; };
-		91A4E8F95A3D4E2AB0011001 /* StandardEmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91A4E8F95A3D4E2AB0012001 /* StandardEmptyStateView.swift */; };
-		91A4E8F95A3D4E2AB0011002 /* UnifiedRecordingListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91A4E8F95A3D4E2AB0012002 /* UnifiedRecordingListView.swift */; };
-		91A4E8F95A3D4E2AB0011003 /* DataStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91A4E8F95A3D4E2AB0012003 /* DataStateView.swift */; };
-		DB10000100000001 /* APIDebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB00000100000001 /* APIDebugLogger.swift */; };
-		DB10000200000002 /* PostmanExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB00000200000002 /* PostmanExporter.swift */; };
-		DB10000400000004 /* HARExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB00000400000004 /* HARExporter.swift */; };
-		DB10000300000003 /* DebugSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB00000300000003 /* DebugSettingsSection.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -179,11 +175,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		F5A077FC9AD84D72A3E071BC /* RecordingSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSource.swift; sourceTree = "<group>"; };
-		D99C1960DB53454796885B23 /* RecordingSourceDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSourceDTO.swift; sourceTree = "<group>"; };
-		485F8C4FF11D4F0F8983C76E /* RecordingSourceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSourceRepository.swift; sourceTree = "<group>"; };
-		DAB94EA38DBD470B850CBA1F /* SQLiteRecordingSourceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteRecordingSourceRepository.swift; sourceTree = "<group>"; };
-		02EA9E22A4AFD964CEEF863C /* JobMonitorPopoverView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = JobMonitorPopoverView.swift; path = JobMonitorPopoverView.swift; sourceTree = "<group>"; };
+		02EA9E22A4AFD964CEEF863C /* JobMonitorPopoverView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = JobMonitorPopoverView.swift; sourceTree = "<group>"; };
 		07496990C2830BD1439D5351 /* BatteryIndicatorView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BatteryIndicatorView.swift; sourceTree = "<group>"; };
 		09134FD2A3C89DFB7EA7BB0F /* DeviceDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DeviceDashboardView.swift; path = HiDocu/Presentation/Views/Device/DeviceDashboardView.swift; sourceTree = SOURCE_ROOT; };
 		099ED2A52F348BBA00905EA4 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -194,39 +186,44 @@
 		1358CE1110F0A9D6089071F3 /* DeletionLogEntry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeletionLogEntry.swift; sourceTree = "<group>"; };
 		14B1464F9B61FF0B4ED761F6 /* DeviceDashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DeviceDashboardViewModel.swift; path = HiDocu/Presentation/ViewModels/DeviceDashboardViewModel.swift; sourceTree = SOURCE_ROOT; };
 		1982272C3186149C008392DB /* SettingsService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsService.swift; sourceTree = "<group>"; };
+		225966B851CE4A9A86ECCBBF /* ImportProgressViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportProgressViews.swift; sourceTree = "<group>"; };
 		23ED289FB59AE3C4686E8DFC /* ToolbarJobMonitorView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ToolbarJobMonitorView.swift; sourceTree = "<group>"; };
 		25F73D445794CFE78B28411B /* TranscriptStatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptStatusBar.swift; sourceTree = "<group>"; };
 		2B0D1580CF48C34D6AA476C3 /* TranscriptRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TranscriptRepository.swift; sourceTree = "<group>"; };
+		2B2CD920910D4121B523536E /* ImportButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportButton.swift; sourceTree = "<group>"; };
 		2C37075ADF55F93DD763F974 /* VariantTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VariantTabBar.swift; sourceTree = "<group>"; };
 		364A63BCA40C34F1107B6A60 /* SidebarViewV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SidebarViewV2.swift; sourceTree = "<group>"; };
 		366665D1CFE1F75AFAAD9DF4 /* SQLiteFolderRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SQLiteFolderRepository.swift; sourceTree = "<group>"; };
 		368BA73F8C08D273FE2B21C8 /* RecordingImportServiceV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingImportServiceV2.swift; sourceTree = "<group>"; };
-		RSSF00001A5B6C7D /* RecordingSourceService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingSourceService.swift; sourceTree = "<group>"; };
 		371F17CB8D6ADADD5D3AD590 /* Source.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Source.swift; sourceTree = "<group>"; };
 		37A04E6ED12F76D8DF4867E7 /* SQLiteTranscriptRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SQLiteTranscriptRepository.swift; sourceTree = "<group>"; };
 		37BFD95EBB1B504ED68E3980 /* DeletionLogDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeletionLogDTO.swift; sourceTree = "<group>"; };
 		3F5287EBB0531F111E6E01E6 /* DocumentListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentListView.swift; sourceTree = "<group>"; };
+		40494DDD4B60440EA94DFA54 /* RecordingTableConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingTableConstants.swift; sourceTree = "<group>"; };
 		42EB92A51DFBFEB3BE82AB4E /* FolderService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FolderService.swift; sourceTree = "<group>"; };
 		438E368ED96312AD4F772D25 /* SQLiteSourceRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SQLiteSourceRepository.swift; sourceTree = "<group>"; };
 		47BF7D3168C144CED0C36ED9 /* DeletionLogRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeletionLogRepository.swift; sourceTree = "<group>"; };
+		485F8C4FF11D4F0F8983C76E /* RecordingSourceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSourceRepository.swift; sourceTree = "<group>"; };
 		48AB4784CE383DE158F98103 /* ToolbarQuotaIndicatorView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ToolbarQuotaIndicatorView.swift; sourceTree = "<group>"; };
 		4937DF72E8C1DB57768B0B94 /* DocumentDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentDTO.swift; sourceTree = "<group>"; };
-		
-		
 		58E73F682433820EF6C487A9 /* SQLiteDocumentRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SQLiteDocumentRepository.swift; sourceTree = "<group>"; };
 		5CF5D0788A026355A829DC46 /* DocumentListViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentListViewModel.swift; sourceTree = "<group>"; };
 		6226CD68D273A20A4EBB9B65 /* DocumentService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentService.swift; sourceTree = "<group>"; };
 		627C906DFCEFBC8B5814A44A /* RecordingPickerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingPickerView.swift; sourceTree = "<group>"; };
 		6BE26D22ECF04CC038346BDC /* FolderDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FolderDTO.swift; sourceTree = "<group>"; };
-		
 		770B5B44BD9261D588D42502 /* AddTranscriptSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTranscriptSheet.swift; sourceTree = "<group>"; };
 		86F8B131B8884602A9CF022F /* TimeInterval+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimeInterval+Extensions.swift"; sourceTree = "<group>"; };
 		8C0838C39A86F5F4DC084A98 /* ContextService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContextService.swift; sourceTree = "<group>"; };
 		905223C42AFE09B648A3121F /* TranscriptStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptStudioView.swift; sourceTree = "<group>"; };
+		9157D5BF5831DA5A2CBCF95D /* AllRecordingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllRecordingsView.swift; sourceTree = "<group>"; };
+		91A4E8F95A3D4E2AB0012001 /* StandardEmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StandardEmptyStateView.swift; sourceTree = "<group>"; };
+		91A4E8F95A3D4E2AB0012002 /* UnifiedRecordingListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedRecordingListView.swift; sourceTree = "<group>"; };
+		91A4E8F95A3D4E2AB0012003 /* DataStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStateView.swift; sourceTree = "<group>"; };
 		93F40903E763C5CAAA849A16 /* RecordingRepositoryV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingRepositoryV2.swift; sourceTree = "<group>"; };
 		9BFD426BB0B6D99B53CEE11E /* PromoteBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromoteBanner.swift; sourceTree = "<group>"; };
 		9CB033465FB3E12E0BB749B1 /* RecordingV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingV2.swift; sourceTree = "<group>"; };
 		A29A4A2521C6F0977A6C729F /* SQLiteRecordingRepositoryV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SQLiteRecordingRepositoryV2.swift; sourceTree = "<group>"; };
+		A39E440C62C1A3D0620AACD4 /* RecordingSourceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSourceViewModel.swift; sourceTree = "<group>"; };
 		A98CB705C2B0017E531544B6 /* SourceRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceRepository.swift; sourceTree = "<group>"; };
 		A9D040E8C768C4EB7680B474 /* RecordingV2DTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingV2DTO.swift; sourceTree = "<group>"; };
 		AA00000100000001 /* LLMProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProvider.swift; sourceTree = "<group>"; };
@@ -248,15 +245,32 @@
 		AA0000B00000000B /* JudgeResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JudgeResponse.swift; sourceTree = "<group>"; };
 		AAA3834F987CA973FCD8506B /* SQLiteDeletionLogRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SQLiteDeletionLogRepository.swift; sourceTree = "<group>"; };
 		AAADD95ECAC7FF3C0B18B887 /* DocumentDetailViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentDetailViewModel.swift; sourceTree = "<group>"; };
+		AB1234567890ABCD12340001 /* AllRecordingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllRecordingsViewModel.swift; sourceTree = "<group>"; };
+		AB1234567890ABCD12340002 /* AvailabilityStatusIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvailabilityStatusIcon.swift; sourceTree = "<group>"; };
+		AB1234567890ABCD12340003 /* DocumentStatusCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentStatusCell.swift; sourceTree = "<group>"; };
+		AB1234567890ABCD12340004 /* RecordingContextMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingContextMenu.swift; sourceTree = "<group>"; };
+		AB1234567890ABCD12340005 /* RecordingTableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingTableView.swift; sourceTree = "<group>"; };
+		AB1234567890ABCD12340006 /* Shared/RecordingRowDisplayable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/RecordingRowDisplayable.swift; sourceTree = "<group>"; };
+		AB1234567890ABCD12340007 /* Shared/DocumentRowDisplayable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/DocumentRowDisplayable.swift; sourceTree = "<group>"; };
+		AB1234567890ABCD12340008 /* DocumentTableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentTableView.swift; sourceTree = "<group>"; };
+		AB1234567890ABCD12340009 /* Trash/TrashViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Trash/TrashViewModel.swift; sourceTree = "<group>"; };
+		AE00001000000001 /* AppEventService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEventService.swift; sourceTree = "<group>"; };
 		AEF1499B052B6ECD6B8CCF60 /* FolderTreeViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FolderTreeViewModel.swift; sourceTree = "<group>"; };
+		B6445531941E4C1AAAA93677 /* DeviceIconView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceIconView.swift; sourceTree = "<group>"; };
 		B89857DC3BCEF88B833F5CEF /* NavigationViewModelV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NavigationViewModelV2.swift; sourceTree = "<group>"; };
 		B930F1D2F342C5D58BD7B889 /* TranscriptDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TranscriptDTO.swift; sourceTree = "<group>"; };
 		BC12039CA327089CC1010027 /* SettingsViewV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsViewV2.swift; sourceTree = "<group>"; };
 		BDA413EE9305C427988A7439 /* FolderRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FolderRepository.swift; sourceTree = "<group>"; };
+		C2E77ED394B3F03BE48200F2 /* RecordingSourceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSourceDetailView.swift; sourceTree = "<group>"; };
 		CC0000B00000000B /* ModelPickerMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelPickerMenu.swift; sourceTree = "<group>"; };
 		D0A200194A4444435072733F /* ContentViewV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContentViewV2.swift; sourceTree = "<group>"; };
 		D69953C06FF92116AE18C2DE /* TrashService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TrashService.swift; sourceTree = "<group>"; };
-		
+		D99C1960DB53454796885B23 /* RecordingSourceDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSourceDTO.swift; sourceTree = "<group>"; };
+		DAB94EA38DBD470B850CBA1F /* SQLiteRecordingSourceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteRecordingSourceRepository.swift; sourceTree = "<group>"; };
+		DB00000100000001 /* APIDebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIDebugLogger.swift; sourceTree = "<group>"; };
+		DB00000200000002 /* PostmanExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostmanExporter.swift; sourceTree = "<group>"; };
+		DB00000300000003 /* DebugSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugSettingsSection.swift; sourceTree = "<group>"; };
+		DB00000400000004 /* HARExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HARExporter.swift; sourceTree = "<group>"; };
 		DBA3562E4C531972E9D61F66 /* SourcesViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesViewModel.swift; sourceTree = "<group>"; };
 		DBECEEA4D622EE030E4E9ED6 /* SourceDTO.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceDTO.swift; sourceTree = "<group>"; };
 		DD00000100000001 /* LLMAccountDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMAccountDTO.swift; sourceTree = "<group>"; };
@@ -281,7 +295,6 @@
 		F0000000F0000000 /* HiDocu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HiDocu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F0000011F0000011 /* HiDocuApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiDocuApp.swift; sourceTree = "<group>"; };
 		F0000012F0000012 /* AppDependencyContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencyContainer.swift; sourceTree = "<group>"; };
-		AE00001000000001 /* AppEventService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEventService.swift; sourceTree = "<group>"; };
 		F0000013F0000013 /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
 		F0000014F0000014 /* Date+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Extensions.swift"; sourceTree = "<group>"; };
 		F0000015F0000015 /* Int+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Int+Extensions.swift"; sourceTree = "<group>"; };
@@ -299,8 +312,10 @@
 		F0A00013F0A00013 /* ImportLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportLogicTests.swift; sourceTree = "<group>"; };
 		F542AE3F2464304DFD5DEFD6 /* TrashView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TrashView.swift; sourceTree = "<group>"; };
 		F5A00011F5A00011 /* TranscriptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionTests.swift; sourceTree = "<group>"; };
+		F5A077FC9AD84D72A3E071BC /* RecordingSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSource.swift; sourceTree = "<group>"; };
 		F8000010F8000010 /* ErrorBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBannerView.swift; sourceTree = "<group>"; };
 		FA55DE2ACE96B64C6A54BE4E /* Folder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Folder.swift; sourceTree = "<group>"; };
+		FAE7D44C08D44BD683B1959C /* DeviceHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceHeaderView.swift; sourceTree = "<group>"; };
 		FDC92D8AF4F6028806551C10 /* DocumentDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DocumentDetailView.swift; sourceTree = "<group>"; };
 		FF00000100000001 /* ClaudeProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeProvider.swift; sourceTree = "<group>"; };
 		FF00000200000002 /* CodexProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexProvider.swift; sourceTree = "<group>"; };
@@ -313,31 +328,8 @@
 		LQV0000000000001 /* LLMQueueService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMQueueService.swift; sourceTree = "<group>"; };
 		M3N4O5P6Q7R8S9T0U1V2W3X4 /* GenerateTranscriptSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateTranscriptSheet.swift; sourceTree = "<group>"; };
 		QS00000000000001 /* QuotaService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaService.swift; sourceTree = "<group>"; };
+		RSSF00001A5B6C7D /* RecordingSourceService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingSourceService.swift; sourceTree = "<group>"; };
 		TM00000000000001 /* TokenManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenManager.swift; sourceTree = "<group>"; };
-		A39E440C62C1A3D0620AACD4 /* RecordingSourceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSourceViewModel.swift; sourceTree = "<group>"; };
-		C2E77ED394B3F03BE48200F2 /* RecordingSourceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSourceDetailView.swift; sourceTree = "<group>"; };
-		9157D5BF5831DA5A2CBCF95D /* AllRecordingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllRecordingsView.swift; sourceTree = "<group>"; };
-		AB1234567890ABCD12340001 /* AllRecordingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllRecordingsViewModel.swift; sourceTree = "<group>"; };
-		AB1234567890ABCD12340002 /* AvailabilityStatusIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvailabilityStatusIcon.swift; sourceTree = "<group>"; };
-		AB1234567890ABCD12340003 /* DocumentStatusCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentStatusCell.swift; sourceTree = "<group>"; };
-		AB1234567890ABCD12340004 /* RecordingContextMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingContextMenu.swift; sourceTree = "<group>"; };
-		AB1234567890ABCD12340005 /* RecordingTableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingTableView.swift; sourceTree = "<group>"; };
-		AB1234567890ABCD12340006 /* RecordingRowDisplayable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/RecordingRowDisplayable.swift; sourceTree = "<group>"; };
-		AB1234567890ABCD12340007 /* DocumentRowDisplayable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/DocumentRowDisplayable.swift; sourceTree = "<group>"; };
-		AB1234567890ABCD12340008 /* DocumentTableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentTableView.swift; sourceTree = "<group>"; };
-		AB1234567890ABCD12340009 /* TrashViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Trash/TrashViewModel.swift; sourceTree = "<group>"; };
-		B6445531941E4C1AAAA93677 /* DeviceIconView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceIconView.swift; sourceTree = "<group>"; };
-		2B2CD920910D4121B523536E /* ImportButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportButton.swift; sourceTree = "<group>"; };
-		225966B851CE4A9A86ECCBBF /* ImportProgressViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportProgressViews.swift; sourceTree = "<group>"; };
-		FAE7D44C08D44BD683B1959C /* DeviceHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceHeaderView.swift; sourceTree = "<group>"; };
-		40494DDD4B60440EA94DFA54 /* RecordingTableConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingTableConstants.swift; sourceTree = "<group>"; };
-		91A4E8F95A3D4E2AB0012001 /* StandardEmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StandardEmptyStateView.swift; sourceTree = "<group>"; };
-		91A4E8F95A3D4E2AB0012002 /* UnifiedRecordingListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedRecordingListView.swift; sourceTree = "<group>"; };
-		91A4E8F95A3D4E2AB0012003 /* DataStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStateView.swift; sourceTree = "<group>"; };
-		DB00000100000001 /* APIDebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIDebugLogger.swift; sourceTree = "<group>"; };
-		DB00000200000002 /* PostmanExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostmanExporter.swift; sourceTree = "<group>"; };
-		DB00000400000004 /* HARExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HARExporter.swift; sourceTree = "<group>"; };
-		DB00000300000003 /* DebugSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugSettingsSection.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -403,6 +395,18 @@
 			path = Trash;
 			sourceTree = "<group>";
 		};
+		AB1234567890ABCD12340020 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				AB1234567890ABCD12340002 /* AvailabilityStatusIcon.swift */,
+				AB1234567890ABCD12340003 /* DocumentStatusCell.swift */,
+				AB1234567890ABCD12340004 /* RecordingContextMenu.swift */,
+				91A4E8F95A3D4E2AB0012002 /* UnifiedRecordingListView.swift */,
+				40494DDD4B60440EA94DFA54 /* RecordingTableConstants.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
 		CC00000100000001 /* LLM */ = {
 			isa = PBXGroup;
 			children = (
@@ -429,7 +433,8 @@
 				F8000010F8000010 /* ErrorBannerView.swift */,
 				07496990C2830BD1439D5351 /* BatteryIndicatorView.swift */,
 				CC0000B00000000B /* ModelPickerMenu.swift */,
-				DD0000C00000000C /* MarkdownEditableView.swift */,				02EA9E22A4AFD964CEEF863C /* JobMonitorPopoverView.swift */,
+				DD0000C00000000C /* MarkdownEditableView.swift */,
+				02EA9E22A4AFD964CEEF863C /* JobMonitorPopoverView.swift */,
 				48AB4784CE383DE158F98103 /* ToolbarQuotaIndicatorView.swift */,
 				0B943509DFD1D703D9B64291 /* QuotaPopoverView.swift */,
 				23ED289FB59AE3C4686E8DFC /* ToolbarJobMonitorView.swift */,
@@ -577,7 +582,7 @@
 		F200000AF200000A /* UseCases */ = {
 			isa = PBXGroup;
 			children = (
-);
+			);
 			path = UseCases;
 			sourceTree = "<group>";
 		};
@@ -652,7 +657,7 @@
 		F200000FF200000F /* Migrations */ = {
 			isa = PBXGroup;
 			children = (
-);
+			);
 			path = Migrations;
 			sourceTree = "<group>";
 		};
@@ -667,8 +672,8 @@
 				D0A200194A4444435072733F /* ContentViewV2.swift */,
 				FB454B08628CE5A75BC6ED32 /* Folders */,
 				6631DDC458171CC9C7062A5D /* Trash */,
-							FB2DDE62926C7C5A52D00344 /* Recordings */,
-);
+				FB2DDE62926C7C5A52D00344 /* Recordings */,
+			);
 			path = Views;
 			sourceTree = "<group>";
 		};
@@ -682,12 +687,12 @@
 				AAADD95ECAC7FF3C0B18B887 /* DocumentDetailViewModel.swift */,
 				DBA3562E4C531972E9D61F66 /* SourcesViewModel.swift */,
 				FF00000500000005 /* LLMSettingsViewModel.swift */,
-							A39E440C62C1A3D0620AACD4 /* RecordingSourceViewModel.swift */,
+				A39E440C62C1A3D0620AACD4 /* RecordingSourceViewModel.swift */,
 				AB1234567890ABCD12340001 /* AllRecordingsViewModel.swift */,
-				AB1234567890ABCD12340009 /* TrashViewModel.swift */,
-				AB1234567890ABCD12340007 /* DocumentRowDisplayable.swift */,
-				AB1234567890ABCD12340006 /* RecordingRowDisplayable.swift */,
-);
+				AB1234567890ABCD12340009 /* Trash/TrashViewModel.swift */,
+				AB1234567890ABCD12340007 /* Shared/DocumentRowDisplayable.swift */,
+				AB1234567890ABCD12340006 /* Shared/RecordingRowDisplayable.swift */,
+			);
 			path = ViewModels;
 			sourceTree = "<group>";
 		};
@@ -729,6 +734,16 @@
 			path = Settings;
 			sourceTree = "<group>";
 		};
+		FB2DDE62926C7C5A52D00344 /* Recordings */ = {
+			isa = PBXGroup;
+			children = (
+				AB1234567890ABCD12340020 /* Components */,
+				C2E77ED394B3F03BE48200F2 /* RecordingSourceDetailView.swift */,
+				9157D5BF5831DA5A2CBCF95D /* AllRecordingsView.swift */,
+			);
+			path = Recordings;
+			sourceTree = "<group>";
+		};
 		FB454B08628CE5A75BC6ED32 /* Folders */ = {
 			isa = PBXGroup;
 			children = (
@@ -746,28 +761,6 @@
 				FF00000300000003 /* GeminiProvider.swift */,
 			);
 			path = Providers;
-			sourceTree = "<group>";
-		};
-		FB2DDE62926C7C5A52D00344 /* Recordings */ = {
-			isa = PBXGroup;
-			children = (
-				AB1234567890ABCD12340020 /* Components */,
-							C2E77ED394B3F03BE48200F2 /* RecordingSourceDetailView.swift */,
-				9157D5BF5831DA5A2CBCF95D /* AllRecordingsView.swift */,
-);
-			path = Recordings;
-			sourceTree = "<group>";
-		};
-		AB1234567890ABCD12340020 /* Components */ = {
-			isa = PBXGroup;
-			children = (
-				AB1234567890ABCD12340002 /* AvailabilityStatusIcon.swift */,
-				AB1234567890ABCD12340003 /* DocumentStatusCell.swift */,
-				AB1234567890ABCD12340004 /* RecordingContextMenu.swift */,
-				91A4E8F95A3D4E2AB0012002 /* UnifiedRecordingListView.swift */,
-				40494DDD4B60440EA94DFA54 /* RecordingTableConstants.swift */,
-			);
-			path = Components;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -845,8 +838,8 @@
 			);
 			mainGroup = F2000000F2000000;
 			packageReferences = (
-				F6000000F6000000 /* XCLocalSwiftPackageReference "JensenUSB" */,
-				F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+				F6000000F6000000 /* XCLocalSwiftPackageReference "../JensenUSB" */,
+				F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB" */,
 				F6000002F6000002 /* XCRemoteSwiftPackageReference "textual" */,
 			);
 			productRefGroup = F2000099F2000099 /* Products */;
@@ -1014,10 +1007,12 @@
 				LQS1000000000001 /* LLMQueueState.swift in Sources */,
 				LQV1000000000001 /* LLMQueueService.swift in Sources */,
 				FF10000500000005 /* LLMSettingsViewModel.swift in Sources */,
-				FF10000600000006 /* LLMSettingsTab.swift in Sources */,				3DE8D43D5E41E48342A9B174 /* JobMonitorPopoverView.swift in Sources */,
+				FF10000600000006 /* LLMSettingsTab.swift in Sources */,
+				3DE8D43D5E41E48342A9B174 /* JobMonitorPopoverView.swift in Sources */,
 				E9628EC90C9811DAA5FDE221 /* ToolbarQuotaIndicatorView.swift in Sources */,
 				0ED011EB7EC2F9A051A66982 /* QuotaPopoverView.swift in Sources */,
-				92AEDC85782DB00613E2A128 /* ToolbarJobMonitorView.swift in Sources */,							8D6F1D4C8176BC1DE48C7C59 /* RecordingSourceViewModel.swift in Sources */,
+				92AEDC85782DB00613E2A128 /* ToolbarJobMonitorView.swift in Sources */,
+				8D6F1D4C8176BC1DE48C7C59 /* RecordingSourceViewModel.swift in Sources */,
 				F0F2FF9D8D0B1BF5A52461FD /* RecordingSourceDetailView.swift in Sources */,
 				D7FFE2A012B3C7DDB6FE64A9 /* AllRecordingsView.swift in Sources */,
 				AB1234567890ABCD12340011 /* AllRecordingsViewModel.swift in Sources */,
@@ -1025,10 +1020,10 @@
 				AB1234567890ABCD12340013 /* DocumentStatusCell.swift in Sources */,
 				AB1234567890ABCD12340014 /* RecordingContextMenu.swift in Sources */,
 				AB1234567890ABCD12340015 /* RecordingTableView.swift in Sources */,
-				AB1234567890ABCD12340016 /* RecordingRowDisplayable.swift in Sources */,
+				AB1234567890ABCD12340016 /* Shared/RecordingRowDisplayable.swift in Sources */,
 				AB1234567890ABCD12340021 /* DocumentTableView.swift in Sources */,
-				AB1234567890ABCD12340022 /* DocumentRowDisplayable.swift in Sources */,
-				AB1234567890ABCD12340023 /* TrashViewModel.swift in Sources */,
+				AB1234567890ABCD12340022 /* Shared/DocumentRowDisplayable.swift in Sources */,
+				AB1234567890ABCD12340023 /* Trash/TrashViewModel.swift in Sources */,
 				4621EB24B602474480B72556 /* DeviceIconView.swift in Sources */,
 				844B76E919A0453990DD9A7F /* ImportButton.swift in Sources */,
 				BE6826ADC71A49FBBFAF5A6E /* ImportProgressViews.swift in Sources */,
@@ -1041,7 +1036,7 @@
 				DB10000200000002 /* PostmanExporter.swift in Sources */,
 				DB10000400000004 /* HARExporter.swift in Sources */,
 				DB10000300000003 /* DebugSettingsSection.swift in Sources */,
-);
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F1A00000F1A00000 /* Sources */ = {
@@ -1343,14 +1338,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		F6000000F6000000 /* XCLocalSwiftPackageReference "JensenUSB" */ = {
+		F6000000F6000000 /* XCLocalSwiftPackageReference "../JensenUSB" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../JensenUSB;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+		F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/groue/GRDB.swift";
 			requirement = {
@@ -1375,7 +1370,7 @@
 		};
 		F0000053F0000053 /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB" */;
 			productName = GRDB;
 		};
 		F0000055F0000055 /* Textual */ = {
@@ -1385,7 +1380,7 @@
 		};
 		F0A00053F0A00053 /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			package = F6000001F6000001 /* XCRemoteSwiftPackageReference "GRDB" */;
 			productName = GRDB;
 		};
 /* End XCSwiftPackageProductDependency section */

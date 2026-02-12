@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct DebugControlsView: View {
     @Bindable var viewModel: TestStudioViewModel
