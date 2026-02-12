@@ -406,15 +406,30 @@ final class TestStudioViewModel {
         log("cURL copied to clipboard", level: .info)
     }
 
-    func exportSelectedAsHAR() {
-        let entriesToExport: [LLMTraceEntry]
-        if selectedTraceIds.isEmpty {
-            entriesToExport = networkEntries.map(\.trace)
-        } else {
-            entriesToExport = networkEntries
-                .filter { selectedTraceIds.contains($0.id) }
-                .map(\.trace)
+    func copySelectedAsHAR() {
+        let entriesToExport = selectedOrAllTraceEntries()
+        guard !entriesToExport.isEmpty else {
+            log("No entries to copy", level: .warning)
+            return
         }
+
+        do {
+            let data = try HARExporter.export(entries: entriesToExport)
+            guard let harString = String(data: data, encoding: .utf8) else {
+                log("Failed to convert HAR to UTF-8 string", level: .error)
+                return
+            }
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(harString, forType: .string)
+            let bytesFormatted = ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .file)
+            log("HAR copied to clipboard (\(entriesToExport.count) entries, \(bytesFormatted))", level: .info)
+        } catch {
+            log("HAR copy failed: \(error.localizedDescription)", level: .error)
+        }
+    }
+
+    func exportSelectedAsHAR() {
+        let entriesToExport = selectedOrAllTraceEntries()
 
         guard !entriesToExport.isEmpty else {
             log("No entries to export", level: .warning)
@@ -444,6 +459,18 @@ final class TestStudioViewModel {
             }
         } catch {
             log("HAR export failed: \(error.localizedDescription)", level: .error)
+        }
+    }
+
+    // MARK: - Private Helpers
+
+    private func selectedOrAllTraceEntries() -> [LLMTraceEntry] {
+        if selectedTraceIds.isEmpty {
+            return networkEntries.map(\.trace)
+        } else {
+            return networkEntries
+                .filter { selectedTraceIds.contains($0.id) }
+                .map(\.trace)
         }
     }
 }

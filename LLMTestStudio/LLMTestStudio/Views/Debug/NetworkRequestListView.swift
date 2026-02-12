@@ -80,12 +80,20 @@ struct NetworkRequestListView: View {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(entry.fullURL, forType: .string)
             }
+            Button("Copy as HAR") {
+                viewModel.selectedTraceIds = selectedIds
+                viewModel.copySelectedAsHAR()
+            }
             Divider()
             Button("Export as HAR") {
                 viewModel.selectedTraceIds = selectedIds
                 viewModel.exportSelectedAsHAR()
             }
         } else if selectedIds.count > 1 {
+            Button("Copy \(selectedIds.count) Selected as HAR") {
+                viewModel.selectedTraceIds = selectedIds
+                viewModel.copySelectedAsHAR()
+            }
             Button("Export \(selectedIds.count) Selected as HAR") {
                 viewModel.selectedTraceIds = selectedIds
                 viewModel.exportSelectedAsHAR()

@@ -19,6 +19,19 @@ struct NetworkConsoleToolbar: View {
         Spacer()
 
         Button {
+            viewModel.copySelectedAsHAR()
+        } label: {
+            Label(
+                viewModel.selectedTraceIds.isEmpty
+                    ? "Copy HAR"
+                    : "Copy \(viewModel.selectedTraceIds.count) as HAR",
+                systemImage: "doc.on.doc"
+            )
+            .font(.caption)
+        }
+        .disabled(viewModel.networkEntries.isEmpty)
+
+        Button {
             viewModel.exportSelectedAsHAR()
         } label: {
             Label(
