@@ -209,10 +209,10 @@
 			);
 			mainGroup = 09C8AD0B2F3D97E700A56B93;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			packageReferences = (
-				09C8AD662F3D989000A56B93 /* XCLocalSwiftPackageReference "LLMService" */,
+				09C8AD662F3D989000A56B93 /* XCLocalSwiftPackageReference "../LLMService" */,
 			);
+			preferredProjectObjectVersion = 77;
 			productRefGroup = 09C8AD152F3D97E700A56B93 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -612,7 +612,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		09C8AD662F3D989000A56B93 /* XCLocalSwiftPackageReference "LLMService" */ = {
+		09C8AD662F3D989000A56B93 /* XCLocalSwiftPackageReference "../LLMService" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../LLMService;
 		};

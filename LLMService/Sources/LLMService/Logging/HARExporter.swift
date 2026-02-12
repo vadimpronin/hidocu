@@ -1,10 +1,10 @@
 import Foundation
 
 /// Exports trace entries as HAR 1.2 format
-enum HARExporter {
+public enum HARExporter {
 
     /// Convert trace entries to HAR 1.2 JSON data
-    static func export(entries: [LLMTraceEntry]) throws -> Data {
+    public static func export(entries: [LLMTraceEntry]) throws -> Data {
         var harEntries: [[String: Any]] = []
 
         for entry in entries {

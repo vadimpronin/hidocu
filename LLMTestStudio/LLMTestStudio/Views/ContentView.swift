@@ -12,12 +12,8 @@ struct ContentView: View {
                 ChatView(viewModel: viewModel)
                     .frame(minHeight: 300)
 
-                VStack(spacing: 0) {
-                    DebugControlsView(viewModel: viewModel)
-                    Divider()
-                    LogView(viewModel: viewModel)
-                }
-                .frame(minHeight: 150, idealHeight: 200)
+                NetworkConsoleView(viewModel: viewModel)
+                    .frame(minHeight: 150, idealHeight: 250)
             }
         }
         .navigationTitle("LLM Test Studio")

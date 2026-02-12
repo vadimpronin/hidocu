@@ -1,6 +1,8 @@
+import AppKit
 import Foundation
 import LLMService
 import OSLog
+import UniformTypeIdentifiers
 
 enum ChatMode: String, CaseIterable {
     case streaming = "Streaming"
@@ -25,6 +27,12 @@ final class TestStudioViewModel {
     var thinkingBudget: Int = 10000
     var chatMode: ChatMode = .streaming
 
+    // Network Console
+    var networkEntries: [NetworkRequestEntry] = []
+    var selectedTraceIds: Set<String> = []
+    var selectedDetailTraceId: String?
+    var networkFilterText: String = ""
+
     // MARK: - Private
 
     /// Bumped after login/logout to trigger SwiftUI re-render for `isLoggedIn(for:)`.
@@ -36,6 +44,7 @@ final class TestStudioViewModel {
     private let logger = Logger(subsystem: "com.llmteststudio", category: "viewmodel")
     private var streamTask: Task<Void, Never>?
     private var streamGeneration = 0
+    private var networkEntriesById: [String: NetworkRequestEntry] = [:]
 
     // MARK: - Init
 
@@ -69,6 +78,26 @@ final class TestStudioViewModel {
         set { chatHistories[selectedProvider] = newValue }
     }
 
+    var selectedDetailEntry: NetworkRequestEntry? {
+        guard let id = selectedDetailTraceId else { return nil }
+        return networkEntriesById[id]
+    }
+
+    func networkEntry(byId id: String) -> NetworkRequestEntry? {
+        networkEntriesById[id]
+    }
+
+    var filteredNetworkEntries: [NetworkRequestEntry] {
+        guard !networkFilterText.isEmpty else { return networkEntries }
+        let filter = networkFilterText.lowercased()
+        return networkEntries.filter { entry in
+            entry.fullURL.lowercased().contains(filter)
+                || entry.provider.lowercased().contains(filter)
+                || entry.httpMethod.lowercased().contains(filter)
+                || entry.statusText.lowercased().contains(filter)
+        }
+    }
+
     // MARK: - Service Management
 
     private func service(for provider: LLMProvider) -> LLMService {
@@ -89,7 +118,13 @@ final class TestStudioViewModel {
         return LLMLoggingConfig(
             subsystem: "com.llmteststudio",
             storageDirectory: dir,
-            shouldMaskTokens: false
+            shouldMaskTokens: false,
+            onTraceRecorded: { [weak self] entry in
+                let viewModel = self
+                Task { @MainActor in
+                    viewModel?.handleTraceRecorded(entry)
+                }
+            }
         )
     }
 
@@ -262,6 +297,7 @@ final class TestStudioViewModel {
     func toggleDebug() {
         debugEnabled.toggle()
         services.removeAll()
+        clearNetworkEntries()
         log("Debug logging \(debugEnabled ? "enabled" : "disabled") — services recreated", level: .info)
     }
 
@@ -293,5 +329,68 @@ final class TestStudioViewModel {
 
     func clearLog() {
         logEntries.removeAll()
+    }
+
+    // MARK: - Network Console
+
+    func handleTraceRecorded(_ entry: LLMTraceEntry) {
+        let networkEntry = NetworkRequestEntry(trace: entry)
+        networkEntries.append(networkEntry)
+        networkEntriesById[networkEntry.id] = networkEntry
+    }
+
+    func clearNetworkEntries() {
+        networkEntries.removeAll()
+        networkEntriesById.removeAll()
+        selectedTraceIds.removeAll()
+        selectedDetailTraceId = nil
+    }
+
+    func copyAsCURL(_ entry: NetworkRequestEntry) {
+        let curl = CURLExporter.generateCURL(from: entry.trace)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(curl, forType: .string)
+        log("cURL copied to clipboard", level: .info)
+    }
+
+    func exportSelectedAsHAR() {
+        let entriesToExport: [LLMTraceEntry]
+        if selectedTraceIds.isEmpty {
+            entriesToExport = networkEntries.map(\.trace)
+        } else {
+            entriesToExport = networkEntries
+                .filter { selectedTraceIds.contains($0.id) }
+                .map(\.trace)
+        }
+
+        guard !entriesToExport.isEmpty else {
+            log("No entries to export", level: .warning)
+            return
+        }
+
+        do {
+            let data = try HARExporter.export(entries: entriesToExport)
+            let panel = NSSavePanel()
+            panel.allowedContentTypes = [UTType(filenameExtension: "har", conformingTo: .json) ?? .json]
+            panel.nameFieldStringValue = "llm_network_\(entriesToExport.count)_requests.har"
+
+            Task {
+                guard let window = NSApp.keyWindow ?? NSApp.windows.first else {
+                    log("No window available for save panel", level: .warning)
+                    return
+                }
+                let response = await panel.beginSheetModal(for: window)
+                if response == .OK, let url = panel.url {
+                    do {
+                        try data.write(to: url)
+                        log("HAR saved to \(url.lastPathComponent) (\(entriesToExport.count) entries)", level: .info)
+                    } catch {
+                        log("Failed to save HAR: \(error.localizedDescription)", level: .error)
+                    }
+                }
+            }
+        } catch {
+            log("HAR export failed: \(error.localizedDescription)", level: .error)
+        }
     }
 }

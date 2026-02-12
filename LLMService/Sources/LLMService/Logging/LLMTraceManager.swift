@@ -21,12 +21,17 @@ actor LLMTraceManager {
             logger.debug("[\(entry.traceId)] \(entry.method) -> \(entry.response?.statusCode ?? 0)")
         }
 
-        guard let storageDir = config.storageDirectory else { return }
+        guard let storageDir = config.storageDirectory else {
+            config.onTraceRecorded?(entry)
+            return
+        }
 
         var entryToWrite = entry
         if redactor {
             entryToWrite = redactEntry(entry)
         }
+
+        config.onTraceRecorded?(entryToWrite)
 
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyyMMdd_HHmmss"

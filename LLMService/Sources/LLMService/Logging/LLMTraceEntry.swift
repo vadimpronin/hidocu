@@ -1,6 +1,7 @@
 import Foundation
 
-public struct LLMTraceEntry: Codable, Sendable {
+public struct LLMTraceEntry: Codable, Sendable, Identifiable {
+    public var id: String { traceId }
     public let traceId: String
     public let requestId: String
     public let timestamp: Date
