@@ -11,7 +11,7 @@ struct AntigravityProvider: InternalProvider {
     /// Project ID obtained via loadCodeAssist during OAuth
     let projectId: String
 
-    private static let streamURL = URL(string: "https://cloudcode-pa.googleapis.com/v1internal:streamGenerateContent?alt=sse")!
+    private static let streamURL = URL(string: "https://daily-cloudcode-pa.googleapis.com/v1internal:streamGenerateContent?alt=sse")!
 
     // MARK: - Request Building
 
@@ -73,16 +73,15 @@ struct AntigravityProvider: InternalProvider {
     // MARK: - Models
 
     func listModels(credentials: LLMCredentials, httpClient: HTTPClient) async throws -> [LLMModelInfo] {
-        // 1. Fetch available model IDs from user quota
-        let modelIds: [String]
+        // 1. Fetch available models
+        let availableModels: [(id: String, displayName: String)]
         do {
-            modelIds = try await AntigravityQuotaFetcher.fetchAvailableModelIds(
-                projectId: projectId,
+            availableModels = try await AntigravityModelFetcher.fetchAvailableModels(
                 credentials: credentials,
                 httpClient: httpClient
             )
         } catch {
-            logger.warning("Failed to fetch model IDs from quota, using fallback: \(error.localizedDescription)")
+            logger.warning("Failed to fetch models, using fallback: \(error.localizedDescription)")
             let catalog = await GeminiModelCatalog.shared.getCatalog(httpClient: httpClient)
             var models = catalog.values.map { $0.withNonStreamingDisabled() }
             models.append(Self.claudeSonnetFallback)
@@ -92,19 +91,19 @@ struct AntigravityProvider: InternalProvider {
         // 2. Enrich with catalog data
         let catalog = await GeminiModelCatalog.shared.getCatalog(httpClient: httpClient)
 
-        return modelIds.map { modelId in
+        return availableModels.map { model in
             // Claude models proxied by Antigravity
-            if modelId.lowercased().contains("claude") {
-                return Self.claudeModelInfo(for: modelId)
+            if model.id.lowercased().contains("claude") {
+                return Self.claudeModelInfo(for: model.id)
             }
 
-            if let entry = catalog[modelId] {
+            if let entry = catalog[model.id] {
                 return entry.withNonStreamingDisabled()
             }
 
             return LLMModelInfo(
-                id: modelId,
-                displayName: LLMModelInfo.formatDisplayName(from: modelId),
+                id: model.id,
+                displayName: model.displayName,
                 supportsText: true, supportsImage: true,
                 supportsNonStreaming: false
             )
@@ -139,8 +138,6 @@ struct AntigravityProvider: InternalProvider {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("antigravity/1.104.0 darwin/arm64", forHTTPHeaderField: "User-Agent")
-        request.setValue("google-cloud-sdk vscode_cloudshelleditor/0.1", forHTTPHeaderField: "X-Goog-Api-Client")
-        let metadata = "{\"ideType\":\"IDE_UNSPECIFIED\",\"platform\":\"PLATFORM_UNSPECIFIED\",\"pluginType\":\"GEMINI\"}"
-        request.setValue(metadata, forHTTPHeaderField: "Client-Metadata")
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
     }
 }

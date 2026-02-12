@@ -163,6 +163,7 @@ final class SmartChatTests: XCTestCase {
         // Verify the URL contains streamGenerateContent (streaming path)
         let capturedURL = mockClient.capturedRequests.first?.url?.absoluteString ?? ""
         XCTAssertTrue(capturedURL.contains("streamGenerateContent"), "Antigravity should use streaming URL")
+        XCTAssertTrue(capturedURL.contains("daily-cloudcode-pa.googleapis.com"), "Antigravity should use daily base URL, not production")
     }
 
     func testChatUsesNonStreamingPathForClaude() async throws {

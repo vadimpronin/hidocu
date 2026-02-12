@@ -124,31 +124,3 @@ final class GeminiQuotaFetcherTests: XCTestCase {
         XCTAssertEqual(modelIds, ["gemini-2.5-pro"])
     }
 }
-
-final class AntigravityQuotaFetcherTests: XCTestCase {
-
-    func testFetchAvailableModelIds() async throws {
-        let mockClient = MockHTTPClient()
-        let quotaResponse: [String: Any] = [
-            "buckets": [
-                ["modelId": "gemini-2.5-pro", "tokenType": "REQUESTS"],
-                ["modelId": "claude-sonnet-4-5-20250929", "tokenType": "REQUESTS"],
-            ]
-        ]
-        mockClient.enqueue(.json(quotaResponse))
-
-        let credentials = LLMCredentials(accessToken: "test-token")
-        let modelIds = try await AntigravityQuotaFetcher.fetchAvailableModelIds(
-            projectId: "test-project",
-            credentials: credentials,
-            httpClient: mockClient
-        )
-
-        XCTAssertEqual(modelIds.count, 2)
-
-        // Verify Antigravity-specific headers
-        let captured = mockClient.capturedRequests.first
-        XCTAssertEqual(captured?.value(forHTTPHeaderField: "User-Agent"), "antigravity/1.104.0 darwin/arm64")
-        XCTAssertEqual(captured?.value(forHTTPHeaderField: "X-Goog-Api-Client"), "google-cloud-sdk vscode_cloudshelleditor/0.1")
-    }
-}
