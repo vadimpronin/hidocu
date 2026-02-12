@@ -2,38 +2,11 @@ import XCTest
 @testable import LLMService
 
 final class AuthFlowTests: XCTestCase {
-    func testLoginCallsSave() async throws {
-        let mockClient = MockHTTPClient()
-        let mockLauncher = MockOAuthLauncher()
-        let session = MockAccountSession(provider: .claudeCode)
 
-        // Set up callback URL with auth code (state must match the UUID generated in OAuthCoordinator)
-        // The mock launcher captures the auth URL, and we set up a callback that echoes the state
-        mockLauncher.echoStateInCallback = true
+    // MARK: - Redirect URI constants
 
-        // Enqueue token exchange response
-        mockClient.enqueue(.json([
-            "access_token": "new-access-token",
-            "refresh_token": "new-refresh-token",
-            "expires_in": 3600,
-            "token_type": "bearer",
-            "account": ["email_address": "test@example.com", "uuid": "acc-123"],
-            "organization": ["uuid": "org-123", "name": "Test Org"]
-        ]))
-
-        let service = LLMService(
-            session: session,
-            loggingConfig: LLMLoggingConfig(),
-            httpClient: mockClient,
-            oauthLauncher: mockLauncher
-        )
-
-        try await service.login()
-
-        // Verify save was called
-        XCTAssertEqual(session.saveCallCount, 1)
-        XCTAssertEqual(session.savedCredentials?.accessToken, "new-access-token")
-        XCTAssertEqual(session.savedCredentials?.refreshToken, "new-refresh-token")
+    func testClaudeRedirectURI() {
+        XCTAssertEqual(ClaudeCodeAuthProvider.redirectURI, "http://localhost:54545/callback")
     }
 
     func testGeminiRedirectURI() {
@@ -46,33 +19,119 @@ final class AuthFlowTests: XCTestCase {
         XCTAssertEqual(redirectURI, "http://localhost:51121/oauth-callback")
     }
 
-    func testLoginRejectsStateMismatch() async {
-        let mockClient = MockHTTPClient()
-        let mockLauncher = MockOAuthLauncher()
-        let session = MockAccountSession(provider: .claudeCode)
+    // MARK: - Claude auth URL building
 
-        // Return a callback with a hardcoded wrong state
-        mockLauncher.callbackURL = URL(string: "llmservice://auth/callback?code=test-code&state=wrong-state")!
-
-        let service = LLMService(
-            session: session,
-            loggingConfig: LLMLoggingConfig(),
-            httpClient: mockClient,
-            oauthLauncher: mockLauncher
+    func testClaudeBuildAuthURLContainsCorrectRedirectURI() throws {
+        let pkceCodes = try PKCEGenerator.generate()
+        let redirectURI = ClaudeCodeAuthProvider.redirectURI
+        let authURL = ClaudeCodeAuthProvider.buildAuthURL(
+            pkceCodes: pkceCodes,
+            state: "test-state",
+            redirectURI: redirectURI
         )
 
-        do {
-            try await service.login()
-            XCTFail("Expected state mismatch error")
-        } catch {
+        let components = try XCTUnwrap(URLComponents(url: authURL, resolvingAgainstBaseURL: false))
+        let queryItems = try XCTUnwrap(components.queryItems)
+
+        let redirectParam = queryItems.first(where: { $0.name == "redirect_uri" })?.value
+        XCTAssertEqual(redirectParam, "http://localhost:54545/callback")
+
+        let codeChallenge = queryItems.first(where: { $0.name == "code_challenge" })?.value
+        XCTAssertEqual(codeChallenge, pkceCodes.codeChallenge)
+
+        let challengeMethod = queryItems.first(where: { $0.name == "code_challenge_method" })?.value
+        XCTAssertEqual(challengeMethod, "S256")
+
+        let stateParam = queryItems.first(where: { $0.name == "state" })?.value
+        XCTAssertEqual(stateParam, "test-state")
+
+        let responseType = queryItems.first(where: { $0.name == "response_type" })?.value
+        XCTAssertEqual(responseType, "code")
+    }
+
+    // MARK: - Claude token exchange
+
+    func testClaudeTokenExchangeParsesResponse() async throws {
+        let mockClient = MockHTTPClient()
+        let pkceCodes = try PKCEGenerator.generate()
+
+        mockClient.enqueue(.json([
+            "access_token": "new-access-token",
+            "refresh_token": "new-refresh-token",
+            "expires_in": 3600,
+            "token_type": "bearer",
+            "account": ["email_address": "test@example.com", "uuid": "acc-123"],
+            "organization": ["uuid": "org-123", "name": "Test Org"]
+        ]))
+
+        let (credentials, email) = try await ClaudeCodeAuthProvider.exchangeCodeForTokens(
+            code: "test-code",
+            state: "test-state",
+            pkceCodes: pkceCodes,
+            redirectURI: ClaudeCodeAuthProvider.redirectURI,
+            httpClient: mockClient
+        )
+
+        XCTAssertEqual(credentials.accessToken, "new-access-token")
+        XCTAssertEqual(credentials.refreshToken, "new-refresh-token")
+        XCTAssertNotNil(credentials.expiresAt)
+        XCTAssertEqual(email, "test@example.com")
+
+        // Verify the request body contains correct redirect_uri
+        let request = try XCTUnwrap(mockClient.capturedRequests.first)
+        let bodyData = try XCTUnwrap(request.httpBody)
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: bodyData) as? [String: Any])
+        XCTAssertEqual(body["redirect_uri"] as? String, "http://localhost:54545/callback")
+        XCTAssertEqual(body["grant_type"] as? String, "authorization_code")
+    }
+
+    // MARK: - State validation (CSRF protection)
+
+    func testExtractCodeRejectsStateMismatch() {
+        let url = URL(string: "http://localhost:54545/callback?code=test-code&state=wrong-state")!
+        XCTAssertThrowsError(try OAuthCoordinator.extractCode(from: url, expectedState: "expected-state")) { error in
             XCTAssertTrue("\(error)".contains("state mismatch"), "Expected CSRF error, got: \(error)")
         }
     }
 
+    func testExtractCodeAcceptsMatchingState() throws {
+        let state = "my-state-123"
+        let url = URL(string: "http://localhost:54545/callback?code=test-code&state=\(state)")!
+        let code = try OAuthCoordinator.extractCode(from: url, expectedState: state)
+        XCTAssertEqual(code, "test-code")
+    }
+
+    func testExtractCodeRejectsMissingCode() {
+        let url = URL(string: "http://localhost:54545/callback?state=my-state")!
+        XCTAssertThrowsError(try OAuthCoordinator.extractCode(from: url, expectedState: "my-state")) { error in
+            XCTAssertTrue("\(error)".contains("No authorization code"), "Expected missing code error, got: \(error)")
+        }
+    }
+
+    // MARK: - Gemini auth URL
+
+    func testBuildAuthURLContainsCorrectRedirectURI() {
+        let redirectURI = GeminiAuthProvider.redirectURI
+        let authURL = GeminiAuthProvider.buildAuthURL(
+            state: "test-state",
+            redirectURI: redirectURI
+        )
+
+        guard let components = URLComponents(url: authURL, resolvingAgainstBaseURL: false),
+              let queryItems = components.queryItems else {
+            XCTFail("Failed to parse auth URL")
+            return
+        }
+
+        let redirectURIParam = queryItems.first(where: { $0.name == "redirect_uri" })?.value
+        XCTAssertEqual(redirectURIParam, "http://localhost:8085/oauth2callback")
+    }
+
+    // MARK: - Project ID fetching
+
     func testFetchProjectIDUsesCorrectIdeTypeForGemini() async throws {
         let mockClient = MockHTTPClient()
 
-        // Enqueue loadCodeAssist response
         mockClient.enqueue(.json([
             "cloudaicompanionProject": "gemini-proj-123"
         ]))
@@ -84,7 +143,6 @@ final class AuthFlowTests: XCTestCase {
 
         XCTAssertEqual(projectId, "gemini-proj-123")
 
-        // Verify the request body contains IDE_UNSPECIFIED for GeminiCLI
         let request = try XCTUnwrap(mockClient.capturedRequests.first)
         let data = try XCTUnwrap(request.httpBody)
         let body = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
@@ -95,7 +153,6 @@ final class AuthFlowTests: XCTestCase {
     func testFetchProjectIDUsesCorrectIdeTypeForAntigravity() async throws {
         let mockClient = MockHTTPClient()
 
-        // Enqueue loadCodeAssist response
         mockClient.enqueue(.json([
             "cloudaicompanionProject": "ag-proj-456"
         ]))
@@ -107,7 +164,6 @@ final class AuthFlowTests: XCTestCase {
 
         XCTAssertEqual(projectId, "ag-proj-456")
 
-        // Verify the request body contains ANTIGRAVITY for Antigravity
         let request = try XCTUnwrap(mockClient.capturedRequests.first)
         let data = try XCTUnwrap(request.httpBody)
         let body = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
@@ -138,17 +194,14 @@ final class AuthFlowTests: XCTestCase {
         )
         session.info.metadata["project_id"] = "my-gemini-project"
 
-        // Enqueue a 500 error (we just want to inspect the request, not get a valid response)
         mockClient.enqueue(.error(500, message: "test"))
 
         let service = LLMService(
             session: session,
             loggingConfig: LLMLoggingConfig(),
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
-        // Call chatStream and consume the expected error
         let stream = service.chatStream(
             modelId: "gemini-2.5-pro",
             messages: [LLMMessage(role: .user, content: [.text("hi")])]
@@ -156,30 +209,12 @@ final class AuthFlowTests: XCTestCase {
         do {
             for try await _ in stream {}
         } catch {
-            // Expected 500 error — we only need to inspect the request
+            // Expected 500 error
         }
 
-        // Verify the captured request contains the project field
         let request = try XCTUnwrap(mockClient.capturedRequests.first)
         let data = try XCTUnwrap(request.httpBody)
         let body = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(body["project"] as? String, "my-gemini-project")
-    }
-
-    func testBuildAuthURLContainsCorrectRedirectURI() {
-        let redirectURI = GeminiAuthProvider.redirectURI
-        let authURL = GeminiAuthProvider.buildAuthURL(
-            state: "test-state",
-            redirectURI: redirectURI
-        )
-
-        guard let components = URLComponents(url: authURL, resolvingAgainstBaseURL: false),
-              let queryItems = components.queryItems else {
-            XCTFail("Failed to parse auth URL")
-            return
-        }
-
-        let redirectURIParam = queryItems.first(where: { $0.name == "redirect_uri" })?.value
-        XCTAssertEqual(redirectURIParam, "http://localhost:8085/oauth2callback")
     }
 }

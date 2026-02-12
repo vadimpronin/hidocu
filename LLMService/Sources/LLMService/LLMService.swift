@@ -9,7 +9,6 @@ public final class LLMService: @unchecked Sendable {
     public var proxyURL: URL?
 
     internal let httpClient: HTTPClient
-    internal let oauthLauncher: OAuthSessionLauncher
     internal let traceManager: LLMTraceManager
     internal var lastResponseHeaders: [String: String] = [:]
 
@@ -17,20 +16,17 @@ public final class LLMService: @unchecked Sendable {
 
     public convenience init(session: LLMAccountSession, loggingConfig: LLMLoggingConfig = LLMLoggingConfig()) {
         let client = URLSessionHTTPClient()
-        let launcher = SystemOAuthLauncher()
-        self.init(session: session, loggingConfig: loggingConfig, httpClient: client, oauthLauncher: launcher)
+        self.init(session: session, loggingConfig: loggingConfig, httpClient: client)
     }
 
     internal init(
         session: LLMAccountSession,
         loggingConfig: LLMLoggingConfig,
-        httpClient: HTTPClient,
-        oauthLauncher: OAuthSessionLauncher
+        httpClient: HTTPClient
     ) {
         self.session = session
         self.loggingConfig = loggingConfig
         self.httpClient = httpClient
-        self.oauthLauncher = oauthLauncher
         self.traceManager = LLMTraceManager(config: loggingConfig)
     }
 
@@ -40,8 +36,7 @@ public final class LLMService: @unchecked Sendable {
         let tracingClient = makeTracingClient(traceId: UUID().uuidString, method: "login")
         try await OAuthCoordinator.login(
             session: session,
-            httpClient: tracingClient,
-            oauthLauncher: oauthLauncher
+            httpClient: tracingClient
         )
     }
 }

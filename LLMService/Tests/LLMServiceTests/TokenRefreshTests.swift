@@ -39,8 +39,7 @@ final class TokenRefreshTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: LLMLoggingConfig(),
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         let response = try await service.chat(

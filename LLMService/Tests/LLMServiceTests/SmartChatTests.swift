@@ -23,12 +23,10 @@ final class SmartChatTests: XCTestCase {
 
         mockClient.enqueue(.sse(sseResponse))
 
-        let launcher = MockOAuthLauncher()
         let service = LLMService(
             session: session,
             loggingConfig: LLMLoggingConfig(),
-            httpClient: mockClient,
-            oauthLauncher: launcher
+            httpClient: mockClient
         )
 
         let response = try await service.chat(
@@ -61,8 +59,7 @@ final class SmartChatTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: LLMLoggingConfig(),
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         let response = try await service.chat(
@@ -110,8 +107,7 @@ final class SmartChatTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: LLMLoggingConfig(),
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         let response = try await service.chat(
@@ -149,8 +145,7 @@ final class SmartChatTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: LLMLoggingConfig(),
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         let response = try await service.chat(
@@ -193,8 +188,7 @@ final class SmartChatTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: LLMLoggingConfig(),
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         let response = try await service.chat(
@@ -245,8 +239,7 @@ final class SmartChatTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: LLMLoggingConfig(),
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         let response = try await service.chatNonStream(
@@ -273,8 +266,7 @@ final class SmartChatTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: LLMLoggingConfig(),
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         do {
@@ -323,8 +315,7 @@ final class SmartChatTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: config,
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         let response = try await service.chatNonStream(
@@ -360,8 +351,7 @@ final class SmartChatTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: LLMLoggingConfig(),
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         do {
@@ -404,8 +394,7 @@ final class SmartChatTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: LLMLoggingConfig(),
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         var chunks: [LLMChatChunk] = []
@@ -465,8 +454,7 @@ final class SmartChatTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: LLMLoggingConfig(),
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         var textDeltas: [String] = []
@@ -503,8 +491,7 @@ final class SmartChatTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: LLMLoggingConfig(),
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         let stream = service.chatStream(
@@ -545,8 +532,7 @@ final class SmartChatTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: LLMLoggingConfig(),
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         var allText = ""
@@ -590,8 +576,7 @@ final class SmartChatTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: LLMLoggingConfig(),
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         let response = try await service.chat(
@@ -651,8 +636,7 @@ final class SmartChatTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: LLMLoggingConfig(),
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         let response = try await service.chat(
@@ -692,8 +676,7 @@ final class SmartChatTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: LLMLoggingConfig(),
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         var chunks: [LLMChatChunk] = []
@@ -747,8 +730,7 @@ final class SmartChatTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: LLMLoggingConfig(),
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         let response = try await service.chat(
@@ -794,8 +776,7 @@ final class SmartChatTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: LLMLoggingConfig(),
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         let response = try await service.chat(
@@ -846,8 +827,7 @@ final class SmartChatTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: config,
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
         return (service, storageDir)
     }

@@ -15,9 +15,7 @@ enum OAuthCoordinator {
     /// Perform the complete login flow for a provider
     static func login(
         session: LLMAccountSession,
-        httpClient: HTTPClient,
-        oauthLauncher: OAuthSessionLauncher,
-        callbackScheme: String = "llmservice"
+        httpClient: HTTPClient
     ) async throws {
         let provider = session.info.provider
         let state = UUID().uuidString
@@ -28,9 +26,7 @@ enum OAuthCoordinator {
             try await loginClaude(
                 session: session,
                 state: state,
-                callbackScheme: callbackScheme,
-                httpClient: httpClient,
-                oauthLauncher: oauthLauncher
+                httpClient: httpClient
             )
 
         case .geminiCLI:
@@ -54,32 +50,48 @@ enum OAuthCoordinator {
     private static func loginClaude(
         session: LLMAccountSession,
         state: String,
-        callbackScheme: String,
-        httpClient: HTTPClient,
-        oauthLauncher: OAuthSessionLauncher
+        httpClient: HTTPClient
     ) async throws {
+        let redirectURI = ClaudeCodeAuthProvider.redirectURI
+        logger.info("loginClaude: redirectURI=\(redirectURI)")
+
         let pkceCodes = try PKCEGenerator.generate()
         let authURL = ClaudeCodeAuthProvider.buildAuthURL(
             pkceCodes: pkceCodes,
             state: state,
-            callbackScheme: callbackScheme
+            redirectURI: redirectURI
+        )
+        logger.info("loginClaude: authURL built, creating LocalOAuthServer on port \(ClaudeCodeAuthProvider.callbackPort)")
+
+        let server = LocalOAuthServer(
+            port: ClaudeCodeAuthProvider.callbackPort,
+            callbackPath: ClaudeCodeAuthProvider.callbackPath
         )
 
-        let callbackURL = try await oauthLauncher.authenticate(url: authURL, callbackScheme: callbackScheme)
+        logger.info("loginClaude: calling server.awaitCallback() with onListenerReady browser open")
+        let callbackURL = try await server.awaitCallback {
+            logger.info("loginClaude: onListenerReady fired — opening browser now")
+            Self.openInBrowser(url: authURL)
+        }
+        logger.info("loginClaude: got callbackURL: \(callbackURL.absoluteString)")
+
         let code = try extractCode(from: callbackURL, expectedState: state)
+        logger.info("loginClaude: extracted code, exchanging for tokens")
 
         let (credentials, email) = try await ClaudeCodeAuthProvider.exchangeCodeForTokens(
             code: code,
             state: state,
             pkceCodes: pkceCodes,
-            callbackScheme: callbackScheme,
+            redirectURI: redirectURI,
             httpClient: httpClient
         )
+        logger.info("loginClaude: token exchange complete, email=\(email ?? "nil")")
 
         var info = session.info
         info.identifier = email
         info.displayName = email
         try await session.save(info: info, credentials: credentials)
+        logger.info("loginClaude: saved credentials successfully")
     }
 
     private static func loginGemini(
@@ -188,7 +200,7 @@ enum OAuthCoordinator {
 
     // MARK: - Helpers
 
-    private static func extractCode(from url: URL, expectedState: String) throws -> String {
+    static func extractCode(from url: URL, expectedState: String) throws -> String {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             logger.error("extractCode: invalid callback URL: \(url.absoluteString)")
             throw LLMServiceError(

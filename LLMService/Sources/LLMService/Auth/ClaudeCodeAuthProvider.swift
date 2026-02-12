@@ -8,18 +8,27 @@ enum ClaudeCodeAuthProvider {
     private static let tokenURL = URL(string: "https://console.anthropic.com/v1/oauth/token")!
     private static let scopes = "org:create_api_key user:profile user:inference"
 
+    // MARK: - Callback Configuration
+
+    static let callbackPort: UInt16 = 54545
+    static let callbackPath = "/callback"
+
+    static var redirectURI: String {
+        "http://localhost:\(callbackPort)\(callbackPath)"
+    }
+
     /// Build the OAuth authorization URL with PKCE challenge
     static func buildAuthURL(
         pkceCodes: PKCEGenerator.PKCECodes,
         state: String,
-        callbackScheme: String
+        redirectURI: String
     ) -> URL {
         var components = URLComponents(url: authURL, resolvingAgainstBaseURL: false)!
         components.queryItems = [
             URLQueryItem(name: "code", value: "true"),
             URLQueryItem(name: "client_id", value: clientId),
             URLQueryItem(name: "response_type", value: "code"),
-            URLQueryItem(name: "redirect_uri", value: "\(callbackScheme)://auth/callback"),
+            URLQueryItem(name: "redirect_uri", value: redirectURI),
             URLQueryItem(name: "scope", value: scopes),
             URLQueryItem(name: "code_challenge", value: pkceCodes.codeChallenge),
             URLQueryItem(name: "code_challenge_method", value: "S256"),
@@ -33,14 +42,14 @@ enum ClaudeCodeAuthProvider {
         code: String,
         state: String,
         pkceCodes: PKCEGenerator.PKCECodes,
-        callbackScheme: String,
+        redirectURI: String,
         httpClient: HTTPClient
     ) async throws -> (credentials: LLMCredentials, email: String?) {
         let body: [String: String] = [
             "code": code,
             "grant_type": "authorization_code",
             "client_id": clientId,
-            "redirect_uri": "\(callbackScheme)://auth/callback",
+            "redirect_uri": redirectURI,
             "code_verifier": pkceCodes.codeVerifier,
         ]
 

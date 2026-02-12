@@ -41,8 +41,7 @@ final class TraceRecordingTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: config,
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         let response = try await service.chat(
@@ -87,8 +86,7 @@ final class TraceRecordingTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: config,
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         do {
@@ -146,8 +144,7 @@ final class TraceRecordingTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: config,
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         let response = try await service.chat(
@@ -201,8 +198,7 @@ final class TraceRecordingTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: config,
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         _ = try await service.chat(
@@ -262,8 +258,7 @@ final class TraceRecordingTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: config,
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         _ = try await service.chat(
@@ -320,8 +315,7 @@ final class TraceRecordingTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: config,
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         let response = try await service.chat(
@@ -361,8 +355,7 @@ final class TraceRecordingTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: config,
-            httpClient: MockHTTPClient(),
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: MockHTTPClient()
         )
 
         let harData = try await service.exportHAR(lastMinutes: 5)
@@ -394,8 +387,7 @@ final class TraceRecordingTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: config,
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         do {
@@ -442,8 +434,7 @@ final class TraceRecordingTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: config,
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         let stream = service.chatStream(
@@ -489,8 +480,7 @@ final class TraceRecordingTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: config,
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         let stream = service.chatStream(
@@ -562,8 +552,7 @@ final class TraceRecordingTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: config,
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         let response = try await service.chat(
@@ -611,8 +600,7 @@ final class TraceRecordingTests: XCTestCase {
         let service = LLMService(
             session: session,
             loggingConfig: config,
-            httpClient: mockClient,
-            oauthLauncher: MockOAuthLauncher()
+            httpClient: mockClient
         )
 
         do {
