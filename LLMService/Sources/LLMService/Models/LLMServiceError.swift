@@ -1,4 +1,6 @@
-public struct LLMServiceError: Error, Sendable {
+import Foundation
+
+public struct LLMServiceError: LocalizedError, Sendable {
     public let traceId: String
     public let message: String
     public let statusCode: Int?
@@ -14,5 +16,12 @@ public struct LLMServiceError: Error, Sendable {
         self.message = message
         self.statusCode = statusCode
         self.underlyingErrorDescription = underlyingError?.localizedDescription
+    }
+
+    public var errorDescription: String? {
+        if let statusCode {
+            return "[\(statusCode)] \(message)"
+        }
+        return message
     }
 }

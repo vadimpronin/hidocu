@@ -1,6 +1,8 @@
 import Foundation
 import OSLog
 
+private let logger = Logger(subsystem: "com.llmservice", category: "LLMService")
+
 public final class LLMService: @unchecked Sendable {
     public let session: LLMAccountSession
     public let loggingConfig: LLMLoggingConfig
@@ -143,7 +145,11 @@ public final class LLMService: @unchecked Sendable {
             Task {
                 do {
                     let provider = try self.resolveProvider()
+                    logger.info("[\(traceId)] chatStream: provider=\(provider.provider.rawValue), model=\(modelId)")
+
                     let credentials = try await self.getCredentialsWithRefresh(traceId: traceId)
+                    logger.info("[\(traceId)] chatStream: got credentials, hasAccessToken=\(credentials.accessToken != nil)")
+
                     let request = try provider.buildStreamRequest(
                         modelId: modelId,
                         messages: messages,
@@ -151,10 +157,20 @@ public final class LLMService: @unchecked Sendable {
                         credentials: credentials,
                         traceId: traceId
                     )
+                    logger.info("[\(traceId)] chatStream: request URL=\(request.url?.absoluteString ?? "nil"), bodySize=\(request.httpBody?.count ?? 0)")
 
                     let (byteStream, response) = try await self.executeWithRetry(
                         request: request,
                         traceId: traceId
+                    )
+                    logger.info("[\(traceId)] chatStream: response statusCode=\(response.statusCode)")
+
+                    let startTime = Date()
+                    let reqDetails = LLMTraceEntry.HTTPDetails(
+                        url: request.url?.absoluteString,
+                        method: request.httpMethod,
+                        headers: request.allHTTPHeaderFields,
+                        body: request.httpBody.flatMap { String(data: $0, encoding: .utf8) }
                     )
 
                     guard (200..<300).contains(response.statusCode) else {
@@ -163,11 +179,27 @@ public final class LLMService: @unchecked Sendable {
                             errorData.append(byte)
                         }
                         let errorMsg = String(data: errorData, encoding: .utf8) ?? "Unknown error"
+                        logger.error("[\(traceId)] chatStream: API error \(response.statusCode): \(errorMsg)")
+
+                        await self.traceManager.record(LLMTraceEntry(
+                            traceId: traceId,
+                            requestId: idempotencyKey ?? traceId,
+                            provider: provider.provider.rawValue,
+                            accountIdentifier: self.session.info.identifier,
+                            method: "chatStream",
+                            isStreaming: true,
+                            request: reqDetails,
+                            response: LLMTraceEntry.HTTPDetails(body: errorMsg, statusCode: response.statusCode),
+                            error: errorMsg,
+                            duration: Date().timeIntervalSince(startTime)
+                        ))
+
                         throw LLMServiceError(traceId: traceId, message: errorMsg, statusCode: response.statusCode)
                     }
 
                     var parser = provider.createStreamParser()
                     var lineBuffer = ""
+                    var responseText = ""
 
                     for try await byte in byteStream {
                         let char = Character(UnicodeScalar(byte))
@@ -175,6 +207,7 @@ public final class LLMService: @unchecked Sendable {
                             if !lineBuffer.isEmpty {
                                 let chunks = provider.parseStreamLine(lineBuffer, parser: &parser)
                                 for chunk in chunks {
+                                    responseText += chunk.delta
                                     continuation.yield(chunk)
                                 }
                             }
@@ -187,12 +220,30 @@ public final class LLMService: @unchecked Sendable {
                     if !lineBuffer.isEmpty {
                         let chunks = provider.parseStreamLine(lineBuffer, parser: &parser)
                         for chunk in chunks {
+                            responseText += chunk.delta
                             continuation.yield(chunk)
                         }
                     }
 
+                    await self.traceManager.record(LLMTraceEntry(
+                        traceId: traceId,
+                        requestId: idempotencyKey ?? traceId,
+                        provider: provider.provider.rawValue,
+                        accountIdentifier: self.session.info.identifier,
+                        method: "chatStream",
+                        isStreaming: true,
+                        request: reqDetails,
+                        response: LLMTraceEntry.HTTPDetails(
+                            body: String(responseText.prefix(4096)),
+                            statusCode: response.statusCode
+                        ),
+                        duration: Date().timeIntervalSince(startTime)
+                    ))
+
+                    logger.info("[\(traceId)] chatStream: stream completed successfully")
                     continuation.finish()
                 } catch {
+                    logger.error("[\(traceId)] chatStream: error — \(error)")
                     continuation.finish(throwing: error)
                 }
             }
@@ -223,7 +274,9 @@ public final class LLMService: @unchecked Sendable {
     // MARK: - Debug
 
     public func exportHAR(lastMinutes: Int) async throws -> Data {
+        logger.info("exportHAR: loading entries (last \(lastMinutes) min), storageDir=\(self.loggingConfig.storageDirectory?.path ?? "nil")")
         let entries = await traceManager.loadEntries(lastMinutes: lastMinutes)
+        logger.info("exportHAR: loaded \(entries.count) entries, exporting as HAR")
         return try HARExporter.export(entries: entries)
     }
 
@@ -238,7 +291,8 @@ public final class LLMService: @unchecked Sendable {
         case .claudeCode:
             return ClaudeCodeProvider()
         case .geminiCLI:
-            return GeminiCLIProvider()
+            let projectId = session.info.metadata["project_id"] ?? ""
+            return GeminiCLIProvider(projectId: projectId)
         case .antigravity:
             let projectId = session.info.metadata["project_id"] ?? ""
             return AntigravityProvider(projectId: projectId)

@@ -21,6 +21,10 @@ final class TestStudioViewModel {
 
     // MARK: - Private
 
+    /// Bumped after login/logout to trigger SwiftUI re-render for `isLoggedIn(for:)`.
+    /// `InMemoryAccountSession` is not `@Observable`, so we need a tracked dependency.
+    private var authStateVersion = 0
+
     private var sessions: [LLMProvider: InMemoryAccountSession] = [:]
     private var services: [LLMProvider: LLMService] = [:]
     private let logger = Logger(subsystem: "com.llmteststudio", category: "viewmodel")
@@ -50,7 +54,8 @@ final class TestStudioViewModel {
     }
 
     func isLoggedIn(for provider: LLMProvider) -> Bool {
-        session(for: provider).isLoggedIn
+        _ = authStateVersion // observation dependency
+        return session(for: provider).isLoggedIn
     }
 
     var currentMessages: [ChatMessage] {
@@ -88,6 +93,7 @@ final class TestStudioViewModel {
         do {
             let svc = service(for: provider)
             try await svc.login()
+            authStateVersion += 1
             log("Login succeeded for \(provider.rawValue)", level: .info)
         } catch {
             log("Login failed for \(provider.rawValue): \(error.localizedDescription)", level: .error)
@@ -97,6 +103,7 @@ final class TestStudioViewModel {
     func logout(provider: LLMProvider) {
         session(for: provider).logout()
         services[provider] = nil
+        authStateVersion += 1
         log("Logged out from \(provider.rawValue)", level: .info)
     }
 
@@ -184,7 +191,11 @@ final class TestStudioViewModel {
                     msg.isStreaming = false
                     currentMessages.append(msg)
                 }
-                log("Stream error: \(error.localizedDescription)", level: .error)
+                if let svcError = error as? LLMServiceError {
+                    log("Stream error [\(svcError.statusCode ?? 0)]: \(svcError.message)", level: .error)
+                } else {
+                    log("Stream error: \(error.localizedDescription)", level: .error)
+                }
             }
             guard generation == self.streamGeneration else { return }
             currentStreamingMessage = nil

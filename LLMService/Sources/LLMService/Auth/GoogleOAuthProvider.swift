@@ -167,16 +167,18 @@ enum GoogleOAuthProvider {
         return email
     }
 
-    // MARK: - Project ID (Antigravity)
+    // MARK: - Project ID
 
-    /// Fetch Antigravity project ID via loadCodeAssist
+    /// Fetch project ID via loadCodeAssist
     static func fetchProjectID(
         accessToken: String,
+        provider: LLMProvider = .antigravity,
         httpClient: HTTPClient
     ) async throws -> String {
+        let ideType = provider == .antigravity ? "ANTIGRAVITY" : "IDE_UNSPECIFIED"
         let body: [String: Any] = [
             "metadata": [
-                "ideType": "ANTIGRAVITY",
+                "ideType": ideType,
                 "platform": "PLATFORM_UNSPECIFIED",
                 "pluginType": "GEMINI",
             ]

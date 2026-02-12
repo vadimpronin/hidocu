@@ -46,8 +46,8 @@ struct DebugControlsView: View {
         Task {
             guard let data = await viewModel.exportHAR(lastMinutes: minutes) else { return }
             let panel = NSSavePanel()
-            panel.allowedContentTypes = [.json]
-            panel.nameFieldStringValue = "llm_debug_\(minutes)min.har"
+            panel.allowedContentTypes = [UTType(filenameExtension: "har", conformingTo: .json) ?? .json]
+            panel.nameFieldStringValue = "llm_debug_\(minutes)min"
             guard let window = NSApp.keyWindow ?? NSApp.windows.first else {
                 viewModel.log("No window available for save panel", level: .warning)
                 return

@@ -69,6 +69,106 @@ final class AuthFlowTests: XCTestCase {
         }
     }
 
+    func testFetchProjectIDUsesCorrectIdeTypeForGemini() async throws {
+        let mockClient = MockHTTPClient()
+
+        // Enqueue loadCodeAssist response
+        mockClient.enqueue(.json([
+            "cloudaicompanionProject": "gemini-proj-123"
+        ]))
+
+        let projectId = try await GoogleOAuthProvider.fetchProjectID(
+            accessToken: "test-token",
+            provider: .geminiCLI,
+            httpClient: mockClient
+        )
+
+        XCTAssertEqual(projectId, "gemini-proj-123")
+
+        // Verify the request body contains IDE_UNSPECIFIED for GeminiCLI
+        let request = try XCTUnwrap(mockClient.capturedRequests.first)
+        let data = try XCTUnwrap(request.httpBody)
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let metadata = try XCTUnwrap(body["metadata"] as? [String: String])
+        XCTAssertEqual(metadata["ideType"], "IDE_UNSPECIFIED")
+    }
+
+    func testFetchProjectIDUsesCorrectIdeTypeForAntigravity() async throws {
+        let mockClient = MockHTTPClient()
+
+        // Enqueue loadCodeAssist response
+        mockClient.enqueue(.json([
+            "cloudaicompanionProject": "ag-proj-456"
+        ]))
+
+        let projectId = try await GoogleOAuthProvider.fetchProjectID(
+            accessToken: "test-token",
+            provider: .antigravity,
+            httpClient: mockClient
+        )
+
+        XCTAssertEqual(projectId, "ag-proj-456")
+
+        // Verify the request body contains ANTIGRAVITY for Antigravity
+        let request = try XCTUnwrap(mockClient.capturedRequests.first)
+        let data = try XCTUnwrap(request.httpBody)
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let metadata = try XCTUnwrap(body["metadata"] as? [String: String])
+        XCTAssertEqual(metadata["ideType"], "ANTIGRAVITY")
+    }
+
+    func testFetchProjectIDCallsLoadCodeAssistEndpoint() async throws {
+        let mockClient = MockHTTPClient()
+        mockClient.enqueue(.json(["cloudaicompanionProject": "proj"]))
+
+        _ = try await GoogleOAuthProvider.fetchProjectID(
+            accessToken: "my-token",
+            provider: .geminiCLI,
+            httpClient: mockClient
+        )
+
+        let request = try XCTUnwrap(mockClient.capturedRequests.first)
+        XCTAssertEqual(request.url?.host, "cloudcode-pa.googleapis.com")
+        XCTAssertTrue(request.url?.path.contains("loadCodeAssist") == true)
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer my-token")
+    }
+
+    func testResolveProviderPassesProjectIdToGeminiCLI() async throws {
+        let mockClient = MockHTTPClient()
+        let session = MockAccountSession(
+            provider: .geminiCLI,
+            credentials: LLMCredentials(accessToken: "test-token")
+        )
+        session.info.metadata["project_id"] = "my-gemini-project"
+
+        // Enqueue a 500 error (we just want to inspect the request, not get a valid response)
+        mockClient.enqueue(.error(500, message: "test"))
+
+        let service = LLMService(
+            session: session,
+            loggingConfig: LLMLoggingConfig(),
+            httpClient: mockClient,
+            oauthLauncher: MockOAuthLauncher()
+        )
+
+        // Call chatStream and consume the expected error
+        let stream = service.chatStream(
+            modelId: "gemini-2.5-pro",
+            messages: [LLMMessage(role: .user, content: [.text("hi")])]
+        )
+        do {
+            for try await _ in stream {}
+        } catch {
+            // Expected 500 error — we only need to inspect the request
+        }
+
+        // Verify the captured request contains the project field
+        let request = try XCTUnwrap(mockClient.capturedRequests.first)
+        let data = try XCTUnwrap(request.httpBody)
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(body["project"] as? String, "my-gemini-project")
+    }
+
     func testBuildAuthURLContainsCorrectRedirectURI() {
         let redirectURI = GoogleOAuthProvider.redirectURI(for: .geminiCLI)
         let authURL = GoogleOAuthProvider.buildAuthURL(

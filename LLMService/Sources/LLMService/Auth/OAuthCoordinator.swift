@@ -42,8 +42,9 @@ enum OAuthCoordinator {
             )
 
         case .antigravity:
-            try await loginAntigravity(
+            try await loginGoogle(
                 session: session,
+                provider: provider,
                 state: state,
                 httpClient: httpClient
             )
@@ -125,39 +126,19 @@ enum OAuthCoordinator {
         var info = session.info
         info.identifier = email
         info.displayName = email
+
+        // Both GeminiCLI and Antigravity require a project ID from loadCodeAssist
+        logger.info("loginGoogle: fetching project ID via loadCodeAssist")
+        let projectId = try await GoogleOAuthProvider.fetchProjectID(
+            accessToken: credentials.accessToken ?? "",
+            provider: provider,
+            httpClient: httpClient
+        )
+        info.metadata["project_id"] = projectId
+        logger.info("loginGoogle: project_id=\(projectId)")
+
         try await session.save(info: info, credentials: credentials)
         logger.info("loginGoogle: saved credentials successfully")
-    }
-
-    private static func loginAntigravity(
-        session: LLMAccountSession,
-        state: String,
-        httpClient: HTTPClient
-    ) async throws {
-        // Reuse the shared Google OAuth flow
-        try await loginGoogle(
-            session: session,
-            provider: .antigravity,
-            state: state,
-            httpClient: httpClient
-        )
-
-        // Antigravity additionally requires a project ID from loadCodeAssist
-        let credentials = try await session.getCredentials()
-        guard let accessToken = credentials.accessToken else {
-            throw LLMServiceError(
-                traceId: "antigravity-login",
-                message: "No access token after token exchange"
-            )
-        }
-        let projectId = try await GoogleOAuthProvider.fetchProjectID(
-            accessToken: accessToken,
-            httpClient: httpClient
-        )
-
-        var info = session.info
-        info.metadata["project_id"] = projectId
-        try await session.save(info: info, credentials: credentials)
     }
 
     // MARK: - Helpers

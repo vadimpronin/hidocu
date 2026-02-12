@@ -5,6 +5,9 @@ struct GeminiCLIProvider: InternalProvider {
     let provider: LLMProvider = .geminiCLI
     let supportsNonStreaming: Bool = true
 
+    /// Project ID obtained via loadCodeAssist during OAuth
+    let projectId: String
+
     private static let streamURL = URL(string: "https://cloudcode-pa.googleapis.com/v1internal:streamGenerateContent?alt=sse")!
     private static let nonStreamURL = URL(string: "https://cloudcode-pa.googleapis.com/v1internal:generateContent")!
 
@@ -17,11 +20,7 @@ struct GeminiCLIProvider: InternalProvider {
         credentials: LLMCredentials,
         traceId: String
     ) throws -> URLRequest {
-        let body = GoogleCloudRequestBuilder.buildRequest(
-            modelName: modelId,
-            messages: messages,
-            thinking: thinking
-        )
+        let body = buildBody(modelId: modelId, messages: messages, thinking: thinking)
 
         var request = URLRequest(url: Self.streamURL)
         request.httpMethod = "POST"
@@ -37,17 +36,28 @@ struct GeminiCLIProvider: InternalProvider {
         credentials: LLMCredentials,
         traceId: String
     ) throws -> URLRequest {
-        let body = GoogleCloudRequestBuilder.buildRequest(
-            modelName: modelId,
-            messages: messages,
-            thinking: thinking
-        )
+        let body = buildBody(modelId: modelId, messages: messages, thinking: thinking)
 
         var request = URLRequest(url: Self.nonStreamURL)
         request.httpMethod = "POST"
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         applyHeaders(to: &request, credentials: credentials)
         return request
+    }
+
+    private func buildBody(
+        modelId: String,
+        messages: [LLMMessage],
+        thinking: ThinkingConfig?
+    ) -> [String: Any] {
+        var fullBody = GoogleCloudRequestBuilder.buildRequest(
+            modelName: modelId,
+            messages: messages,
+            thinking: thinking
+        )
+        // Add project field required by cloudcode-pa API
+        fullBody["project"] = projectId
+        return fullBody
     }
 
     // MARK: - Response Parsing
@@ -98,5 +108,7 @@ struct GeminiCLIProvider: InternalProvider {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("google-api-nodejs-client/9.15.1", forHTTPHeaderField: "User-Agent")
+        request.setValue("gl-node/22.17.0", forHTTPHeaderField: "X-Goog-Api-Client")
+        request.setValue("ideType=IDE_UNSPECIFIED,platform=PLATFORM_UNSPECIFIED,pluginType=GEMINI", forHTTPHeaderField: "Client-Metadata")
     }
 }
