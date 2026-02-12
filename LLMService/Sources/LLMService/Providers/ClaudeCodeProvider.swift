@@ -35,6 +35,7 @@ struct ClaudeCodeProvider: InternalProvider {
         request.httpMethod = "POST"
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         applyHeaders(to: &request, credentials: credentials, stream: true)
+        request.timeoutInterval = 600
         return request
     }
 
@@ -56,6 +57,7 @@ struct ClaudeCodeProvider: InternalProvider {
         request.httpMethod = "POST"
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         applyHeaders(to: &request, credentials: credentials, stream: false)
+        request.timeoutInterval = 600
         return request
     }
 
@@ -117,7 +119,7 @@ struct ClaudeCodeProvider: InternalProvider {
         request.setValue("js", forHTTPHeaderField: "X-Stainless-Lang")
         request.setValue("arm64", forHTTPHeaderField: "X-Stainless-Arch")
         request.setValue("MacOS", forHTTPHeaderField: "X-Stainless-Os")
-        request.setValue("60", forHTTPHeaderField: "X-Stainless-Timeout")
+        request.setValue("600", forHTTPHeaderField: "X-Stainless-Timeout")
         request.setValue("claude-cli/1.0.83 (external, cli)", forHTTPHeaderField: "User-Agent")
         request.setValue("keep-alive", forHTTPHeaderField: "Connection")
         request.setValue(stream ? "text/event-stream" : "application/json", forHTTPHeaderField: "Accept")
